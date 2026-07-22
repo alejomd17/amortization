@@ -1,0 +1,15 @@
+name: Keep aleossa-api warm
+
+on:
+  schedule:
+    # cada 10 min entre 7:00 AM y 11:00 PM hora Colombia (UTC-5)
+    # 7 AM Col = 12:00 UTC  |  11 PM Col = 04:00 UTC del dia siguiente
+    - cron: '*/10 12-23,0-4 * * *'
+  workflow_dispatch:   # boton para despertarlo manualmente antes de una demo
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping aleossa-api
+        run: curl -fsS --max-time 90 https://aleossa-api.onrender.com/
