@@ -386,6 +386,13 @@ body {
 .amort-table .row-abono { background: var(--verde-claro); }
 .amort-table .row-abono td { font-weight: 500; }
 
+/* Tabla del comparador: primera columna = etiqueta, demás = valores alineados a la derecha */
+.comparador-table td:not(:first-child),
+.comparador-table th:not(:first-child) { text-align: right; }
+.comparador-table td:first-child { color: var(--negro); opacity: 0.6; }
+.comparador-table .col-mejor { background: var(--verde-claro); }
+.comparador-table th.col-mejor { color: var(--verde); opacity: 1; }
+
 .hidden { display: none; }
 
 /* ===== RESPONSIVE ===== */

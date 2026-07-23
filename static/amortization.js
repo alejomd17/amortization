@@ -529,6 +529,72 @@ document.addEventListener("DOMContentLoaded", () => {
             retencion_cdt_pct: g("imRtRetencion") || 0,
         }, displayRentabilidad, "rentabilidadResultCard");
     });
+
+    // ── Sub-modo Crédito: Amortización / Comparador ──────────────────────────
+    const CREDITO_MODOS = [
+        { key: "amortizacion", btn: "crModeAmortizacion", panel: "crPanelAmortizacion" },
+        { key: "comparador", btn: "crModeComparador", panel: "crPanelComparador" },
+    ].map((m) => ({ ...m, btnEl: document.getElementById(m.btn), panelEl: document.getElementById(m.panel) }));
+    function setCreditoModo(key) {
+        CREDITO_MODOS.forEach((m) => {
+            const activo = m.key === key;
+            m.btnEl.classList.toggle("active", activo);
+            m.btnEl.setAttribute("aria-selected", String(activo));
+            m.panelEl.classList.toggle("hidden", !activo);
+        });
+    }
+    CREDITO_MODOS.forEach((m) => m.btnEl.addEventListener("click", () => setCreditoModo(m.key)));
+
+    // ── Comparador de créditos ───────────────────────────────────────────────
+    const escenarios = [];
+    function displayEscenarios() {
+        const tbody = document.querySelector("#escenariosTable tbody");
+        tbody.innerHTML = "";
+        escenarios.forEach((e, i) => {
+            const row = tbody.insertRow();
+            row.insertCell(0).textContent = e.nombre || `Crédito ${i + 1}`;
+            row.insertCell(1).textContent = fmtMoney(e.monto);
+            row.insertCell(2).textContent =
+                `${e.interest_rate}% ${e.type_rate === "Nominal" ? "N" : "E"}${e.period === "Anual" ? "A" : "M"}`;
+            row.insertCell(3).textContent = `${e.plazo_meses} m`;
+            row.insertCell(4).textContent = fmtMoney(e.costos);
+            const btn = document.createElement("button");
+            btn.className = "btn-remove-abono";
+            btn.textContent = "Eliminar";
+            btn.addEventListener("click", () => { escenarios.splice(i, 1); displayEscenarios(); });
+            row.insertCell(5).appendChild(btn);
+        });
+    }
+    document.getElementById("addEscenarioBtn").addEventListener("click", () => {
+        const monto = Number.parseFloat(document.getElementById("cmpMonto").value);
+        const rate = Number.parseFloat(document.getElementById("cmpRate").value);
+        const plazoRaw = Number.parseFloat(document.getElementById("cmpPlazo").value);
+        if (!(monto > 0) || !(rate > 0) || !(plazoRaw > 0)) {
+            alert("Ingresa monto, tasa y plazo válidos.");
+            return;
+        }
+        const plazoMeses = document.getElementById("cmpPlazoUnit").value === "years" ? plazoRaw * 12 : plazoRaw;
+        escenarios.push({
+            nombre: document.getElementById("cmpNombre").value.trim(),
+            monto,
+            interest_rate: rate,
+            type_rate: document.getElementById("cmpRateType").value,
+            period: document.getElementById("cmpRatePeriod").value,
+            plazo_meses: plazoMeses,
+            costos: Number.parseFloat(document.getElementById("cmpCostos").value) || 0,
+        });
+        ["cmpNombre", "cmpMonto", "cmpRate", "cmpPlazo", "cmpCostos"].forEach((id) => {
+            document.getElementById(id).value = "";
+        });
+        displayEscenarios();
+    });
+    document.getElementById("compararBtn").addEventListener("click", () => {
+        if (escenarios.length < 2) {
+            alert("Agrega al menos 2 créditos para comparar.");
+            return;
+        }
+        postAndRender("/comparar", { escenarios }, displayComparador, "comparadorResultCard");
+    });
 });
 
 
@@ -769,5 +835,40 @@ function displayRentabilidad(r) {
             ${kpiHtml("Administración", fmtMoney(r.gastos.administracion))}
             ${kpiHtml("Predial", fmtMoney(r.gastos.predial))}
             ${kpiHtml("Mantenimiento", fmtMoney(r.gastos.mantenimiento))}
+        </div>`;
+}
+
+
+// ── Render: comparador de créditos ────────────────────────────────────────────
+function displayComparador(r) {
+    const card = document.getElementById("comparadorResultCard");
+    card.classList.remove("hidden");
+    const es = r.escenarios;
+    const mejor = es.find((e) => e.mejor) || es[0];
+
+    const th = es.map((e, i) => `<th class="${e.mejor ? "col-mejor" : ""}">${e.nombre || "Crédito " + (i + 1)}</th>`).join("");
+    const fila = (label, fn) =>
+        `<tr><td>${label}</td>${es.map((e) => `<td class="${e.mejor ? "col-mejor" : ""}">${fn(e)}</td>`).join("")}</tr>`;
+
+    card.innerHTML = `
+        <h2>El <em>comparador</em></h2>
+        <p class="resumen-narrativa">
+            Gana <strong>${mejor.nombre || "Crédito 1"}</strong> con el menor costo total
+            (<strong>${fmtMoney(mejor.costo_total)}</strong>)${mejor.ahorro_vs_peor > 0
+                ? `, ahorra <strong>${fmtMoney(mejor.ahorro_vs_peor)}</strong> frente a la opción más cara` : ""}.
+        </p>
+        <div class="table-scroll">
+            <table class="amort-table comparador-table">
+                <thead><tr><th></th>${th}</tr></thead>
+                <tbody>
+                    ${fila("Cuota mensual", (e) => fmtMoney(e.cuota))}
+                    ${fila("Tasa E.A.", (e) => fmtPct(e.tasa_ea))}
+                    ${fila("Plazo", (e) => e.plazo_meses + " meses")}
+                    ${fila("Total pagado", (e) => fmtMoney(e.total_pagado))}
+                    ${fila("Total intereses", (e) => fmtMoney(e.total_intereses))}
+                    ${fila("Costos iniciales", (e) => fmtMoney(e.costos))}
+                    ${fila("Costo total", (e) => `<strong>${fmtMoney(e.costo_total)}</strong>`)}
+                </tbody>
+            </table>
         </div>`;
 }

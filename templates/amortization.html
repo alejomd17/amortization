@@ -20,8 +20,14 @@
 
         <!-- ============ PESTAÑA CRÉDITO ============ -->
         <section id="panelCredito" class="tab-panel">
-            <h1 class="page-title">Amortización de <em>crédito</em></h1>
+            <h1 class="page-title">Simula tu <em>crédito</em></h1>
 
+            <div class="abono-mode-toggle" role="tablist">
+                <button type="button" id="crModeAmortizacion" class="mode-btn active" role="tab" aria-selected="true">Amortización</button>
+                <button type="button" id="crModeComparador" class="mode-btn" role="tab" aria-selected="false">Comparador</button>
+            </div>
+
+            <div id="crPanelAmortizacion" class="ahorro-submodo">
             <section class="card">
                 <p class="section-eyebrow">Detalles del crédito</p>
                 <div class="field-grid">
@@ -143,6 +149,72 @@
                     </table>
                 </div>
             </div>
+            </div><!-- /crPanelAmortizacion -->
+
+            <div id="crPanelComparador" class="ahorro-submodo hidden">
+                <section class="card">
+                    <p class="section-eyebrow">Comparar créditos</p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="cmpNombre">Nombre (banco/opción)</label>
+                            <input type="text" id="cmpNombre" placeholder="Ej. Banco A">
+                        </div>
+                        <div class="field">
+                            <label for="cmpMonto">Monto</label>
+                            <input type="number" id="cmpMonto" placeholder="Ej. 200.000.000">
+                        </div>
+                        <div class="field">
+                            <label for="cmpPlazo">Plazo</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="cmpPlazo" placeholder="Ej. 20">
+                                <select id="cmpPlazoUnit" aria-label="Unidad del plazo">
+                                    <option value="years" selected>Años</option>
+                                    <option value="months">Meses</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="cmpRate">Tasa de interés</label>
+                            <input type="number" id="cmpRate" placeholder="Ej. 12" step="any">
+                        </div>
+                        <div class="field">
+                            <label for="cmpRateType">Tipo de tasa</label>
+                            <select id="cmpRateType">
+                                <option value="Nominal">Nominal</option>
+                                <option value="Efectiva" selected>Efectiva</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="cmpRatePeriod">Período de la tasa</label>
+                            <select id="cmpRatePeriod">
+                                <option value="Anual" selected>Anual</option>
+                                <option value="Mensual">Mensual</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="cmpCostos">Costos iniciales (opcional)</label>
+                            <input type="number" id="cmpCostos" placeholder="Ej. 0">
+                        </div>
+                        <div class="field field-btn">
+                            <button type="button" id="addEscenarioBtn" class="btn btn-outline">Agregar crédito</button>
+                        </div>
+                        <div class="field"></div>
+                    </div>
+                    <p class="hint">Para comparar refinanciar tu crédito actual, agrégalo como una opción usando el <strong>saldo que te queda</strong> y el <strong>plazo que falta</strong>; usa "costos iniciales" para los gastos del cambio.</p>
+                    <table id="escenariosTable" class="abonos-table">
+                        <thead><tr><th>Crédito</th><th>Monto</th><th>Tasa</th><th>Plazo</th><th>Costos</th><th></th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </section>
+                <div class="calcular-wrap">
+                    <button id="compararBtn" class="btn btn-primary">Comparar</button>
+                </div>
+                <div id="comparadorResultCard" class="card resumen-card hidden"></div>
+            </div><!-- /crPanelComparador -->
         </section>
 
         <!-- ============ PESTAÑA INMOBILIARIA ============ -->
