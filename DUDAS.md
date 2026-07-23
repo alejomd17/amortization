@@ -26,3 +26,25 @@ Revísalas y me corriges lo que no cuadre.
 - **Comisión agencia**: la calculo como % del arriendo sobre los meses arrendados (no un mes fijo
   de comisión). ¿Así opera tu agencia, o es distinto?
 - El evaluador es **v1** (sin proyección a N años ni compra financiada/apalancamiento — eso era v2/v3).
+
+## Crédito → Comparador
+- **Refinanciar**: no hice un modo separado; se hace agregando el crédito actual como un
+  escenario (saldo restante + plazo restante) y poniendo los gastos del cambio en "costos
+  iniciales". Hay una nota explicándolo. ¿Te sirve así o prefieres un modo dedicado?
+- Ordeno por **costo total** (pagos + costos). ¿Es el criterio que quieres, o prefieres por cuota?
+
+## Crédito → Abonar vs. invertir
+- **Horizonte** default 5 años.
+- Es una **comparación de tasas** proyectada: abonar "rinde" la tasa E.A. del crédito libre de
+  impuestos; invertir rinde el CDT neto. El ganador siempre es el de mayor tasa; la proyección en
+  pesos (X·(1+tasa)^años) es una simplificación — NO modela reinvertir el flujo que se libera al
+  terminar antes el crédito. ¿Suficiente para v1, o lo hacemos más fino?
+
+## PENDIENTES (no construidos aún)
+- **Costo real del crédito**: falta. Plan: campos opcionales (costos iniciales + el seguro que ya
+  existe) dentro de la amortización → calcular la tasa efectiva real (TIR del flujo). Requiere una
+  iteración (bisección) para la TIR.
+- **Arrendar vs. comprar**: NO lo construí a propósito. Tiene muchos supuestos de modelado
+  (horizonte, crecimiento del arriendo, valorización, costo de oportunidad de la cuota inicial,
+  saldo del crédito al final…) y prefiero que lo diseñemos juntos como hicimos con el evaluador de
+  arriendo, para que el veredicto no salga engañoso. Lo dejé anotado en el ROADMAP.
