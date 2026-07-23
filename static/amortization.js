@@ -534,6 +534,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const CREDITO_MODOS = [
         { key: "amortizacion", btn: "crModeAmortizacion", panel: "crPanelAmortizacion" },
         { key: "comparador", btn: "crModeComparador", panel: "crPanelComparador" },
+        { key: "abonar-invertir", btn: "crModeAbonarInvertir", panel: "crPanelAbonarInvertir" },
     ].map((m) => ({ ...m, btnEl: document.getElementById(m.btn), panelEl: document.getElementById(m.panel) }));
     function setCreditoModo(key) {
         CREDITO_MODOS.forEach((m) => {
@@ -594,6 +595,19 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         postAndRender("/comparar", { escenarios }, displayComparador, "comparadorResultCard");
+    });
+
+    // ── Abonar vs. invertir ──────────────────────────────────────────────────
+    document.getElementById("calcularAbonarInvertirBtn").addEventListener("click", () => {
+        postAndRender("/decisiones/abonar-vs-invertir", {
+            monto_extra: g("aiMonto"),
+            tasa_credito: g("aiTasaCredito"),
+            tc_type: gv("aiTcType"),
+            tc_period: gv("aiTcPeriod"),
+            cdt_ea: g("aiCdt") || 0,
+            retencion_cdt_pct: g("aiRetencion") || 0,
+            horizonte_anos: g("aiHorizonte") || 5,
+        }, displayAbonarInvertir, "abonarInvertirResultCard");
     });
 });
 
@@ -870,5 +884,28 @@ function displayComparador(r) {
                     ${fila("Costo total", (e) => `<strong>${fmtMoney(e.costo_total)}</strong>`)}
                 </tbody>
             </table>
+        </div>`;
+}
+
+
+// ── Render: abonar vs. invertir ───────────────────────────────────────────────
+function displayAbonarInvertir(r) {
+    const card = document.getElementById("abonarInvertirResultCard");
+    card.classList.remove("hidden");
+    const ganador = r.conviene_abonar ? "abonar al crédito" : "invertir en el CDT";
+    card.innerHTML = `
+        <h2>¿Abonar o <em>invertir</em>?</h2>
+        <p class="resumen-narrativa">
+            Te conviene <strong>${ganador}</strong>. Abonar te ahorra el
+            <strong>${fmtPct(r.tasa_credito_ea)}</strong> del crédito (libre de impuestos);
+            invertir te renta el <strong>${fmtPct(r.cdt_neto)}</strong> neto. En
+            ${r.horizonte_anos} años la diferencia es <strong>${fmtMoney(r.diferencia)}</strong>.
+        </p>
+        <div class="kpi-grid">
+            ${kpiHtml("Si abonas", fmtMoney(r.valor_abonar), `ahorras ${fmtMoney(r.ganancia_abonar)}`, r.conviene_abonar ? "good" : "")}
+            ${kpiHtml("Si inviertes", fmtMoney(r.valor_invertir), `ganas ${fmtMoney(r.ganancia_invertir)}`, r.conviene_abonar ? "" : "good")}
+            ${kpiHtml("Abonar rinde", fmtPct(r.tasa_credito_ea), "libre de impuestos")}
+            ${kpiHtml("Invertir rinde", fmtPct(r.cdt_neto), "neto")}
+            ${kpiHtml("Diferencia", fmtMoney(r.diferencia), `en ${r.horizonte_anos} años`)}
         </div>`;
 }

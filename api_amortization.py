@@ -10,6 +10,7 @@ from src.amortization import Amortization
 from src.ahorro import Ahorro
 from src.inmueble import Inmueble
 from src.comparador import Comparador
+from src.decisiones import Decisiones
 
 # Rutas absolutas: en serverless el directorio de trabajo no es la raiz del proyecto
 BASE_DIR = Path(__file__).resolve().parent
@@ -20,6 +21,7 @@ amortization = Amortization()
 ahorro = Ahorro()
 inmueble = Inmueble()
 comparador = Comparador()
+decisiones = Decisiones()
 
 origins = [
     "https://aleossa.com",
@@ -325,6 +327,27 @@ async def comparar_creditos(request: CompararRequest):
         if len(request.escenarios) < 2:
             raise ValueError("Agrega al menos 2 créditos para comparar.")
         return comparador.comparar([e.model_dump() for e in request.escenarios])
+    except ValueError as ve:
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
+
+
+class AbonarVsInvertirRequest(BaseModel):
+    monto_extra: float
+    tasa_credito: float
+    tc_type: str
+    tc_period: str
+    cdt_ea: float = 10
+    retencion_cdt_pct: float = 4
+    horizonte_anos: float = 5
+
+
+@app.post('/decisiones/abonar-vs-invertir')
+async def calcular_abonar_vs_invertir(request: AbonarVsInvertirRequest):
+    """¿Abonar al crédito o invertir la plata extra en un CDT?"""
+    try:
+        return decisiones.abonar_vs_invertir(**request.model_dump())
     except ValueError as ve:
         raise HTTPException(status_code=422, detail=str(ve))
     except Exception as e:

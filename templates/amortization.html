@@ -25,6 +25,7 @@
             <div class="abono-mode-toggle" role="tablist">
                 <button type="button" id="crModeAmortizacion" class="mode-btn active" role="tab" aria-selected="true">Amortización</button>
                 <button type="button" id="crModeComparador" class="mode-btn" role="tab" aria-selected="false">Comparador</button>
+                <button type="button" id="crModeAbonarInvertir" class="mode-btn" role="tab" aria-selected="false">Abonar vs. invertir</button>
             </div>
 
             <div id="crPanelAmortizacion" class="ahorro-submodo">
@@ -215,6 +216,58 @@
                 </div>
                 <div id="comparadorResultCard" class="card resumen-card hidden"></div>
             </div><!-- /crPanelComparador -->
+
+            <div id="crPanelAbonarInvertir" class="ahorro-submodo hidden">
+                <section class="card">
+                    <p class="section-eyebrow">Tienes plata extra: ¿abonar o invertir?</p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="aiMonto">Monto extra disponible</label>
+                            <input type="number" id="aiMonto" placeholder="Ej. 10.000.000" required>
+                        </div>
+                        <div class="field">
+                            <label for="aiHorizonte">Horizonte (años)</label>
+                            <input type="number" id="aiHorizonte" value="5" step="any">
+                        </div>
+                        <div class="field"></div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="aiTasaCredito">Tasa de tu crédito</label>
+                            <input type="number" id="aiTasaCredito" placeholder="Ej. 14" step="any" required>
+                        </div>
+                        <div class="field">
+                            <label for="aiTcType">Tipo de tasa</label>
+                            <select id="aiTcType">
+                                <option value="Nominal">Nominal</option>
+                                <option value="Efectiva" selected>Efectiva</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="aiTcPeriod">Período de la tasa</label>
+                            <select id="aiTcPeriod">
+                                <option value="Anual" selected>Anual</option>
+                                <option value="Mensual">Mensual</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="aiCdt">CDT de referencia (% E.A.)</label>
+                            <input type="number" id="aiCdt" value="10" step="any">
+                        </div>
+                        <div class="field">
+                            <label for="aiRetencion">Retención del CDT (%)</label>
+                            <input type="number" id="aiRetencion" value="4" step="any">
+                        </div>
+                        <div class="field"></div>
+                    </div>
+                </section>
+                <div class="calcular-wrap">
+                    <button id="calcularAbonarInvertirBtn" class="btn btn-primary">Comparar</button>
+                </div>
+                <div id="abonarInvertirResultCard" class="card resumen-card hidden"></div>
+            </div><!-- /crPanelAbonarInvertir -->
         </section>
 
         <!-- ============ PESTAÑA INMOBILIARIA ============ -->
