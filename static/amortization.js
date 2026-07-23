@@ -1,5 +1,11 @@
+// En local la API la sirve el mismo FastAPI; en produccion vive en Render
+// (la pagina se sirve via proxy desde aleossa.com, por eso la URL absoluta).
+const API_BASE = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+    ? ""
+    : "https://aleossa-api.onrender.com";
+
 document.addEventListener("DOMContentLoaded",() => {
-    
+
     const desembolsoDate = document.getElementById('desembolsoDate');
     const loanAmount = document.getElementById('loanAmount');
     const InterestRate = document.getElementById('InterestRate');
@@ -85,7 +91,7 @@ document.addEventListener("DOMContentLoaded",() => {
             };
 
             try {
-                const response = await fetch("https://aleossa-api.onrender.com/amortization", {
+                const response = await fetch(`${API_BASE}/amortization`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)

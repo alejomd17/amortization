@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -41,6 +41,10 @@ class AmortizationRequest(BaseModel):
 @app.api_route('/health', methods=["GET", "HEAD"])
 async def health():
     return {"status": "ok"}
+
+@app.get('/favicon.ico', include_in_schema=False)
+async def favicon():
+    return FileResponse("static/favicon.svg", media_type="image/svg+xml")
 
 @app.post('/amortization')
 async def calculate_amortization_table(request: AmortizationRequest):
