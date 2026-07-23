@@ -14,7 +14,17 @@
   cronograma sin abonos; solo se muestra cuando hay costos.
 - **Abonar vs. invertir (versión fina)**: modela los flujos reales — al abonar, el crédito
   termina antes y la cuota liberada se invierte hasta el fin del plazo original; compara el
-  patrimonio final de las dos estrategias. Requiere saldo + plazo restante del crédito.
+  patrimonio final de las dos estrategias. Toggle "desde el crédito original" (deduce el saldo con
+  el motor de amortización) / "sé mi saldo actual".
+- **Arrendar vs. comprar** (en Inmobiliaria): patrimonio final a un horizonte.
+  - Comprar: valor del inmueble − saldo del crédito (− venta si aplica, toggle, default conserva).
+  - Arrendar: invierte la cuota inicial **y la diferencia mensual** (lo que se ahorra vs. el costo
+    de comprar) a la tasa de inversión. Este segundo término es necesario para que sea justo — sin
+    él, comprar sale artificialmente bien.
+  - Administración: la paga el comprador (propietario).
+  - Muestra el año de equilibrio (break-even).
+  - **Simplificación v1**: predial y mantenimiento se mantienen constantes en el tiempo (el arriendo
+    sí sube con inflación año a año). ¿Los hacemos crecer con inflación también?
 
 ## Abiertas
-- **Arrendar vs. comprar**: lo diseñamos juntos (como el evaluador de arriendo) antes de construir.
+- (ninguna por ahora)

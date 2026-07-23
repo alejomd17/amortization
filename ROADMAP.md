@@ -11,25 +11,25 @@ Ideas acordadas para ir construyendo. Marca lo hecho a medida que avanzamos.
 ## 🔜 Backlog
 
 ### Crédito
-- [ ] **Costo real del crédito** — campos opcionales (seguros, estudio, costos) dentro de
+- [x] **Costo real del crédito** — campos opcionales (seguros, estudio, costos) dentro de
       la amortización actual → muestra la tasa efectiva real. (No es módulo aparte.)
-- [ ] **Comparador de créditos** — compara N escenarios lado a lado. Incluye **modo
+- [x] **Comparador de créditos** — compara N escenarios lado a lado. Incluye **modo
       refinanciar / compra de cartera** (una columna = crédito actual desde el saldo
       restante + campo "costos del cambio"). Reúso casi total del amortizador.
-- [ ] **Abonar a capital vs. invertir** — vive en Crédito por ahora; se mueve a
+- [x] **Abonar a capital vs. invertir** — vive en Crédito por ahora; se mueve a
       "Decisiones" cuando esa sección exista.
 
 ### Ahorro
-- [ ] **Ahorro programado** — aportes mensuales fijos → cuánto acumulas (interés compuesto
+- [x] **Ahorro programado** — aportes mensuales fijos → cuánto acumulas (interés compuesto
       sobre aportes recurrentes).
-- [ ] **Meta de ahorro** — inverso: cuánto aportar para llegar a $X, o cuánto tiempo toma.
+- [x] **Meta de ahorro** — inverso: cuánto aportar para llegar a $X, o cuánto tiempo toma.
 - [ ] **Comparador de ahorro** — CDT vs. cuenta de ahorro vs. fondo.
 - [ ] Extras educativos: ajuste por inflación (valor real), simple vs. compuesto.
 
 ### Inmobiliaria (renombrar la pestaña "Hipotecario")
-- [ ] **Capacidad de endeudamiento** — cuota ≤ ~30% del ingreso → monto máximo que prestan.
-- [ ] **Cuota inicial + precio de vivienda** → monto a financiar + cuota.
-- [ ] **Evaluador de rentabilidad de arriendo** ⭐ — **SPEC FINALIZADO**
+- [x] **Capacidad de endeudamiento** — cuota ≤ ~30% del ingreso → monto máximo que prestan.
+- [x] **Cuota inicial + precio de vivienda** → monto a financiar + cuota.
+- [x] **Evaluador de rentabilidad de arriendo** ⭐ — **SPEC FINALIZADO**
       - Entradas: precio · costos de compra (default 2.5%) · arriendo mensual · vacancia
         (meses/año) · comisión agencia (~10%) · administración (la paga el propietario) ·
         predial · mantenimiento · **inflación esperada (5%) + valorización real (3%)** [2 campos] ·
@@ -43,7 +43,7 @@ Ideas acordadas para ir construyendo. Marca lo hecho a medida que avanzamos.
 
 ### Decisiones / ¿Qué me conviene? (crear cuando haya 2–3 listas)
 - [ ] Abonar vs. invertir *(mover aquí desde Crédito)*
-- [ ] **Arrendar vs. comprar** ⭐ — total de arriendo vs. cuota + valorización − intereses.
+- [x] **Arrendar vs. comprar** ⭐ — total de arriendo vs. cuota + valorización − intereses.
 - [ ] Cuota inicial grande vs. pequeña
 - [ ] Pagar de contado vs. financiar
 - [ ] Plazo corto vs. largo
