@@ -320,45 +320,50 @@
   }
 
   /* ===== RESUMEN ===== */
-  .resumen-card h2 { margin-top: 0; }
-  .resumen-card h3 {
-    font-size: var(--font-size-md);
-    color: var(--color-dark);
-    margin-top: var(--space-lg);
+  .resumen-card h2 {
+    margin-top: 0;
     margin-bottom: var(--space-xs);
+    font-size: var(--font-size-lg);
+  }
+  .resumen-card h3 {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-top: var(--space-sm);
+    margin-bottom: var(--space-xxs);
   }
 
   .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: var(--space-sm);
+    grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+    gap: var(--space-xxs);
   }
-  .kpi-grid.grow { flex: 1; }
 
   .kpi {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: var(--space-sm) var(--space-md);
+    gap: 1px;
+    padding: var(--space-xxs) var(--space-xs);
     background-color: var(--color-gray-very-light);
     border: var(--border-width) solid var(--color-gray-light);
-    border-left: 4px solid var(--color-primary);
-    border-radius: var(--border-radius-md);
+    border-left: 3px solid var(--color-primary);
+    border-radius: var(--border-radius-sm);
   }
   .kpi-label {
-    font-size: var(--font-size-xs);
+    font-size: var(--font-size-xxs);
     color: var(--color-gray-dark);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.02em;
   }
   .kpi-value {
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-md);
     font-weight: 700;
     color: var(--color-dark);
   }
   .kpi-sub {
-    font-size: var(--font-size-xs);
+    font-size: var(--font-size-xxs);
     color: var(--color-gray-medium);
   }
   .kpi.good {
@@ -374,18 +379,6 @@
     margin-bottom: var(--space-sm);
     color: var(--color-gray-dark);
   }
-
-  .resumen-con-abonos {
-    display: flex;
-    gap: var(--space-lg);
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
-  .resumen-con-abonos .abonos-resumen {
-    flex: 0 0 auto;
-    min-width: 240px;
-  }
-  .resumen-con-abonos .abonos-table { width: 100%; }
 
   /* ===== TABLA CON SCROLL ===== */
   .table-scroll {

@@ -88,6 +88,7 @@ class Amortization:
             "total_seguro": round(sum(row["insurance"] for row in tabla), 2),
             "total_abonos": round(total_abonos, 2),
             "meses": max(row["num"] for row in tabla),
+            "mes_final": tabla[-1]["anno_mes"],
         }
 
     def anno_mes_str(self, anno_mes):

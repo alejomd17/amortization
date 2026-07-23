@@ -23,7 +23,14 @@ function convertirTasa(tasaInicial, tipo, periodoActual, periodoDeseado) {
 }
 
 const fmtMoney = (v) => "$" + Math.round(v).toLocaleString("es-CO");
-const fmtPct = (v) => `${v}%`;
+const fmtPct = (v) => `${Math.round(v * 100) / 100}%`;  // 2 decimales, sin ceros sobrantes
+
+const MESES_ABR = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+function fmtMesAnno(annoMes) {
+    if (!/^\d{6}$/.test(annoMes)) return annoMes;
+    const nombre = MESES_ABR[Number(annoMes.slice(4)) - 1] || "";
+    return `${nombre.charAt(0).toUpperCase()}${nombre.slice(1)} ${annoMes.slice(0, 4)}`;
+}
 
 // "202607" -> valido si son 6 digitos y el mes esta entre 01 y 12
 function esAnnoMesValido(s) {
@@ -108,7 +115,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ── Tabla de abonos ──────────────────────────────────────────────────────
     function agregarAbono(annoMes, monto) {
-        abono_capital_all[annoMes] = (abono_capital_all[annoMes] || 0) + monto;
+        // Reemplaza: el ultimo valor asignado a un mes es el que manda (no se suman
+        // solapes de rangos). Para cambiar un mes, vuelve a asignarlo o elimínalo.
+        abono_capital_all[annoMes] = monto;
     }
 
     function displayAbonos() {
@@ -255,38 +264,26 @@ function displayResumen(r) {
         <div class="kpi-grid">
             ${kpi("Total a pagar", fmtMoney(r.sin_abonos.total_pagado))}
             ${kpi("Total intereses", fmtMoney(r.sin_abonos.total_intereses))}
-            ${kpi("Meses a pagar", `${r.sin_abonos.meses}`)}
+            ${kpi("Meses a pagar", `${r.sin_abonos.meses}`, `termina ${fmtMesAnno(r.sin_abonos.mes_final)}`)}
         </div>`;
 
     if (r.con_abonos) {
         const c = r.con_abonos;
-        const filasAbonos = c.abonos
-            .map((a) => `<tr><td>${a.anno_mes}</td><td>${fmtMoney(a.valor)}</td></tr>`)
-            .join("");
-
         html += `
         <h3>Con tus abonos</h3>
         <p class="resumen-narrativa">
-            Con estos abonos terminas de pagar en <strong>${c.meses} meses</strong>
-            (<strong>${c.meses_ahorrados} meses antes</strong>) y ahorras
-            <strong>${fmtMoney(c.ahorro_intereses)}</strong> en intereses.
+            Con estos abonos terminas de pagar en <strong>${fmtMesAnno(c.mes_final)}</strong>
+            &mdash; <strong>${c.meses} meses</strong> (${c.meses_ahorrados} antes) &mdash;
+            y ahorras <strong>${fmtMoney(c.ahorro_intereses)}</strong> en intereses.
         </p>
-        <div class="resumen-con-abonos">
-            <div class="abonos-resumen">
-                <table class="abonos-table">
-                    <thead><tr><th>Abono</th><th>Monto</th></tr></thead>
-                    <tbody>${filasAbonos}</tbody>
-                    <tfoot><tr><td>Total (${c.abonos.length})</td><td>${fmtMoney(c.total_abonos)}</td></tr></tfoot>
-                </table>
-            </div>
-            <div class="kpi-grid grow">
-                ${kpi("Meses que pagas", `${c.meses}`, `ahorras ${c.meses_ahorrados}`, "good")}
-                ${kpi("Ahorro en intereses", fmtMoney(c.ahorro_intereses), "", "good")}
-                ${kpi("Ahorro total", fmtMoney(c.ahorro_total), "", "good")}
-                ${kpi("Total a pagar", fmtMoney(c.total_pagado))}
-                ${kpi("Total intereses", fmtMoney(c.total_intereses))}
-                ${kpi("Total abonos", fmtMoney(c.total_abonos))}
-            </div>
+        <div class="kpi-grid">
+            ${kpi("Terminas de pagar", fmtMesAnno(c.mes_final), `${c.meses} meses`, "good")}
+            ${kpi("Meses que ahorras", `${c.meses_ahorrados}`, "", "good")}
+            ${kpi("Ahorro en intereses", fmtMoney(c.ahorro_intereses), "", "good")}
+            ${kpi("Ahorro total", fmtMoney(c.ahorro_total), "", "good")}
+            ${kpi("Total a pagar", fmtMoney(c.total_pagado))}
+            ${kpi("Total intereses", fmtMoney(c.total_intereses))}
+            ${kpi("Total abonos", fmtMoney(c.total_abonos), `${c.abonos.length} abonos`)}
         </div>`;
     }
 
