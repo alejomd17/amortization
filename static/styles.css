@@ -37,6 +37,36 @@ body {
     margin: 0 auto;
     padding: 48px 40px 64px;
 }
+
+/* ===== PESTAÑAS ===== */
+.tabs {
+    display: flex;
+    gap: 28px;
+    border-bottom: 1px solid var(--crema-oscuro);
+    margin-bottom: 36px;
+}
+.tab {
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: var(--negro);
+    opacity: 0.45;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 12px 2px;
+    margin-bottom: -1px;
+    cursor: pointer;
+    transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+}
+.tab:hover { opacity: 0.75; }
+.tab.active {
+    opacity: 1;
+    color: var(--verde);
+    border-bottom-color: var(--verde);
+    font-weight: 500;
+}
 .page-title {
     font-family: var(--font-body);
     font-weight: 500;

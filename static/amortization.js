@@ -32,6 +32,15 @@ function fmtMesAnno(annoMes) {
     return `${nombre.charAt(0).toUpperCase()}${nombre.slice(1)} ${annoMes.slice(0, 4)}`;
 }
 
+// Tarjeta KPI reutilizable (resumen de crédito y de ahorro)
+function kpiHtml(label, value, sub = "", clase = "") {
+    return `<div class="kpi ${clase}">
+        <span class="kpi-label">${label}</span>
+        <span class="kpi-value">${value}</span>
+        ${sub ? `<span class="kpi-sub">${sub}</span>` : ""}
+    </div>`;
+}
+
 // "202607" -> valido si son 6 digitos y el mes esta entre 01 y 12
 function esAnnoMesValido(s) {
     if (!/^\d{6}$/.test(s)) return false;
@@ -233,6 +242,78 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Hubo un problema con el cálculo: " + error.message);
         }
     });
+
+    // ── PESTAÑAS Crédito / Ahorro ────────────────────────────────────────────
+    const tabCredito = document.getElementById("tabCredito");
+    const tabAhorro = document.getElementById("tabAhorro");
+    const panelCredito = document.getElementById("panelCredito");
+    const panelAhorro = document.getElementById("panelAhorro");
+    function setTab(tab) {
+        const esCredito = tab === "credito";
+        tabCredito.classList.toggle("active", esCredito);
+        tabAhorro.classList.toggle("active", !esCredito);
+        panelCredito.classList.toggle("hidden", !esCredito);
+        panelAhorro.classList.toggle("hidden", esCredito);
+    }
+    tabCredito.addEventListener("click", () => setTab("credito"));
+    tabAhorro.addEventListener("click", () => setTab("ahorro"));
+
+    // ── AHORRO / CDT ─────────────────────────────────────────────────────────
+    const ahMonto = document.getElementById("ahMonto");
+    const ahRate = document.getElementById("ahRate");
+    const ahRateType = document.getElementById("ahRateType");
+    const ahRatePeriod = document.getElementById("ahRatePeriod");
+    const ahRateConversion = document.getElementById("ahRateConversion");
+    const ahPlazo = document.getElementById("ahPlazo");
+    const ahPlazoUnit = document.getElementById("ahPlazoUnit");
+    const ahRetencion = document.getElementById("ahRetencion");
+    const calcularAhorroBtn = document.getElementById("calcularAhorroBtn");
+
+    function actualizarConversionAhorro() {
+        const tasa = Number.parseFloat(ahRate.value);
+        if (!Number.isFinite(tasa) || tasa <= 0) {
+            ahRateConversion.classList.add("hidden");
+            return;
+        }
+        const ea = convertirTasa(tasa, ahRateType.value, ahRatePeriod.value, "Anual");
+        const mv = convertirTasa(tasa, ahRateType.value, ahRatePeriod.value, "Mensual");
+        ahRateConversion.innerHTML = `≈ <strong>${fmtPct(ea)}</strong> E.A. &nbsp;·&nbsp; <strong>${fmtPct(mv)}</strong> M.V.`;
+        ahRateConversion.classList.remove("hidden");
+    }
+    [ahRate, ahRateType, ahRatePeriod].forEach((el) =>
+        el.addEventListener("input", actualizarConversionAhorro));
+
+    calcularAhorroBtn.addEventListener("click", async () => {
+        const plazo = Number.parseFloat(ahPlazo.value);
+        const plazoMeses = ahPlazoUnit.value === "years" ? plazo * 12 : plazo;
+
+        const data = {
+            monto: Number.parseFloat(ahMonto.value),
+            interest_rate: Number.parseFloat(ahRate.value),
+            type_rate: ahRateType.value,
+            period: ahRatePeriod.value,
+            plazo_meses: plazoMeses,
+            retencion: Number.parseFloat(ahRetencion.value) || 0,
+        };
+
+        try {
+            const response = await fetch(`${API_BASE}/ahorro`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data),
+            });
+            if (!response.ok) {
+                let detalle = "";
+                try { detalle = (await response.json()).detail || ""; } catch (e) {}
+                throw new Error(detalle || `HTTP ${response.status}`);
+            }
+            displayAhorro(await response.json());
+            document.getElementById("ahorroResultCard").scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch (error) {
+            console.error("Error:", error);
+            alert("Hubo un problema con el cálculo: " + error.message);
+        }
+    });
 });
 
 
@@ -310,4 +391,27 @@ function displayAmortizationTable(tabla) {
         newRow.insertCell(6).textContent = fmtMoney(row.abono_capital);
         newRow.insertCell(7).textContent = fmtMoney(row.balance);
     });
+}
+
+
+// ── Render: ahorro / CDT ──────────────────────────────────────────────────────
+function displayAhorro(r) {
+    const card = document.getElementById("ahorroResultCard");
+    card.classList.remove("hidden");
+
+    card.innerHTML = `
+        <h2>Tu <em>ahorro</em></h2>
+        <p class="resumen-narrativa">
+            Inviertes <strong>${fmtMoney(r.monto)}</strong> a <strong>${fmtPct(r.tasa_ea)} E.A.</strong>
+            durante <strong>${r.plazo_meses} meses</strong>. Al vencimiento recibes
+            <strong>${fmtMoney(r.valor_final_neto)}</strong> netos.
+        </p>
+        <div class="kpi-grid">
+            ${kpiHtml("Valor final neto", fmtMoney(r.valor_final_neto), `rinde ${fmtPct(r.rendimiento_neto_pct)}`, "good")}
+            ${kpiHtml("Interés neto", fmtMoney(r.interes_neto), "", "good")}
+            ${kpiHtml("Interés bruto", fmtMoney(r.interes_bruto))}
+            ${kpiHtml("Retención", fmtMoney(r.retencion), `${fmtPct(r.retencion_pct)} en la fuente`)}
+            ${kpiHtml("Tasa E.A.", fmtPct(r.tasa_ea))}
+            ${kpiHtml("Tasa M.V.", fmtPct(r.tasa_mv))}
+        </div>`;
 }

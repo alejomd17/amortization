@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict
 from src.interest_rates import InterestRates
 from src.amortization import Amortization
+from src.ahorro import Ahorro
 
 # Rutas absolutas: en serverless el directorio de trabajo no es la raiz del proyecto
 BASE_DIR = Path(__file__).resolve().parent
@@ -14,6 +15,7 @@ BASE_DIR = Path(__file__).resolve().parent
 app = FastAPI()
 interest_rates = InterestRates()
 amortization = Amortization()
+ahorro = Ahorro()
 
 origins = [
     "https://aleossa.com",
@@ -103,6 +105,46 @@ async def calculate_amortization_table(request: AmortizationRequest):
         raise HTTPException(status_code=422, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
+
+class AhorroRequest(BaseModel):
+    monto: float
+    interest_rate: float
+    type_rate: str
+    period: str
+    plazo_meses: float
+    retencion: float = 4.0  # CDT / renta fija: 4% sobre rendimientos
+
+    @field_validator("retencion", mode="before")
+    @classmethod
+    def retencion_por_defecto(cls, v):
+        if v is None or v == "":
+            return 4.0
+        try:
+            v = float(v)
+        except (TypeError, ValueError):
+            return 4.0
+        return 0.0 if v != v else v  # NaN -> 0
+
+
+@app.post('/ahorro')
+async def calcular_ahorro(request: AhorroRequest):
+    """Calcula un CDT (interes compuesto a vencimiento, con retencion en la fuente)."""
+    try:
+        if request.plazo_meses <= 0:
+            raise ValueError("El plazo debe ser mayor a 0.")
+        return ahorro.cdt(
+            monto         = request.monto,
+            interest_rate = request.interest_rate,
+            type_rate     = request.type_rate,
+            period        = request.period,
+            plazo_meses   = request.plazo_meses,
+            retencion_pct = request.retencion,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
+
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():

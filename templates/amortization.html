@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Amortización de crédito</title>
+    <title>Calculadora de crédito y ahorro</title>
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,148 +12,194 @@
 </head>
 <body>
     <main class="container">
-        <h1 class="page-title">Amortización de <em>crédito</em></h1>
+        <div class="tabs">
+            <button type="button" class="tab active" id="tabCredito">Crédito</button>
+            <button type="button" class="tab" id="tabAhorro">Ahorro</button>
+        </div>
 
-        <!-- ===== DETALLES ===== -->
-        <section class="card">
-            <p class="section-eyebrow">Detalles del crédito</p>
+        <!-- ============ PESTAÑA CRÉDITO ============ -->
+        <section id="panelCredito" class="tab-panel">
+            <h1 class="page-title">Amortización de <em>crédito</em></h1>
 
-            <div class="field-grid">
-                <div class="field">
-                    <label for="desembolsoDate">Fecha del préstamo</label>
-                    <input type="text" id="desembolsoDate" placeholder="Ej. 202601" required>
+            <section class="card">
+                <p class="section-eyebrow">Detalles del crédito</p>
+                <div class="field-grid">
+                    <div class="field">
+                        <label for="desembolsoDate">Fecha del préstamo</label>
+                        <input type="text" id="desembolsoDate" placeholder="Ej. 202601" required>
+                    </div>
+                    <div class="field">
+                        <label for="loanAmount">Monto del préstamo</label>
+                        <input type="number" id="loanAmount" placeholder="Ej. 100.000.000" required>
+                    </div>
+                    <div class="field">
+                        <label for="loanTerm">Plazo</label>
+                        <div class="input-with-unit">
+                            <input type="number" id="loanTerm" placeholder="Ej. 20" required>
+                            <select id="loanTermUnit" aria-label="Unidad del plazo">
+                                <option value="years" selected>Años</option>
+                                <option value="months">Meses</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
-                <div class="field">
-                    <label for="loanAmount">Monto del préstamo</label>
-                    <input type="number" id="loanAmount" placeholder="Ej. 100.000.000" required>
-                </div>
-                <div class="field">
-                    <label for="loanTerm">Plazo</label>
-                    <div class="input-with-unit">
-                        <input type="number" id="loanTerm" placeholder="Ej. 20" required>
-                        <select id="loanTermUnit" aria-label="Unidad del plazo">
-                            <option value="years" selected>Años</option>
-                            <option value="months">Meses</option>
+                <div class="field-grid">
+                    <div class="field">
+                        <label for="InterestRate">Tasa de interés</label>
+                        <input type="number" id="InterestRate" placeholder="Ej. 12" step="any" required>
+                        <p id="rateConversion" class="rate-conversion hidden"></p>
+                    </div>
+                    <div class="field">
+                        <label for="rateType">Tipo de tasa</label>
+                        <select id="rateType">
+                            <option value="Nominal">Nominal</option>
+                            <option value="Efectiva" selected>Efectiva</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="ratePeriod">Período de la tasa</label>
+                        <select id="ratePeriod">
+                            <option value="Anual" selected>Anual</option>
+                            <option value="Mensual">Mensual</option>
                         </select>
                     </div>
                 </div>
+                <div class="field-grid">
+                    <div class="field field-wide">
+                        <label for="insurance">Otros gastos (seguro, aportes, etc.)</label>
+                        <input type="number" id="insurance" placeholder="Ej. 90.000 (opcional)">
+                    </div>
+                </div>
+            </section>
+
+            <section class="card card-soft">
+                <p class="section-eyebrow">Abonos extras a capital</p>
+                <div class="abono-mode-toggle" role="tablist">
+                    <button type="button" id="modeUnico" class="mode-btn active" role="tab" aria-selected="true">Único</button>
+                    <button type="button" id="modeRecurrente" class="mode-btn" role="tab" aria-selected="false">Mensual fijo</button>
+                </div>
+                <div id="abonoUnicoPanel" class="abono-panel">
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="abonosCapitalDate">Fecha del abono</label>
+                            <input type="text" id="abonosCapitalDate" placeholder="Ej. 202606">
+                        </div>
+                        <div class="field">
+                            <label for="abonosCapitalValue">Monto del abono</label>
+                            <input type="number" id="abonosCapitalValue" placeholder="Ej. 30.000.000">
+                        </div>
+                        <div class="field field-btn">
+                            <button type="button" id="addAbonosCapital" class="btn btn-outline">Agregar abono</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="abonoRecurrentePanel" class="abono-panel hidden">
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="abonoRecDesde">Desde</label>
+                            <input type="text" id="abonoRecDesde" placeholder="Ej. 202607">
+                        </div>
+                        <div class="field">
+                            <label for="abonoRecHasta">Hasta</label>
+                            <input type="text" id="abonoRecHasta" placeholder="Ej. 202612">
+                        </div>
+                        <div class="field">
+                            <label for="abonoRecValor">Monto mensual</label>
+                            <input type="number" id="abonoRecValor" placeholder="Ej. 1.000.000">
+                        </div>
+                        <div class="field field-btn">
+                            <button type="button" id="addAbonoRecurrente" class="btn btn-outline">Agregar rango</button>
+                        </div>
+                    </div>
+                    <p class="hint">Asigna el mismo monto a cada mes del rango (incluidos los extremos). Si un mes ya tenía un abono, lo reemplaza.</p>
+                </div>
+                <div id="extraAbonosCapitalContainer">
+                    <table id="abonosTable" class="abonos-table">
+                        <thead><tr><th>Abono</th><th>Monto</th><th></th></tr></thead>
+                        <tbody></tbody>
+                        <tfoot></tfoot>
+                    </table>
+                </div>
+            </section>
+
+            <div class="calcular-wrap">
+                <button id="calculateBtn" class="btn btn-primary">Calcular</button>
             </div>
 
-            <div class="field-grid">
-                <div class="field">
-                    <label for="InterestRate">Tasa de interés</label>
-                    <input type="number" id="InterestRate" placeholder="Ej. 12" step="any" required>
-                    <p id="rateConversion" class="rate-conversion hidden"></p>
-                </div>
-                <div class="field">
-                    <label for="rateType">Tipo de tasa</label>
-                    <select id="rateType">
-                        <option value="Nominal">Nominal</option>
-                        <option value="Efectiva" selected>Efectiva</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label for="ratePeriod">Período de la tasa</label>
-                    <select id="ratePeriod">
-                        <option value="Anual" selected>Anual</option>
-                        <option value="Mensual">Mensual</option>
-                    </select>
-                </div>
-            </div>
+            <div id="resumenCard" class="card resumen-card hidden"></div>
 
-            <div class="field-grid">
-                <div class="field field-wide">
-                    <label for="insurance">Otros gastos (seguro, aportes, etc.)</label>
-                    <input type="number" id="insurance" placeholder="Ej. 90.000 (opcional)">
+            <div id="resultsTable" class="card results-card hidden">
+                <p class="section-eyebrow">Tabla de amortización</p>
+                <div class="table-scroll">
+                    <table id="calculationResult" class="amort-table">
+                        <thead>
+                            <tr>
+                                <th>#</th><th>Año-Mes</th><th>Interés</th><th>Capital</th>
+                                <th>Otros</th><th>Cuota</th><th>Abono</th><th>Saldo</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
             </div>
         </section>
 
-        <!-- ===== ABONOS ===== -->
-        <section class="card card-soft">
-            <p class="section-eyebrow">Abonos extras a capital</p>
+        <!-- ============ PESTAÑA AHORRO ============ -->
+        <section id="panelAhorro" class="tab-panel hidden">
+            <h1 class="page-title">Simula tu <em>ahorro</em></h1>
 
-            <div class="abono-mode-toggle" role="tablist">
-                <button type="button" id="modeUnico" class="mode-btn active" role="tab" aria-selected="true">Único</button>
-                <button type="button" id="modeRecurrente" class="mode-btn" role="tab" aria-selected="false">Mensual fijo</button>
-            </div>
-
-            <div id="abonoUnicoPanel" class="abono-panel">
+            <section class="card">
+                <p class="section-eyebrow">Datos del CDT</p>
                 <div class="field-grid">
                     <div class="field">
-                        <label for="abonosCapitalDate">Fecha del abono</label>
-                        <input type="text" id="abonosCapitalDate" placeholder="Ej. 202606">
+                        <label for="ahMonto">Monto a invertir</label>
+                        <input type="number" id="ahMonto" placeholder="Ej. 10.000.000" required>
                     </div>
                     <div class="field">
-                        <label for="abonosCapitalValue">Monto del abono</label>
-                        <input type="number" id="abonosCapitalValue" placeholder="Ej. 30.000.000">
+                        <label for="ahPlazo">Plazo</label>
+                        <div class="input-with-unit">
+                            <input type="number" id="ahPlazo" placeholder="Ej. 12" required>
+                            <select id="ahPlazoUnit" aria-label="Unidad del plazo">
+                                <option value="months" selected>Meses</option>
+                                <option value="years">Años</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="field field-btn">
-                        <button type="button" id="addAbonosCapital" class="btn btn-outline">Agregar abono</button>
+                    <div class="field">
+                        <label for="ahRetencion">Retención en la fuente (%)</label>
+                        <input type="number" id="ahRetencion" value="4" step="any">
+                        <p class="hint">4% para CDT y renta fija · 7% rendimientos generales</p>
                     </div>
                 </div>
-            </div>
-
-            <div id="abonoRecurrentePanel" class="abono-panel hidden">
                 <div class="field-grid">
                     <div class="field">
-                        <label for="abonoRecDesde">Desde</label>
-                        <input type="text" id="abonoRecDesde" placeholder="Ej. 202607">
+                        <label for="ahRate">Tasa de interés</label>
+                        <input type="number" id="ahRate" placeholder="Ej. 10" step="any" required>
+                        <p id="ahRateConversion" class="rate-conversion hidden"></p>
                     </div>
                     <div class="field">
-                        <label for="abonoRecHasta">Hasta</label>
-                        <input type="text" id="abonoRecHasta" placeholder="Ej. 202612">
+                        <label for="ahRateType">Tipo de tasa</label>
+                        <select id="ahRateType">
+                            <option value="Nominal">Nominal</option>
+                            <option value="Efectiva" selected>Efectiva</option>
+                        </select>
                     </div>
                     <div class="field">
-                        <label for="abonoRecValor">Monto mensual</label>
-                        <input type="number" id="abonoRecValor" placeholder="Ej. 1.000.000">
-                    </div>
-                    <div class="field field-btn">
-                        <button type="button" id="addAbonoRecurrente" class="btn btn-outline">Agregar rango</button>
+                        <label for="ahRatePeriod">Período de la tasa</label>
+                        <select id="ahRatePeriod">
+                            <option value="Anual" selected>Anual</option>
+                            <option value="Mensual">Mensual</option>
+                        </select>
                     </div>
                 </div>
-                <p class="hint">Asigna el mismo monto a cada mes del rango (incluidos los extremos). Si un mes ya tenía un abono, lo reemplaza.</p>
+            </section>
+
+            <div class="calcular-wrap">
+                <button id="calcularAhorroBtn" class="btn btn-primary">Calcular ahorro</button>
             </div>
 
-            <div id="extraAbonosCapitalContainer">
-                <table id="abonosTable" class="abonos-table">
-                    <thead>
-                        <tr><th>Abono</th><th>Monto</th><th></th></tr>
-                    </thead>
-                    <tbody></tbody>
-                    <tfoot></tfoot>
-                </table>
-            </div>
+            <div id="ahorroResultCard" class="card resumen-card hidden"></div>
         </section>
-
-        <div class="calcular-wrap">
-            <button id="calculateBtn" class="btn btn-primary">Calcular</button>
-        </div>
-
-        <!-- Resumen (lo llena el JS) -->
-        <div id="resumenCard" class="card resumen-card hidden"></div>
-
-        <!-- Tabla -->
-        <div id="resultsTable" class="card results-card hidden">
-            <p class="section-eyebrow">Tabla de amortización</p>
-            <div class="table-scroll">
-                <table id="calculationResult" class="amort-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Año-Mes</th>
-                            <th>Interés</th>
-                            <th>Capital</th>
-                            <th>Otros</th>
-                            <th>Cuota</th>
-                            <th>Abono</th>
-                            <th>Saldo</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
     </main>
 
     <script src="/static/amortization.js"></script>
