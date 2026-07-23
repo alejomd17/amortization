@@ -3,9 +3,13 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from pathlib import Path
 from typing import Dict
 from src.interest_rates import InterestRates
 from src.amortization import Amortization
+
+# Rutas absolutas: en serverless el directorio de trabajo no es la raiz del proyecto
+BASE_DIR = Path(__file__).resolve().parent
 
 app = FastAPI()
 interest_rates = InterestRates()
@@ -26,7 +30,7 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"]
 )
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 class AmortizationRequest(BaseModel):
     desembolso_date:str
@@ -44,7 +48,7 @@ async def health():
 
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
-    return FileResponse("static/favicon.svg", media_type="image/svg+xml")
+    return FileResponse(BASE_DIR / "static" / "favicon.svg", media_type="image/svg+xml")
 
 @app.post('/amortization')
 async def calculate_amortization_table(request: AmortizationRequest):
@@ -91,8 +95,7 @@ async def calculate_amortization_table(request: AmortizationRequest):
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     try:
-        with open("templates/amortization.html", "r", encoding="utf-8") as file:
-            content = file.read()
-            return HTMLResponse(content=content)
+        content = (BASE_DIR / "templates" / "amortization.html").read_text(encoding="utf-8")
+        return HTMLResponse(content=content)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Error al leer el archivo HTML: {str(e)}')
