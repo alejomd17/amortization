@@ -6,7 +6,7 @@
     <title>Amortización de crédito</title>
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <link rel="stylesheet" href="static/styles.css">
-    
+
 </head>
 <body>
     <h1>Tabla de amortización de crédito</h1>
@@ -20,25 +20,32 @@
                 </div>
                 <div class="form-group large-input">
                     <label for="loanAmount">Monto del Préstamo:</label>
-                    <input type="number" id="loanAmount" name="loanAmount" 
+                    <input type="number" id="loanAmount" name="loanAmount"
                         placeholder="Ej. 100.000.000" required>
                 </div>
                 <div class="form-group large-input">
-                    <label for="loanTermYears">Plazo (años):</label>
-                    <input type="number" id="loanTermYears" name="loanTermYears" 
-                            placeholder="Ej. 20" required>
+                    <label for="loanTerm">Plazo:</label>
+                    <div class="input-with-unit">
+                        <input type="number" id="loanTerm" name="loanTerm"
+                                placeholder="Ej. 20" required>
+                        <select id="loanTermUnit" name="loanTermUnit" aria-label="Unidad del plazo">
+                            <option value="years" selected>años</option>
+                            <option value="months">meses</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="form-group large-input">
                     <label for="InterestRate">Tasa de Interés:</label>
-                    <input type="number" id="InterestRate" name="InterestRate" 
-                        placeholder="Ej. 12" required>
+                    <input type="number" id="InterestRate" name="InterestRate"
+                        placeholder="Ej. 12" step="any" required>
+                    <p id="rateConversion" class="rate-conversion hidden"></p>
                 </div>
                 <div class="form-group small-input">
                     <label for="rateType">Tipo de Tasa:</label>
-                    <select id="rateType" name="rateType" placeholder="Seleccione si es Nominal o Efectiva">
+                    <select id="rateType" name="rateType">
                         <option value="Nominal">Nominal</option>
                         <option value="Efectiva" selected>Efectiva</option>
                     </select>
@@ -55,42 +62,80 @@
             <div class="form-row">
                 <div class="form-group large-input">
                     <label for="insurance">Otros gastos (seguro, aportes, etc.):</label>
-                    <input type="number" id="insurance" name="insurance" 
-                            placeholder="Ej. 90.000">
+                    <input type="number" id="insurance" name="insurance"
+                            placeholder="Ej. 90.000 (opcional)">
                 </div>
             </div>
 
                 <div id="extraAbonosForm" class="abonoscapital-form">
-                    <h2>Abonos extras</h2>
+                    <h2>Abonos extras a capital</h2>
+
+                    <div class="abono-mode-toggle" role="tablist">
+                        <button type="button" id="modeUnico" class="mode-btn active" role="tab" aria-selected="true">Único</button>
+                        <button type="button" id="modeRecurrente" class="mode-btn" role="tab" aria-selected="false">Mensual fijo</button>
+                    </div>
+
+                    <!-- Modo: abono unico -->
+                    <div id="abonoUnicoPanel" class="abono-panel">
                         <div class="form-row">
                             <div class="form-group small-input">
                                 <label for="abonosCapitalDate">Fecha del Abono:</label>
                                 <input type="text" id="abonosCapitalDate" name="abonosCapitalDate"
-                                    placeholder="Ej. 202606" required>
+                                    placeholder="Ej. 202606">
                             </div>
                             <div class="form-group small-input">
                                 <label for="abonosCapitalValue">Monto del Abono:</label>
                                 <input type="number" id="abonosCapitalValue" name="abonosCapitalValue"
-                                    placeholder="Ej. 30.000.000" required>
+                                    placeholder="Ej. 30.000.000">
                             </div>
                             <div class="form-group small-input">
-                                <button id="addAbonosCapital" class="btn btn-sec">
+                                <button type="button" id="addAbonosCapital" class="btn btn-sec">
                                     Agregar abono
                                 </button>
                             </div>
                         </div>
-                            
-                            <div id="extraAbonosCapitalContainer" class="abonoscapital-container">
-                                <table id="abonosTable" class="abonos-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Abono</th>
-                                            <th>Monto</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-                                </table>
+                    </div>
+
+                    <!-- Modo: abono mensual fijo (rango) -->
+                    <div id="abonoRecurrentePanel" class="abono-panel hidden">
+                        <div class="form-row">
+                            <div class="form-group small-input">
+                                <label for="abonoRecDesde">Desde:</label>
+                                <input type="text" id="abonoRecDesde" name="abonoRecDesde"
+                                    placeholder="Ej. 202607">
                             </div>
+                            <div class="form-group small-input">
+                                <label for="abonoRecHasta">Hasta:</label>
+                                <input type="text" id="abonoRecHasta" name="abonoRecHasta"
+                                    placeholder="Ej. 202612">
+                            </div>
+                            <div class="form-group small-input">
+                                <label for="abonoRecValor">Monto mensual:</label>
+                                <input type="number" id="abonoRecValor" name="abonoRecValor"
+                                    placeholder="Ej. 1.000.000">
+                            </div>
+                            <div class="form-group small-input">
+                                <button type="button" id="addAbonoRecurrente" class="btn btn-sec">
+                                    Agregar rango
+                                </button>
+                            </div>
+                        </div>
+                        <p class="hint">Suma el mismo monto a cada mes del rango (incluidos los extremos).</p>
+                    </div>
+
+                    <div id="extraAbonosCapitalContainer" class="abonoscapital-container">
+                        <table id="abonosTable" class="abonos-table">
+                            <thead>
+                                <tr>
+                                    <th>Abono</th>
+                                    <th>Monto</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                            <tfoot></tfoot>
+                        </table>
+                    </div>
 
     </div>
 
@@ -99,25 +144,29 @@
             Calcular
         </button>
     </div>
-    
+
+    <!-- Resumen (se llena por JS) -->
+    <div id="resumenCard" class="card resumen-card hidden"></div>
+
     <div id="resultsTable" class="card results-card hidden">
-        <h2>Calculo del crédito</h2>
+        <h2>Tabla de amortización</h2>
+        <div class="table-scroll">
             <table id="calculationResult">
             <thead>
                 <tr>
-                    <th>Num</th>
-                    <th>Anno_Mes</th>
-                    <th>Interest</th>
+                    <th>#</th>
+                    <th>Año-Mes</th>
+                    <th>Interés</th>
                     <th>Capital</th>
-                    <th>Others</th>
-                    <th>Payment</th>
+                    <th>Otros</th>
+                    <th>Cuota</th>
                     <th>Abono</th>
-                    <th>Balance</th>
-                    
+                    <th>Saldo</th>
                 </tr>
             </thead>
             <tbody></tbody>
         </table>
+        </div>
     </div>
     <script src="static/amortization.js"></script>
 </body>

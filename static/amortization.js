@@ -6,130 +6,311 @@ const API_BASE = PROXIED_HOSTS.includes(window.location.hostname)
     ? "https://amortization-sigma.vercel.app"
     : "";
 
-document.addEventListener("DOMContentLoaded",() => {
+// ── Utilidades ──────────────────────────────────────────────────────────────
+const DICT_PERIOD = { Mensual: 1, Semestral: 6, Anual: 12 };
 
-    const desembolsoDate = document.getElementById('desembolsoDate');
-    const loanAmount = document.getElementById('loanAmount');
-    const InterestRate = document.getElementById('InterestRate');
-    const rateType = document.getElementById('rateType');
-    const ratePeriod = document.getElementById('ratePeriod');
-    const loanTermYears = document.getElementById('loanTermYears');
-    const insurance = document.getElementById('insurance');
-    const calculateBtn = document.getElementById('calculateBtn');
+// Conversion de tasas: misma logica que src/interest_rates.py, replicada en el
+// cliente para mostrar el equivalente en vivo sin ir al servidor.
+function convertirTasa(tasaInicial, tipo, periodoActual, periodoDeseado) {
+    let tasa = tasaInicial;
+    let actual = periodoActual;
+    if (tipo === "Nominal") {
+        tasa = tasa / DICT_PERIOD[actual];
+        actual = "Mensual";
+    }
+    const convertida = (Math.pow(1 + tasa / 100, DICT_PERIOD[periodoDeseado] / DICT_PERIOD[actual]) - 1) * 100;
+    return Math.round(convertida * 10000) / 10000;
+}
 
-    const abonosCapitalDate = document.getElementById('abonosCapitalDate')
-    const abonosCapitalValue = document.getElementById('abonosCapitalValue')
-    const extraAbonosCapitalBtn = document.getElementById('addAbonosCapital')
-    const extraAbonosCapitalContainer = document.getElementById('extraAbonosCapitalContainer')
+const fmtMoney = (v) => "$" + Math.round(v).toLocaleString("es-CO");
+const fmtPct = (v) => `${v}%`;
+
+// "202607" -> valido si son 6 digitos y el mes esta entre 01 y 12
+function esAnnoMesValido(s) {
+    if (!/^\d{6}$/.test(s)) return false;
+    const mes = Number(s.slice(4));
+    return mes >= 1 && mes <= 12;
+}
+
+// Lista de "AAAAMM" desde/hasta inclusive
+function mesesEnRango(desde, hasta) {
+    const meses = [];
+    let anno = Number(desde.slice(0, 4));
+    let mes = Number(desde.slice(4));
+    const finAnno = Number(hasta.slice(0, 4));
+    const finMes = Number(hasta.slice(4));
+    while (anno < finAnno || (anno === finAnno && mes <= finMes)) {
+        meses.push(`${anno}${String(mes).padStart(2, "0")}`);
+        mes += 1;
+        if (mes > 12) { mes = 1; anno += 1; }
+    }
+    return meses;
+}
+
+// ── App ─────────────────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+
+    const desembolsoDate = document.getElementById("desembolsoDate");
+    const loanAmount = document.getElementById("loanAmount");
+    const InterestRate = document.getElementById("InterestRate");
+    const rateType = document.getElementById("rateType");
+    const ratePeriod = document.getElementById("ratePeriod");
+    const loanTerm = document.getElementById("loanTerm");
+    const loanTermUnit = document.getElementById("loanTermUnit");
+    const insurance = document.getElementById("insurance");
+    const calculateBtn = document.getElementById("calculateBtn");
+    const rateConversion = document.getElementById("rateConversion");
+
+    // Abonos: unico
+    const abonosCapitalDate = document.getElementById("abonosCapitalDate");
+    const abonosCapitalValue = document.getElementById("abonosCapitalValue");
+    const addAbonoUnicoBtn = document.getElementById("addAbonosCapital");
+    // Abonos: recurrente
+    const abonoRecDesde = document.getElementById("abonoRecDesde");
+    const abonoRecHasta = document.getElementById("abonoRecHasta");
+    const abonoRecValor = document.getElementById("abonoRecValor");
+    const addAbonoRecBtn = document.getElementById("addAbonoRecurrente");
+    // Toggle de modo
+    const modeUnico = document.getElementById("modeUnico");
+    const modeRecurrente = document.getElementById("modeRecurrente");
+    const panelUnico = document.getElementById("abonoUnicoPanel");
+    const panelRecurrente = document.getElementById("abonoRecurrentePanel");
 
     const abono_capital_all = {};
-    
-    function displayExtraAbonosCapital(){
-        const tableBody = document.querySelector('#abonosTable tbody')
-        tableBody.innerHTML = "";
 
-        // Ordenar abonos por fecha
-        const sortedAbonos = Object.entries(abono_capital_all).sort((a, b) => a[0].localeCompare(b[0]));
-        
-        sortedAbonos.forEach(([date, value]) => {
-            const newRow = tableBody.insertRow();
-            
-            // Celda de Fecha
-            const dateCell = newRow.insertCell(0);
-            dateCell.textContent = date;
-            
-            // Celda de Monto
-            const amountCell = newRow.insertCell(1);
-            amountCell.textContent = `$${value.toLocaleString()}`;
-            
-            // Celda de Acciones
-            const actionCell = newRow.insertCell(2);
-            const removeBtn = document.createElement('button');
-            removeBtn.className = 'btn-remove-abono';
-            removeBtn.textContent = 'Eliminar';
-            removeBtn.setAttribute('data-date', date);
+    // ── Conversion de tasas en vivo ──────────────────────────────────────────
+    function actualizarConversion() {
+        const tasa = Number.parseFloat(InterestRate.value);
+        if (!Number.isFinite(tasa) || tasa <= 0) {
+            rateConversion.classList.add("hidden");
+            return;
+        }
+        const ea = convertirTasa(tasa, rateType.value, ratePeriod.value, "Anual");
+        const mv = convertirTasa(tasa, rateType.value, ratePeriod.value, "Mensual");
+        rateConversion.innerHTML = `≈ <strong>${fmtPct(ea)}</strong> E.A. &nbsp;·&nbsp; <strong>${fmtPct(mv)}</strong> M.V.`;
+        rateConversion.classList.remove("hidden");
+    }
+    [InterestRate, rateType, ratePeriod].forEach((el) =>
+        el.addEventListener("input", actualizarConversion));
+
+    // ── Toggle de modo de abono ──────────────────────────────────────────────
+    function setModo(modo) {
+        const esUnico = modo === "unico";
+        modeUnico.classList.toggle("active", esUnico);
+        modeRecurrente.classList.toggle("active", !esUnico);
+        modeUnico.setAttribute("aria-selected", String(esUnico));
+        modeRecurrente.setAttribute("aria-selected", String(!esUnico));
+        panelUnico.classList.toggle("hidden", !esUnico);
+        panelRecurrente.classList.toggle("hidden", esUnico);
+    }
+    modeUnico.addEventListener("click", () => setModo("unico"));
+    modeRecurrente.addEventListener("click", () => setModo("recurrente"));
+
+    // ── Tabla de abonos ──────────────────────────────────────────────────────
+    function agregarAbono(annoMes, monto) {
+        abono_capital_all[annoMes] = (abono_capital_all[annoMes] || 0) + monto;
+    }
+
+    function displayAbonos() {
+        const tbody = document.querySelector("#abonosTable tbody");
+        const tfoot = document.querySelector("#abonosTable tfoot");
+        tbody.innerHTML = "";
+        tfoot.innerHTML = "";
+
+        const ordenados = Object.entries(abono_capital_all).sort((a, b) => a[0].localeCompare(b[0]));
+
+        ordenados.forEach(([date, value]) => {
+            const row = tbody.insertRow();
+            row.insertCell(0).textContent = date;
+            row.insertCell(1).textContent = fmtMoney(value);
+            const actionCell = row.insertCell(2);
+            const removeBtn = document.createElement("button");
+            removeBtn.className = "btn-remove-abono";
+            removeBtn.textContent = "Eliminar";
+            removeBtn.setAttribute("data-date", date);
             actionCell.appendChild(removeBtn);
         });
 
-        document.querySelectorAll('.btn-remove-abono').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const dateToRemove = this.getAttribute('data-date');
-                delete abono_capital_all[dateToRemove];
-                displayExtraAbonosCapital();
+        if (ordenados.length > 0) {
+            const suma = ordenados.reduce((acc, [, v]) => acc + v, 0);
+            const footRow = tfoot.insertRow();
+            footRow.insertCell(0).textContent = `Total (${ordenados.length})`;
+            footRow.insertCell(1).textContent = fmtMoney(suma);
+            footRow.insertCell(2).textContent = "";
+        }
+
+        document.querySelectorAll(".btn-remove-abono").forEach((btn) => {
+            btn.addEventListener("click", function () {
+                delete abono_capital_all[this.getAttribute("data-date")];
+                displayAbonos();
             });
         });
     }
 
+    // ── Agregar abono unico ──────────────────────────────────────────────────
+    addAbonoUnicoBtn.addEventListener("click", () => {
+        const date = abonosCapitalDate.value.trim();
+        const amount = Number.parseFloat(abonosCapitalValue.value);
+        if (!esAnnoMesValido(date) || !(amount > 0)) {
+            alert("Ingrese una fecha AAAAMM válida y un monto mayor a 0.");
+            return;
+        }
+        agregarAbono(date, amount);
+        abonosCapitalDate.value = "";
+        abonosCapitalValue.value = "";
+        displayAbonos();
+    });
 
-        extraAbonosCapitalBtn.addEventListener("click",() =>{
-            const date = abonosCapitalDate.value
-            const amount = Number.parseFloat(abonosCapitalValue.value)
-    
-            if (!date || amount <=0) {
-                alert("Por favor, ingrese valores válidos para el Abono Extra.");
-                return;
+    // ── Agregar abono mensual fijo (rango) ───────────────────────────────────
+    addAbonoRecBtn.addEventListener("click", () => {
+        const desde = abonoRecDesde.value.trim();
+        const hasta = abonoRecHasta.value.trim();
+        const monto = Number.parseFloat(abonoRecValor.value);
+        if (!esAnnoMesValido(desde) || !esAnnoMesValido(hasta)) {
+            alert("Ingrese fechas AAAAMM válidas en 'Desde' y 'Hasta'.");
+            return;
+        }
+        if (desde > hasta) {
+            alert("'Desde' debe ser menor o igual que 'Hasta'.");
+            return;
+        }
+        if (!(monto > 0)) {
+            alert("Ingrese un monto mensual mayor a 0.");
+            return;
+        }
+        mesesEnRango(desde, hasta).forEach((m) => agregarAbono(m, monto));
+        abonoRecDesde.value = "";
+        abonoRecHasta.value = "";
+        abonoRecValor.value = "";
+        displayAbonos();
+    });
+
+    // ── Calcular ─────────────────────────────────────────────────────────────
+    calculateBtn.addEventListener("click", async () => {
+        // Plazo: convertir a años segun la unidad elegida (el backend usa años)
+        const plazo = Number.parseFloat(loanTerm.value);
+        const plazoAnios = loanTermUnit.value === "months" ? plazo / 12 : plazo;
+
+        const data = {
+            desembolso_date: desembolsoDate.value.trim(),
+            loan_amount: Number.parseFloat(loanAmount.value),
+            interest_rate: Number.parseFloat(InterestRate.value),
+            type_rate: rateType.value,
+            period: ratePeriod.value,
+            loan_term_years: plazoAnios,
+            insurance: Number.parseFloat(insurance.value) || 0,  // vacio -> 0
+            abono_capital_all: abono_capital_all,
+        };
+
+        try {
+            const response = await fetch(`${API_BASE}/amortization`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data),
+            });
+
+            if (!response.ok) {
+                let detalle = "";
+                try { detalle = (await response.json()).detail || ""; } catch (e) {}
+                throw new Error(detalle || `HTTP ${response.status}`);
             }
-    
-            abono_capital_all[date] = amount;
-    
-            abonosCapitalDate.value = "";
-            abonosCapitalValue.value = "";
-            displayExtraAbonosCapital();
 
-        })
-
-
-    calculateBtn.addEventListener("click",
-        async () =>{
-            const data = {
-                desembolso_date: desembolsoDate.value,
-                loan_amount: Number.parseFloat(loanAmount.value),
-                interest_rate: Number.parseFloat(InterestRate.value),
-                type_rate: rateType.value,
-                period: ratePeriod.value,
-                loan_term_years: Number.parseFloat(loanTermYears.value),
-                insurance: Number.parseFloat(insurance.value),
-                abono_capital_all: abono_capital_all,
-            };
-
-            try {
-                const response = await fetch(`${API_BASE}/amortization`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-
-                if (!response.ok) {
-                    throw new Error("API request failed");
-                }
-
-                const result = await response.json();
-                displayAmortizationTable(result);
-            } catch (error) {
-                console.error("Error:", error);
-                alert("Hubo un problema con la solicitud a la API.");
-            }
+            const result = await response.json();
+            displayResumen(result.resumen);
+            displayAmortizationTable(result.amortization_table);
+            document.getElementById("resumenCard").scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch (error) {
+            console.error("Error:", error);
+            alert("Hubo un problema con el cálculo: " + error.message);
+        }
     });
 });
 
 
-function displayAmortizationTable(result) {
-    
+// ── Render: resumen ───────────────────────────────────────────────────────────
+function displayResumen(r) {
+    const card = document.getElementById("resumenCard");
+    card.classList.remove("hidden");
+
+    const kpi = (label, value, sub = "", clase = "") =>
+        `<div class="kpi ${clase}">
+            <span class="kpi-label">${label}</span>
+            <span class="kpi-value">${value}</span>
+            ${sub ? `<span class="kpi-sub">${sub}</span>` : ""}
+        </div>`;
+
+    const seguroSub = r.seguro > 0
+        ? `+ seguro ${fmtMoney(r.seguro)} = ${fmtMoney(r.cuota_total)}`
+        : "";
+
+    let html = `<h2>Resumen</h2>
+        <div class="kpi-grid">
+            ${kpi("Cuota mensual", fmtMoney(r.cuota_mensual), seguroSub)}
+            ${kpi("Tasa E.A.", fmtPct(r.tasa_ea))}
+            ${kpi("Tasa M.V.", fmtPct(r.tasa_mv))}
+            ${kpi("Plazo", `${r.plazo_meses} meses`)}
+        </div>
+
+        <h3>Sin abonos</h3>
+        <div class="kpi-grid">
+            ${kpi("Total a pagar", fmtMoney(r.sin_abonos.total_pagado))}
+            ${kpi("Total intereses", fmtMoney(r.sin_abonos.total_intereses))}
+            ${kpi("Meses a pagar", `${r.sin_abonos.meses}`)}
+        </div>`;
+
+    if (r.con_abonos) {
+        const c = r.con_abonos;
+        const filasAbonos = c.abonos
+            .map((a) => `<tr><td>${a.anno_mes}</td><td>${fmtMoney(a.valor)}</td></tr>`)
+            .join("");
+
+        html += `
+        <h3>Con tus abonos</h3>
+        <p class="resumen-narrativa">
+            Con estos abonos terminas de pagar en <strong>${c.meses} meses</strong>
+            (<strong>${c.meses_ahorrados} meses antes</strong>) y ahorras
+            <strong>${fmtMoney(c.ahorro_intereses)}</strong> en intereses.
+        </p>
+        <div class="resumen-con-abonos">
+            <div class="abonos-resumen">
+                <table class="abonos-table">
+                    <thead><tr><th>Abono</th><th>Monto</th></tr></thead>
+                    <tbody>${filasAbonos}</tbody>
+                    <tfoot><tr><td>Total (${c.abonos.length})</td><td>${fmtMoney(c.total_abonos)}</td></tr></tfoot>
+                </table>
+            </div>
+            <div class="kpi-grid grow">
+                ${kpi("Meses que pagas", `${c.meses}`, `ahorras ${c.meses_ahorrados}`, "good")}
+                ${kpi("Ahorro en intereses", fmtMoney(c.ahorro_intereses), "", "good")}
+                ${kpi("Ahorro total", fmtMoney(c.ahorro_total), "", "good")}
+                ${kpi("Total a pagar", fmtMoney(c.total_pagado))}
+                ${kpi("Total intereses", fmtMoney(c.total_intereses))}
+                ${kpi("Total abonos", fmtMoney(c.total_abonos))}
+            </div>
+        </div>`;
+    }
+
+    card.innerHTML = html;
+}
+
+
+// ── Render: tabla ─────────────────────────────────────────────────────────────
+function displayAmortizationTable(tabla) {
     const resultCard = document.getElementById("resultsTable");
-    const tableBody = document.getElementById("calculationResult").getElementsByTagName('tbody')[0];
-    resultCard.classList.remove("hidden");
+    const tableBody = document.getElementById("calculationResult").getElementsByTagName("tbody")[0];
+    resultCard.classList.remove("hidden");
+    tableBody.innerHTML = "";
 
-    tableBody.innerHTML = "";
-
-    result.amortization_table.forEach(row => {
-                const newRow = tableBody.insertRow();
-                newRow.insertCell(0).textContent = row.num;
-                newRow.insertCell(1).textContent = row.anno_mes;
-                newRow.insertCell(2).textContent = `$${row.interest.toLocaleString()}`;
-                newRow.insertCell(3).textContent = `$${row.capital.toLocaleString()}`;
-                newRow.insertCell(4).textContent = `$${row.insurance.toLocaleString()}`;
-                newRow.insertCell(5).textContent = `$${row.payment.toLocaleString()}`;
-                newRow.insertCell(6).textContent = `$${row.abono_capital?.toLocaleString()}`;
-                newRow.insertCell(7).textContent = `$${row.balance.toLocaleString()}`;
-            });
-        }
+    tabla.forEach((row) => {
+        const newRow = tableBody.insertRow();
+        if (row.abono_capital > 0) newRow.classList.add("row-abono");
+        newRow.insertCell(0).textContent = row.num;
+        newRow.insertCell(1).textContent = row.anno_mes;
+        newRow.insertCell(2).textContent = fmtMoney(row.interest);
+        newRow.insertCell(3).textContent = fmtMoney(row.capital);
+        newRow.insertCell(4).textContent = fmtMoney(row.insurance);
+        newRow.insertCell(5).textContent = fmtMoney(row.payment);
+        newRow.insertCell(6).textContent = fmtMoney(row.abono_capital);
+        newRow.insertCell(7).textContent = fmtMoney(row.balance);
+    });
+}

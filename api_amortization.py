@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from typing import Dict
@@ -40,7 +40,19 @@ class AmortizationRequest(BaseModel):
     period:str
     loan_term_years:float
     insurance: float = 0.0
-    abono_capital_all: Dict[str, float]
+    abono_capital_all: Dict[str, float] = {}
+
+    @field_validator("insurance", mode="before")
+    @classmethod
+    def seguro_por_defecto(cls, v):
+        # Si llega None, "", o NaN (p. ej. campo vacio en el front), usar 0.0
+        if v is None or v == "":
+            return 0.0
+        try:
+            v = float(v)
+        except (TypeError, ValueError):
+            return 0.0
+        return 0.0 if v != v else v  # v != v es True solo para NaN
 
 @app.api_route('/health', methods=["GET", "HEAD"])
 async def health():
@@ -75,7 +87,7 @@ async def calculate_amortization_table(request: AmortizationRequest):
         if len(request.desembolso_date) != 6 or not (request.desembolso_date.isdigit()):
             raise ValueError("Formato de fecha inválido. Deber ser AAAAMM")
         
-        amortization_table  = amortization.calculation_amortization(
+        resultado = amortization.calcular(
         desembolso_date     = request.desembolso_date,
         loan_amount         = request.loan_amount,
         interest_rate       = request.interest_rate,
@@ -86,7 +98,7 @@ async def calculate_amortization_table(request: AmortizationRequest):
         abono_capital_all   = request.abono_capital_all,
             )
 
-        return {"amortization_table":amortization_table}
+        return resultado
     except ValueError as ve:
         raise HTTPException(status_code=422, detail=str(ve))
     except Exception as e:

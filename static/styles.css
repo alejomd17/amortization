@@ -253,7 +253,149 @@
   .hidden {
     display: none;
   }
-  
+
+  /* ===== PLAZO CON UNIDAD ===== */
+  .input-with-unit {
+    display: flex;
+    gap: var(--space-xxs);
+  }
+  .input-with-unit input { flex: 2; }
+  .input-with-unit select {
+    flex: 1;
+    min-width: 78px;
+    border: var(--border-width) solid var(--color-gray-light);
+    border-radius: var(--border-radius-sm);
+    padding: 0 var(--space-xs);
+  }
+
+  /* ===== CONVERSION DE TASAS EN VIVO ===== */
+  .rate-conversion {
+    margin-top: var(--space-xxs);
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-dark);
+    background-color: var(--color-gray-very-light);
+    border-radius: var(--border-radius-xs);
+    padding: var(--space-xxxs) var(--space-xs);
+  }
+  .rate-conversion strong { color: var(--color-primary); }
+
+  /* ===== TOGGLE DE MODO DE ABONO ===== */
+  .abono-mode-toggle {
+    display: inline-flex;
+    gap: 2px;
+    background-color: var(--color-gray-light);
+    border-radius: var(--border-radius-md);
+    padding: 3px;
+    margin-bottom: var(--space-sm);
+  }
+  .mode-btn {
+    border: none;
+    background: transparent;
+    padding: var(--space-xxs) var(--space-md);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-gray-dark);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .mode-btn.active {
+    background-color: var(--color-white);
+    color: var(--color-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  }
+
+  .hint {
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-medium);
+    margin-top: var(--space-xxs);
+  }
+
+  /* Pie de tabla de abonos (total) */
+  .abonos-table tfoot td {
+    font-weight: 700;
+    color: var(--color-dark);
+    background-color: var(--color-gray-very-light);
+    border-top: 2px solid var(--color-secondary);
+  }
+
+  /* ===== RESUMEN ===== */
+  .resumen-card h2 { margin-top: 0; }
+  .resumen-card h3 {
+    font-size: var(--font-size-md);
+    color: var(--color-dark);
+    margin-top: var(--space-lg);
+    margin-bottom: var(--space-xs);
+  }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: var(--space-sm);
+  }
+  .kpi-grid.grow { flex: 1; }
+
+  .kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-sm) var(--space-md);
+    background-color: var(--color-gray-very-light);
+    border: var(--border-width) solid var(--color-gray-light);
+    border-left: 4px solid var(--color-primary);
+    border-radius: var(--border-radius-md);
+  }
+  .kpi-label {
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-dark);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .kpi-value {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--color-dark);
+  }
+  .kpi-sub {
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-medium);
+  }
+  .kpi.good {
+    border-left-color: var(--color-secondary);
+    background-color: rgba(46, 204, 113, 0.08);
+  }
+  .kpi.good .kpi-value { color: #1e874b; }
+
+  .resumen-narrativa {
+    background-color: rgba(52, 152, 219, 0.08);
+    border-radius: var(--border-radius-md);
+    padding: var(--space-sm) var(--space-md);
+    margin-bottom: var(--space-sm);
+    color: var(--color-gray-dark);
+  }
+
+  .resumen-con-abonos {
+    display: flex;
+    gap: var(--space-lg);
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .resumen-con-abonos .abonos-resumen {
+    flex: 0 0 auto;
+    min-width: 240px;
+  }
+  .resumen-con-abonos .abonos-table { width: 100%; }
+
+  /* ===== TABLA CON SCROLL ===== */
+  .table-scroll {
+    overflow-x: auto;
+  }
+  .row-abono {
+    background-color: rgba(46, 204, 113, 0.12) !important;
+  }
+  .row-abono td { font-weight: 600; }
+
   /* ===== RESPONSIVE ===== */
   @media (max-width: 768px) {
     body {
