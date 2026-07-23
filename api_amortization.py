@@ -49,6 +49,7 @@ class AmortizationRequest(BaseModel):
     loan_term_years:float
     insurance: float = 0.0
     abono_capital_all: Dict[str, float] = {}
+    costos_iniciales: float = 0.0
 
     @field_validator("insurance", mode="before")
     @classmethod
@@ -104,6 +105,7 @@ async def calculate_amortization_table(request: AmortizationRequest):
         loan_term_years     = request.loan_term_years,
         insurance           = request.insurance,
         abono_capital_all   = request.abono_capital_all,
+        costos_iniciales    = request.costos_iniciales,
             )
 
         return resultado

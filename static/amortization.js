@@ -111,6 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const loanTerm = document.getElementById("loanTerm");
     const loanTermUnit = document.getElementById("loanTermUnit");
     const insurance = document.getElementById("insurance");
+    const costosIniciales = document.getElementById("costosIniciales");
     const calculateBtn = document.getElementById("calculateBtn");
     const rateConversion = document.getElementById("rateConversion");
 
@@ -255,6 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
             loan_term_years: plazoAnios,
             insurance: Number.parseFloat(insurance.value) || 0,  // vacio -> 0
             abono_capital_all: abono_capital_all,
+            costos_iniciales: Number.parseFloat(costosIniciales.value) || 0,
         };
 
         try {
@@ -628,11 +630,18 @@ function displayResumen(r) {
         ? `+ seguro ${fmtMoney(r.seguro)} = ${fmtMoney(r.cuota_total)}`
         : "";
 
+    // Costo real: solo si hay costos (seguro/iniciales) que lo separen de la tasa nominal
+    const hayCostoReal = r.costo_real_ea && Math.abs(r.costo_real_ea - r.tasa_ea) > 0.001;
+    const costoRealKpi = hayCostoReal
+        ? kpi("Costo real (E.A.)", fmtPct(r.costo_real_ea), `+${Math.round((r.costo_real_ea - r.tasa_ea) * 100) / 100} pts vs nominal`)
+        : "";
+
     let html = `<h2>Tu <em>resumen</em></h2>
         <div class="kpi-grid">
             ${kpi("Cuota mensual", fmtMoney(r.cuota_mensual), seguroSub)}
             ${kpi("Tasa E.A.", fmtPct(r.tasa_ea))}
             ${kpi("Tasa M.V.", fmtPct(r.tasa_mv))}
+            ${costoRealKpi}
             ${kpi("Plazo", `${r.plazo_meses} meses`)}
         </div>
 

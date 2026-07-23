@@ -12,6 +12,7 @@ class Amortization:
                  loan_term_years: float = 20,
                  insurance: float = 80000,
                  abono_capital_all: dict = {},
+                 costos_iniciales: float = 0,
                  ) -> dict:
         """Calcula la tabla de amortizacion y un resumen con los indicadores clave.
 
@@ -50,12 +51,23 @@ class Amortization:
         tasa_ea = interest_rates.calculate_interest_rate(interest_rate, type_rate, period, 'Anual')
         tasa_mv = round(monthly_interest_rate * 100, 4)
 
+        # Costo real (tasa efectiva total): TIR del flujo real — recibes el préstamo menos
+        # los costos iniciales, y pagas cada mes la cuota + el seguro. Sin costos, = tasa_ea.
+        if costos_iniciales or insurance:
+            pagos = [row["payment"] for row in tabla_sin_abonos if row["num"] > 0]
+            tir_m = self._tir_mensual(loan_amount - costos_iniciales, pagos)
+            costo_real_ea = round(((1 + tir_m) ** 12 - 1) * 100, 2)
+        else:
+            costo_real_ea = tasa_ea
+
         resumen = {
             "cuota_mensual": round(monthly_payment, 2),
             "seguro": round(float(insurance), 2),
             "cuota_total": round(monthly_payment + insurance, 2),
             "tasa_ea": tasa_ea,
             "tasa_mv": tasa_mv,
+            "costos_iniciales": round(float(costos_iniciales), 2),
+            "costo_real_ea": costo_real_ea,
             "plazo_meses": int(number_of_payments),
             "sin_abonos": self._totales(tabla_sin_abonos),
         }
@@ -77,6 +89,27 @@ class Amortization:
     def calculation_amortization(self, *args, **kwargs) -> list[dict]:
         """Compatibilidad: devuelve solo la tabla (para el notebook)."""
         return self.calcular(*args, **kwargs)["amortization_table"]
+
+    @staticmethod
+    def _tir_mensual(monto_neto: float, pagos: list[float]) -> float:
+        """Tasa interna de retorno mensual del flujo: +monto_neto en t=0, -pago en t=1..n.
+        Por bisección. NPV(i) crece con i (NPV(0)<0 porque pagas más de lo que recibes)."""
+        def npv(i):
+            return monto_neto - sum(p / (1 + i) ** t for t, p in enumerate(pagos, start=1))
+
+        lo, hi = 1e-9, 1.0
+        while npv(hi) < 0 and hi < 100:
+            hi *= 2
+        for _ in range(200):
+            mid = (lo + hi) / 2
+            v = npv(mid)
+            if abs(v) < 0.01:
+                return mid
+            if v < 0:
+                lo = mid
+            else:
+                hi = mid
+        return (lo + hi) / 2
 
     @staticmethod
     def _totales(tabla: list[dict]) -> dict:
