@@ -7,7 +7,13 @@ requires-python = ">=3.10"
 dependencies = [
     "fastapi==0.115.11",
     "uvicorn==0.34.0",
+    "pydantic==2.10.6",
+]
+
+# Solo para explorar en el notebook: el calculo y la API no dependen de esto.
+[dependency-groups]
+dev = [
     "pandas==2.2.3",
     "numpy==2.2.4",
-    "pydantic==2.10.6",
+    "ipykernel>=6.29",
 ]

@@ -82,7 +82,7 @@ async def calculate_amortization_table(request: AmortizationRequest):
         abono_capital_all   = request.abono_capital_all,
             )
 
-        return {"amortization_table":amortization_table.to_dict(orient='records')}
+        return {"amortization_table":amortization_table}
     except ValueError as ve:
         raise HTTPException(status_code=422, detail=str(ve))
     except Exception as e:

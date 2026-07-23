@@ -1,5 +1,4 @@
 from src.interest_rates import InterestRates
-import pandas as pd
 from datetime import datetime
 interest_rates = InterestRates()
 
@@ -13,7 +12,7 @@ class Amortization:
                                  loan_term_years:float=20,
                                  insurance:float = 80000,
                                  abono_capital_all:dict={},
-                                 )-> pd.DataFrame:
+                                 )-> list[dict]:
         
         monthly_interest_rate = interest_rates.calculate_interest_rate(interest_rate,type_rate,period,'Mensual') /100
 
@@ -29,40 +28,38 @@ class Amortization:
         amortization_table = [{
                     "num":0,
                     "anno_mes":anno_mes,
-                    "interest":0,
-                    "capital":0,
-                    "insurance":0,
-                    "payment":0,
-                    "abono_capital":0,
-                    "balance":saldo
+                    "interest":0.0,
+                    "capital":0.0,
+                    "insurance":0.0,
+                    "payment":0.0,
+                    "abono_capital":0.0,
+                    "balance":float(saldo)
                 }]
-        
-        df_amortization_table_without_abono_capital = pd.DataFrame(
-                                                self.amortization_abonos_capital(
+
+        amortization_table_without_abono_capital = self.amortization_abonos_capital(
                                                 amortization_table.copy(),
                                                 anno_mes,
-                                                number_of_payments, 
+                                                number_of_payments,
                                                 saldo,
                                                 insurance,
-                                                monthly_interest_rate, 
+                                                monthly_interest_rate,
                                                 monthly_payment,
                                                 {}
-                                                ))
-        
-        df_amortization_table = pd.DataFrame(
-                                        self.amortization_abonos_capital(
+                                                )
+
+        amortization_table = self.amortization_abonos_capital(
                                         amortization_table.copy(),
                                         anno_mes,
-                                        number_of_payments, 
+                                        number_of_payments,
                                         saldo,
                                         insurance,
-                                        monthly_interest_rate, 
+                                        monthly_interest_rate,
                                         monthly_payment,
-                                        abono_capital_all))
+                                        abono_capital_all)
 
-        number_months_to_pay_total = df_amortization_table['num'].max()
-        amount_paid_at_end = df_amortization_table['payment'].sum() + df_amortization_table['abono_capital'].sum() 
-        amount_paid_without_abonos_capital = df_amortization_table_without_abono_capital['payment'].sum()
+        number_months_to_pay_total = max(row['num'] for row in amortization_table)
+        amount_paid_at_end = sum(row['payment'] for row in amortization_table) + sum(row['abono_capital'] for row in amortization_table)
+        amount_paid_without_abonos_capital = sum(row['payment'] for row in amortization_table_without_abono_capital)
 
         print(f'Anual interest rate: {round(interest_rate,2)}%')
         print(f'Monthly interest rate: {round(monthly_interest_rate*100,4)}%')
@@ -73,8 +70,8 @@ class Amortization:
             print(f'Money saved: {amount_paid_without_abonos_capital - amount_paid_at_end:,.0f}')
             print(f'Number of months you paid: {number_months_to_pay_total}')
             print(f'Number of months saved: {number_of_payments - number_months_to_pay_total}')
-             
-        return df_amortization_table
+
+        return amortization_table
             
     def anno_mes_str(self, anno_mes):
         if int(anno_mes[4:]) == 12:
@@ -113,12 +110,12 @@ class Amortization:
                 {
                     "num": month,
                     "anno_mes": anno_mes,
-                    "interest": round(interest, 2),
-                    "capital": round(abono, 2),
-                    "insurance": round(insurance, 2),
-                    "payment": round(monthly_payment + insurance, 2),
-                    "abono_capital": abono_capital,
-                    "balance": round(saldo, 2)
+                    "interest": round(float(interest), 2),
+                    "capital": round(float(abono), 2),
+                    "insurance": round(float(insurance), 2),
+                    "payment": round(float(monthly_payment + insurance), 2),
+                    "abono_capital": float(abono_capital),
+                    "balance": round(float(saldo), 2)
                 }
             )
 

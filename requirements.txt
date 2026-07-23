@@ -16,24 +16,12 @@ h11==0.16.0
     # via uvicorn
 idna==3.18
     # via anyio
-numpy==2.2.4
-    # via
-    #   amortization
-    #   pandas
-pandas==2.2.3
-    # via amortization
 pydantic==2.10.6
     # via
     #   amortization
     #   fastapi
 pydantic-core==2.27.2
     # via pydantic
-python-dateutil==2.9.0.post0
-    # via pandas
-pytz==2026.2
-    # via pandas
-six==1.17.0
-    # via python-dateutil
 starlette==0.46.2
     # via fastapi
 typing-extensions==4.16.0
@@ -44,7 +32,5 @@ typing-extensions==4.16.0
     #   pydantic
     #   pydantic-core
     #   uvicorn
-tzdata==2026.3
-    # via pandas
 uvicorn==0.34.0
     # via amortization
