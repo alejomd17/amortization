@@ -323,6 +323,7 @@
                 <button type="button" id="imModeCapacidad" class="mode-btn active" role="tab" aria-selected="true">Capacidad</button>
                 <button type="button" id="imModeCuotaInicial" class="mode-btn" role="tab" aria-selected="false">Cuota inicial</button>
                 <button type="button" id="imModeRentabilidad" class="mode-btn" role="tab" aria-selected="false">Rentabilidad arriendo</button>
+                <button type="button" id="imModeArrendarComprar" class="mode-btn" role="tab" aria-selected="false">Arrendar vs. comprar</button>
             </div>
 
             <!-- Sub-modo: Capacidad de endeudamiento -->
@@ -507,6 +508,114 @@
                     <button id="calcularRentabilidadBtn" class="btn btn-primary">Calcular rentabilidad</button>
                 </div>
                 <div id="rentabilidadResultCard" class="card resumen-card hidden"></div>
+            </div>
+
+            <!-- Sub-modo: Arrendar vs. comprar -->
+            <div id="imPanelArrendarComprar" class="ahorro-submodo hidden">
+                <section class="card">
+                    <p class="section-eyebrow">Arrendar vs. comprar (a un horizonte)</p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="acPrecio">Precio del inmueble</label>
+                            <input type="number" id="acPrecio" placeholder="Ej. 300.000.000" required>
+                        </div>
+                        <div class="field">
+                            <label for="acCuotaInicial">Cuota inicial (%)</label>
+                            <input type="number" id="acCuotaInicial" value="30" step="any">
+                        </div>
+                        <div class="field">
+                            <label for="acCostosCompra">Costos de compra (%)</label>
+                            <input type="number" id="acCostosCompra" value="2.5" step="any">
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="acTasa">Tasa del crédito</label>
+                            <input type="number" id="acTasa" placeholder="Ej. 12" step="any" required>
+                        </div>
+                        <div class="field">
+                            <label for="acTcType">Tipo de tasa</label>
+                            <select id="acTcType">
+                                <option value="Nominal">Nominal</option>
+                                <option value="Efectiva" selected>Efectiva</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="acTcPeriod">Período de la tasa</label>
+                            <select id="acTcPeriod">
+                                <option value="Anual" selected>Anual</option>
+                                <option value="Mensual">Mensual</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="acPlazo">Plazo del crédito</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="acPlazo" placeholder="Ej. 20" required>
+                                <select id="acPlazoUnit" aria-label="Unidad del plazo">
+                                    <option value="years" selected>Años</option>
+                                    <option value="months">Meses</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="acArriendo">Arriendo mensual equivalente</label>
+                            <input type="number" id="acArriendo" placeholder="Ej. 1.500.000" required>
+                        </div>
+                        <div class="field">
+                            <label for="acHorizonte">Horizonte (años)</label>
+                            <input type="number" id="acHorizonte" value="10" step="any">
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="acInflacion">Inflación (%, sube el arriendo)</label>
+                            <input type="number" id="acInflacion" value="5" step="any">
+                        </div>
+                        <div class="field">
+                            <label for="acValorizacion">Valorización real (%)</label>
+                            <input type="number" id="acValorizacion" value="3" step="any">
+                        </div>
+                        <div class="field"></div>
+                    </div>
+                    <p class="hint">Gastos anuales del propietario (los pagas solo si compras):</p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="acPredial">Predial anual</label>
+                            <input type="number" id="acPredial" placeholder="Ej. 0">
+                        </div>
+                        <div class="field">
+                            <label for="acAdmin">Administración mensual</label>
+                            <input type="number" id="acAdmin" placeholder="Ej. 0">
+                        </div>
+                        <div class="field">
+                            <label for="acMantenimiento">Mantenimiento anual</label>
+                            <input type="number" id="acMantenimiento" placeholder="Ej. 0">
+                        </div>
+                    </div>
+                    <p class="hint">Si arriendas, inviertes la cuota inicial y la diferencia mensual:</p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="acTasaInversion">Tasa de inversión (% E.A.)</label>
+                            <input type="number" id="acTasaInversion" value="10" step="any">
+                        </div>
+                        <div class="field">
+                            <label for="acRetencionInv">Retención inversión (%)</label>
+                            <input type="number" id="acRetencionInv" value="4" step="any">
+                        </div>
+                        <div class="field checkbox-field">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="acVende"> Vender al final (resta comisión)
+                            </label>
+                            <input type="number" id="acCostosVenta" value="3" step="any" placeholder="Costos de venta %">
+                        </div>
+                    </div>
+                </section>
+                <div class="calcular-wrap">
+                    <button id="calcularArrendarComprarBtn" class="btn btn-primary">Comparar</button>
+                </div>
+                <div id="arrendarComprarResultCard" class="card resumen-card hidden"></div>
             </div>
         </section>
 

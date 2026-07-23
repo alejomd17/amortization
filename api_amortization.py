@@ -318,6 +318,41 @@ async def calcular_rentabilidad(request: RentabilidadRequest):
         raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
 
 
+class ArrendarComprarRequest(BaseModel):
+    precio: float
+    cuota_inicial_pct: float = 30
+    costos_compra_pct: float = 2.5
+    tasa_credito: float
+    tc_type: str
+    tc_period: str
+    plazo_credito_meses: float
+    arriendo_mensual: float
+    inflacion_pct: float = 5
+    valorizacion_real_pct: float = 3
+    predial_anual: float = 0
+    administracion_mensual: float = 0
+    mantenimiento_anual: float = 0
+    tasa_inversion_ea: float = 10
+    retencion_inversion_pct: float = 4
+    horizonte_anos: float = 10
+    vende: bool = False
+    costos_venta_pct: float = 3
+
+
+@app.post('/inmueble/arrendar-vs-comprar')
+async def calcular_arrendar_vs_comprar(request: ArrendarComprarRequest):
+    try:
+        if request.plazo_credito_meses <= 0:
+            raise ValueError("El plazo del crédito debe ser mayor a 0.")
+        if request.horizonte_anos <= 0:
+            raise ValueError("El horizonte debe ser mayor a 0.")
+        return inmueble.arrendar_vs_comprar(**request.model_dump())
+    except ValueError as ve:
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
+
+
 class EscenarioCredito(BaseModel):
     nombre: str = ""
     monto: float

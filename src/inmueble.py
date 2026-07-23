@@ -130,3 +130,100 @@ class Inmueble:
             "cdt_neto": round(cdt_neto, 2),
             "conviene_inmueble": rent_total > cdt_neto,
         }
+
+    # ── Arrendar vs. comprar ──────────────────────────────────────────────────
+    def arrendar_vs_comprar(self,
+                            precio: float = 300000000,
+                            cuota_inicial_pct: float = 30,
+                            costos_compra_pct: float = 2.5,
+                            tasa_credito: float = 12,
+                            tc_type: str = "Efectiva",
+                            tc_period: str = "Anual",
+                            plazo_credito_meses: float = 240,
+                            arriendo_mensual: float = 1500000,
+                            inflacion_pct: float = 5,
+                            valorizacion_real_pct: float = 3,
+                            predial_anual: float = 0,
+                            administracion_mensual: float = 0,
+                            mantenimiento_anual: float = 0,
+                            tasa_inversion_ea: float = 10,
+                            retencion_inversion_pct: float = 4,
+                            horizonte_anos: float = 10,
+                            vende: bool = False,
+                            costos_venta_pct: float = 3,
+                            ) -> dict:
+        """Arrendar vs. comprar, comparando el patrimonio final a un horizonte.
+
+        Comprar: patrimonio = valor del inmueble − saldo del crédito (− venta si aplica).
+        Arrendar: invierte la cuota inicial y, mes a mes, lo que se ahorra frente al costo
+        de comprar; el patrimonio es ese fondo acumulado.
+        """
+        i_loan = interest_rates.calculate_interest_rate(tasa_credito, tc_type, tc_period, 'Mensual') / 100
+        cuota_inicial = precio * cuota_inicial_pct / 100
+        costos_compra = precio * costos_compra_pct / 100
+        desembolso_inicial = cuota_inicial + costos_compra          # lo que invierte el que arrienda
+        monto_credito = precio - cuota_inicial
+        plazo = int(plazo_credito_meses)
+
+        if i_loan == 0:
+            cuota = monto_credito / plazo if plazo else 0.0
+        else:
+            cuota = monto_credito * i_loan * (1 + i_loan) ** plazo / ((1 + i_loan) ** plazo - 1)
+
+        # Inversión (costo de oportunidad) neta, mensual
+        inv_neta_ea = tasa_inversion_ea * (1 - retencion_inversion_pct / 100)
+        i_inv = (1 + inv_neta_ea / 100) ** (1 / 12) - 1
+        valorizacion_total = inflacion_pct + valorizacion_real_pct  # anual, nominal
+        costos_prop_mes = predial_anual / 12 + administracion_mensual + mantenimiento_anual / 12
+
+        def _saldo(m):
+            if m >= plazo:
+                return 0.0
+            if i_loan == 0:
+                return max(monto_credito - cuota * m, 0.0)
+            return monto_credito * (1 + i_loan) ** m - cuota * ((1 + i_loan) ** m - 1) / i_loan
+
+        def _patrimonios(meses):
+            anos = meses / 12
+            valor_inmueble = precio * (1 + valorizacion_total / 100) ** anos
+            patr_comprar = valor_inmueble - _saldo(meses)
+            if vende:
+                patr_comprar -= valor_inmueble * costos_venta_pct / 100
+
+            # Arrendar: cuota inicial invertida + diferencia mensual invertida
+            fondo = desembolso_inicial * (1 + i_inv) ** meses
+            for k in range(1, meses + 1):
+                arriendo_k = arriendo_mensual * (1 + inflacion_pct / 100) ** ((k - 1) // 12)
+                costo_comprar_k = (cuota if k <= plazo else 0.0) + costos_prop_mes
+                diferencia = costo_comprar_k - arriendo_k          # lo que ahorra al arrendar
+                fondo += diferencia * (1 + i_inv) ** (meses - k)
+            return patr_comprar, fondo
+
+        n_meses = int(horizonte_anos * 12)
+        patr_comprar, patr_arrendar = _patrimonios(n_meses)
+
+        # Año de equilibrio: primer año donde comprar >= arrendar
+        break_even = None
+        for y in range(1, 41):
+            c, a = _patrimonios(y * 12)
+            if c >= a:
+                break_even = y
+                break
+
+        return {
+            "precio": round(float(precio), 2),
+            "cuota_inicial": round(cuota_inicial, 2),
+            "costos_compra": round(costos_compra, 2),
+            "monto_credito": round(monto_credito, 2),
+            "cuota_credito": round(cuota, 2),
+            "arriendo_mensual": round(float(arriendo_mensual), 2),
+            "horizonte_anos": round(float(horizonte_anos), 1),
+            "valor_inmueble_final": round(precio * (1 + valorizacion_total / 100) ** horizonte_anos, 2),
+            "saldo_credito_final": round(_saldo(n_meses), 2),
+            "patrimonio_comprar": round(patr_comprar, 2),
+            "patrimonio_arrendar": round(patr_arrendar, 2),
+            "diferencia": round(abs(patr_comprar - patr_arrendar), 2),
+            "conviene_comprar": patr_comprar >= patr_arrendar,
+            "break_even_ano": break_even,
+            "vende": vende,
+        }

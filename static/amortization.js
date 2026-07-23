@@ -472,6 +472,7 @@ document.addEventListener("DOMContentLoaded", () => {
         { key: "capacidad", btn: "imModeCapacidad", panel: "imPanelCapacidad" },
         { key: "cuota-inicial", btn: "imModeCuotaInicial", panel: "imPanelCuotaInicial" },
         { key: "rentabilidad", btn: "imModeRentabilidad", panel: "imPanelRentabilidad" },
+        { key: "arrendar-comprar", btn: "imModeArrendarComprar", panel: "imPanelArrendarComprar" },
     ].map((m) => ({ ...m, btnEl: document.getElementById(m.btn), panelEl: document.getElementById(m.panel) }));
     function setInmoModo(key) {
         INMO_MODOS.forEach((m) => {
@@ -533,6 +534,31 @@ document.addEventListener("DOMContentLoaded", () => {
             cdt_ea: g("imRtCdt") || 0,
             retencion_cdt_pct: g("imRtRetencion") || 0,
         }, displayRentabilidad, "rentabilidadResultCard");
+    });
+
+    // Arrendar vs. comprar
+    document.getElementById("calcularArrendarComprarBtn").addEventListener("click", () => {
+        const plazoMeses = gv("acPlazoUnit") === "years" ? g("acPlazo") * 12 : g("acPlazo");
+        postAndRender("/inmueble/arrendar-vs-comprar", {
+            precio: g("acPrecio"),
+            cuota_inicial_pct: g("acCuotaInicial") || 30,
+            costos_compra_pct: g("acCostosCompra") || 0,
+            tasa_credito: g("acTasa"),
+            tc_type: gv("acTcType"),
+            tc_period: gv("acTcPeriod"),
+            plazo_credito_meses: plazoMeses,
+            arriendo_mensual: g("acArriendo"),
+            inflacion_pct: g("acInflacion") || 0,
+            valorizacion_real_pct: g("acValorizacion") || 0,
+            predial_anual: g("acPredial") || 0,
+            administracion_mensual: g("acAdmin") || 0,
+            mantenimiento_anual: g("acMantenimiento") || 0,
+            tasa_inversion_ea: g("acTasaInversion") || 0,
+            retencion_inversion_pct: g("acRetencionInv") || 0,
+            horizonte_anos: g("acHorizonte") || 10,
+            vende: document.getElementById("acVende").checked,
+            costos_venta_pct: g("acCostosVenta") || 0,
+        }, displayArrendarComprar, "arrendarComprarResultCard");
     });
 
     // ── Sub-modo Crédito: Amortización / Comparador ──────────────────────────
@@ -917,6 +943,34 @@ function displayRentabilidad(r) {
             ${kpiHtml("Administración", fmtMoney(r.gastos.administracion))}
             ${kpiHtml("Predial", fmtMoney(r.gastos.predial))}
             ${kpiHtml("Mantenimiento", fmtMoney(r.gastos.mantenimiento))}
+        </div>`;
+}
+
+
+// ── Render: arrendar vs. comprar ──────────────────────────────────────────────
+function displayArrendarComprar(r) {
+    const card = document.getElementById("arrendarComprarResultCard");
+    card.classList.remove("hidden");
+    const ganador = r.conviene_comprar ? "comprar" : "arrendar";
+    const breakEven = r.break_even_ano
+        ? `Comprar supera a arrendar a partir del <strong>año ${r.break_even_ano}</strong>.`
+        : `En 40 años, arrendar e invertir nunca queda por debajo de comprar con estos datos.`;
+
+    card.innerHTML = `
+        <h2>Arrendar vs. <em>comprar</em></h2>
+        <p class="resumen-narrativa">
+            A <strong>${r.horizonte_anos} años</strong> te conviene <strong>${ganador}</strong>:
+            comprar te deja <strong>${fmtMoney(r.patrimonio_comprar)}</strong> de patrimonio y
+            arrendar (invirtiendo la diferencia) <strong>${fmtMoney(r.patrimonio_arrendar)}</strong>
+            — diferencia de <strong>${fmtMoney(r.diferencia)}</strong>. ${breakEven}
+        </p>
+        <div class="kpi-grid">
+            ${kpiHtml("Patrimonio si compras", fmtMoney(r.patrimonio_comprar), "", r.conviene_comprar ? "good" : "")}
+            ${kpiHtml("Patrimonio si arriendas", fmtMoney(r.patrimonio_arrendar), "", r.conviene_comprar ? "" : "good")}
+            ${kpiHtml("Punto de equilibrio", r.break_even_ano ? `Año ${r.break_even_ano}` : "—", "comprar supera a arrendar", "good")}
+            ${kpiHtml("Valor del inmueble", fmtMoney(r.valor_inmueble_final), `en ${r.horizonte_anos} años`)}
+            ${kpiHtml("Saldo del crédito", fmtMoney(r.saldo_credito_final), `en ${r.horizonte_anos} años`)}
+            ${kpiHtml("Cuota del crédito", fmtMoney(r.cuota_credito))}
         </div>`;
 }
 
