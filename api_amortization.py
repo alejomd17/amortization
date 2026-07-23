@@ -346,19 +346,24 @@ async def comparar_creditos(request: CompararRequest):
 
 
 class AbonarVsInvertirRequest(BaseModel):
-    monto_extra: float
+    saldo: float
+    plazo_restante_meses: float
     tasa_credito: float
     tc_type: str
     tc_period: str
+    monto_extra: float
     cdt_ea: float = 10
     retencion_cdt_pct: float = 4
-    horizonte_anos: float = 5
 
 
 @app.post('/decisiones/abonar-vs-invertir')
 async def calcular_abonar_vs_invertir(request: AbonarVsInvertirRequest):
     """¿Abonar al crédito o invertir la plata extra en un CDT?"""
     try:
+        if request.plazo_restante_meses <= 0:
+            raise ValueError("El plazo restante debe ser mayor a 0.")
+        if request.monto_extra <= 0:
+            raise ValueError("El monto extra debe ser mayor a 0.")
         return decisiones.abonar_vs_invertir(**request.model_dump())
     except ValueError as ve:
         raise HTTPException(status_code=422, detail=str(ve))
