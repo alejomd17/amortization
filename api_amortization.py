@@ -8,6 +8,7 @@ from typing import Dict
 from src.interest_rates import InterestRates
 from src.amortization import Amortization
 from src.ahorro import Ahorro
+from src.inmueble import Inmueble
 
 # Rutas absolutas: en serverless el directorio de trabajo no es la raiz del proyecto
 BASE_DIR = Path(__file__).resolve().parent
@@ -16,6 +17,7 @@ app = FastAPI()
 interest_rates = InterestRates()
 amortization = Amortization()
 ahorro = Ahorro()
+inmueble = Inmueble()
 
 origins = [
     "https://aleossa.com",
@@ -226,6 +228,74 @@ async def calcular_ahorro_meta(request: MetaRequest):
             plazo_meses   = request.plazo_meses,
             retencion_pct = request.retencion,
         )
+    except ValueError as ve:
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
+
+
+class CapacidadRequest(BaseModel):
+    ingreso_mensual: float
+    porcentaje_max: float = 30
+    deudas_actuales: float = 0
+    interest_rate: float
+    type_rate: str
+    period: str
+    plazo_meses: float
+
+
+class CuotaInicialRequest(BaseModel):
+    precio: float
+    porcentaje_inicial: float = 30
+    interest_rate: float
+    type_rate: str
+    period: str
+    plazo_meses: float
+
+
+class RentabilidadRequest(BaseModel):
+    precio: float
+    costos_compra_pct: float = 2.5
+    arriendo_mensual: float
+    vacancia_meses: float = 0
+    comision_agencia_pct: float = 10
+    administracion_mensual: float = 0
+    predial_anual: float = 0
+    mantenimiento_anual: float = 0
+    inflacion_pct: float = 5
+    valorizacion_real_pct: float = 3
+    cdt_ea: float = 10
+    retencion_cdt_pct: float = 4
+
+
+@app.post('/inmueble/capacidad')
+async def calcular_capacidad(request: CapacidadRequest):
+    try:
+        if request.plazo_meses <= 0:
+            raise ValueError("El plazo debe ser mayor a 0.")
+        return inmueble.capacidad(**request.model_dump())
+    except ValueError as ve:
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
+
+
+@app.post('/inmueble/cuota-inicial')
+async def calcular_cuota_inicial(request: CuotaInicialRequest):
+    try:
+        if request.plazo_meses <= 0:
+            raise ValueError("El plazo debe ser mayor a 0.")
+        return inmueble.cuota_inicial(**request.model_dump())
+    except ValueError as ve:
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
+
+
+@app.post('/inmueble/rentabilidad')
+async def calcular_rentabilidad(request: RentabilidadRequest):
+    try:
+        return inmueble.rentabilidad_arriendo(**request.model_dump())
     except ValueError as ve:
         raise HTTPException(status_code=422, detail=str(ve))
     except Exception as e:

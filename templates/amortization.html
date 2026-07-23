@@ -14,6 +14,7 @@
     <main class="container">
         <div class="tabs">
             <button type="button" class="tab active" id="tabCredito">Crédito</button>
+            <button type="button" class="tab" id="tabInmobiliaria">Inmobiliaria</button>
             <button type="button" class="tab" id="tabAhorro">Ahorro</button>
         </div>
 
@@ -141,6 +142,191 @@
                         <tbody></tbody>
                     </table>
                 </div>
+            </div>
+        </section>
+
+        <!-- ============ PESTAÑA INMOBILIARIA ============ -->
+        <section id="panelInmobiliaria" class="tab-panel hidden">
+            <h1 class="page-title">Comprar <em>vivienda</em></h1>
+
+            <div class="abono-mode-toggle" role="tablist">
+                <button type="button" id="imModeCapacidad" class="mode-btn active" role="tab" aria-selected="true">Capacidad</button>
+                <button type="button" id="imModeCuotaInicial" class="mode-btn" role="tab" aria-selected="false">Cuota inicial</button>
+                <button type="button" id="imModeRentabilidad" class="mode-btn" role="tab" aria-selected="false">Rentabilidad arriendo</button>
+            </div>
+
+            <!-- Sub-modo: Capacidad de endeudamiento -->
+            <div id="imPanelCapacidad" class="ahorro-submodo">
+                <section class="card">
+                    <p class="section-eyebrow">¿Cuánto me prestan?</p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="imCapIngreso">Ingreso mensual</label>
+                            <input type="number" id="imCapIngreso" placeholder="Ej. 5.000.000" required>
+                        </div>
+                        <div class="field">
+                            <label for="imCapPorcentaje">Cuota máx. (% del ingreso)</label>
+                            <input type="number" id="imCapPorcentaje" value="30" step="any">
+                        </div>
+                        <div class="field">
+                            <label for="imCapDeudas">Deudas mensuales actuales</label>
+                            <input type="number" id="imCapDeudas" placeholder="Ej. 0 (opcional)">
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="imCapRate">Tasa de interés</label>
+                            <input type="number" id="imCapRate" placeholder="Ej. 12" step="any" required>
+                            <p id="imCapRateConversion" class="rate-conversion hidden"></p>
+                        </div>
+                        <div class="field">
+                            <label for="imCapRateType">Tipo de tasa</label>
+                            <select id="imCapRateType">
+                                <option value="Nominal">Nominal</option>
+                                <option value="Efectiva" selected>Efectiva</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="imCapPlazo">Plazo</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="imCapPlazo" placeholder="Ej. 20" required>
+                                <select id="imCapPlazoUnit" aria-label="Unidad del plazo">
+                                    <option value="years" selected>Años</option>
+                                    <option value="months">Meses</option>
+                                </select>
+                            </div>
+                            <input type="hidden" id="imCapRatePeriod" value="Anual">
+                        </div>
+                    </div>
+                </section>
+                <div class="calcular-wrap">
+                    <button id="calcularCapacidadBtn" class="btn btn-primary">Calcular</button>
+                </div>
+                <div id="capacidadResultCard" class="card resumen-card hidden"></div>
+            </div>
+
+            <!-- Sub-modo: Cuota inicial + precio -->
+            <div id="imPanelCuotaInicial" class="ahorro-submodo hidden">
+                <section class="card">
+                    <p class="section-eyebrow">Cuota inicial y financiación</p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="imCiPrecio">Precio del inmueble</label>
+                            <input type="number" id="imCiPrecio" placeholder="Ej. 300.000.000" required>
+                        </div>
+                        <div class="field">
+                            <label for="imCiPorcentaje">Cuota inicial (%)</label>
+                            <input type="number" id="imCiPorcentaje" value="30" step="any">
+                        </div>
+                        <div class="field">
+                            <label for="imCiPlazo">Plazo</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="imCiPlazo" placeholder="Ej. 20" required>
+                                <select id="imCiPlazoUnit" aria-label="Unidad del plazo">
+                                    <option value="years" selected>Años</option>
+                                    <option value="months">Meses</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="imCiRate">Tasa de interés</label>
+                            <input type="number" id="imCiRate" placeholder="Ej. 12" step="any" required>
+                            <p id="imCiRateConversion" class="rate-conversion hidden"></p>
+                        </div>
+                        <div class="field">
+                            <label for="imCiRateType">Tipo de tasa</label>
+                            <select id="imCiRateType">
+                                <option value="Nominal">Nominal</option>
+                                <option value="Efectiva" selected>Efectiva</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="imCiRatePeriod">Período de la tasa</label>
+                            <select id="imCiRatePeriod">
+                                <option value="Anual" selected>Anual</option>
+                                <option value="Mensual">Mensual</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+                <div class="calcular-wrap">
+                    <button id="calcularCuotaInicialBtn" class="btn btn-primary">Calcular</button>
+                </div>
+                <div id="cuotaInicialResultCard" class="card resumen-card hidden"></div>
+            </div>
+
+            <!-- Sub-modo: Rentabilidad de arriendo -->
+            <div id="imPanelRentabilidad" class="ahorro-submodo hidden">
+                <section class="card">
+                    <p class="section-eyebrow">Comprar para arrendar</p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="imRtPrecio">Precio del inmueble</label>
+                            <input type="number" id="imRtPrecio" placeholder="Ej. 300.000.000" required>
+                        </div>
+                        <div class="field">
+                            <label for="imRtCostos">Costos de compra (%)</label>
+                            <input type="number" id="imRtCostos" value="2.5" step="any">
+                        </div>
+                        <div class="field">
+                            <label for="imRtArriendo">Arriendo mensual</label>
+                            <input type="number" id="imRtArriendo" placeholder="Ej. 1.500.000" required>
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="imRtVacancia">Vacancia (meses/año)</label>
+                            <input type="number" id="imRtVacancia" value="0" step="any">
+                        </div>
+                        <div class="field">
+                            <label for="imRtComision">Comisión agencia (%)</label>
+                            <input type="number" id="imRtComision" value="10" step="any">
+                        </div>
+                        <div class="field">
+                            <label for="imRtAdmin">Administración mensual</label>
+                            <input type="number" id="imRtAdmin" placeholder="Ej. 0 (la paga el dueño)">
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="imRtPredial">Predial anual</label>
+                            <input type="number" id="imRtPredial" placeholder="Ej. 0">
+                        </div>
+                        <div class="field">
+                            <label for="imRtMantenimiento">Mantenimiento anual</label>
+                            <input type="number" id="imRtMantenimiento" placeholder="Ej. 0">
+                        </div>
+                        <div class="field"></div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="imRtInflacion">Inflación esperada (%)</label>
+                            <input type="number" id="imRtInflacion" value="5" step="any">
+                        </div>
+                        <div class="field">
+                            <label for="imRtValorizacion">Valorización real adicional (%)</label>
+                            <input type="number" id="imRtValorizacion" value="3" step="any">
+                        </div>
+                        <div class="field"></div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="imRtCdt">CDT de referencia (% E.A.)</label>
+                            <input type="number" id="imRtCdt" value="10" step="any">
+                        </div>
+                        <div class="field">
+                            <label for="imRtRetencion">Retención del CDT (%)</label>
+                            <input type="number" id="imRtRetencion" value="4" step="any">
+                        </div>
+                        <div class="field"></div>
+                    </div>
+                </section>
+                <div class="calcular-wrap">
+                    <button id="calcularRentabilidadBtn" class="btn btn-primary">Calcular rentabilidad</button>
+                </div>
+                <div id="rentabilidadResultCard" class="card resumen-card hidden"></div>
             </div>
         </section>
 

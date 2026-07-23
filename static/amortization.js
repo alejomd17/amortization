@@ -41,6 +41,27 @@ function kpiHtml(label, value, sub = "", clase = "") {
     </div>`;
 }
 
+// POST a la API y renderiza el resultado (patrón común de todos los botones Calcular)
+async function postAndRender(path, data, renderFn, cardId) {
+    try {
+        const response = await fetch(`${API_BASE}/${path.replace(/^\//, "")}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+            let detalle = "";
+            try { detalle = (await response.json()).detail || ""; } catch (e) {}
+            throw new Error(detalle || `HTTP ${response.status}`);
+        }
+        renderFn(await response.json());
+        document.getElementById(cardId).scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (error) {
+        console.error("Error:", error);
+        alert("Hubo un problema con el cálculo: " + error.message);
+    }
+}
+
 // Muestra el equivalente E.A./M.V. en vivo bajo un campo de tasa
 function wireRateConversion(rateEl, typeEl, periodEl, outEl) {
     function update() {
@@ -259,20 +280,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ── PESTAÑAS Crédito / Ahorro ────────────────────────────────────────────
-    const tabCredito = document.getElementById("tabCredito");
-    const tabAhorro = document.getElementById("tabAhorro");
-    const panelCredito = document.getElementById("panelCredito");
-    const panelAhorro = document.getElementById("panelAhorro");
-    function setTab(tab) {
-        const esCredito = tab === "credito";
-        tabCredito.classList.toggle("active", esCredito);
-        tabAhorro.classList.toggle("active", !esCredito);
-        panelCredito.classList.toggle("hidden", !esCredito);
-        panelAhorro.classList.toggle("hidden", esCredito);
+    // ── PESTAÑAS: Crédito / Inmobiliaria / Ahorro ────────────────────────────
+    const TABS = [
+        { key: "credito", tab: "tabCredito", panel: "panelCredito" },
+        { key: "inmobiliaria", tab: "tabInmobiliaria", panel: "panelInmobiliaria" },
+        { key: "ahorro", tab: "tabAhorro", panel: "panelAhorro" },
+    ].map((t) => ({ ...t, tabEl: document.getElementById(t.tab), panelEl: document.getElementById(t.panel) }));
+    function setTab(key) {
+        TABS.forEach((t) => {
+            const activo = t.key === key;
+            t.tabEl.classList.toggle("active", activo);
+            t.panelEl.classList.toggle("hidden", !activo);
+        });
     }
-    tabCredito.addEventListener("click", () => setTab("credito"));
-    tabAhorro.addEventListener("click", () => setTab("ahorro"));
+    TABS.forEach((t) => t.tabEl.addEventListener("click", () => setTab(t.key)));
 
     // ── AHORRO / CDT ─────────────────────────────────────────────────────────
     const ahMonto = document.getElementById("ahMonto");
@@ -440,6 +461,74 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Hubo un problema con el cálculo: " + error.message);
         }
     });
+
+    // ── Sub-modo Inmobiliaria ────────────────────────────────────────────────
+    const INMO_MODOS = [
+        { key: "capacidad", btn: "imModeCapacidad", panel: "imPanelCapacidad" },
+        { key: "cuota-inicial", btn: "imModeCuotaInicial", panel: "imPanelCuotaInicial" },
+        { key: "rentabilidad", btn: "imModeRentabilidad", panel: "imPanelRentabilidad" },
+    ].map((m) => ({ ...m, btnEl: document.getElementById(m.btn), panelEl: document.getElementById(m.panel) }));
+    function setInmoModo(key) {
+        INMO_MODOS.forEach((m) => {
+            const activo = m.key === key;
+            m.btnEl.classList.toggle("active", activo);
+            m.btnEl.setAttribute("aria-selected", String(activo));
+            m.panelEl.classList.toggle("hidden", !activo);
+        });
+    }
+    INMO_MODOS.forEach((m) => m.btnEl.addEventListener("click", () => setInmoModo(m.key)));
+
+    const g = (id) => Number.parseFloat(document.getElementById(id).value);
+    const gv = (id) => document.getElementById(id).value;
+
+    // Capacidad de endeudamiento
+    wireRateConversion(document.getElementById("imCapRate"), document.getElementById("imCapRateType"),
+        document.getElementById("imCapRatePeriod"), document.getElementById("imCapRateConversion"));
+    document.getElementById("calcularCapacidadBtn").addEventListener("click", () => {
+        const plazoMeses = gv("imCapPlazoUnit") === "years" ? g("imCapPlazo") * 12 : g("imCapPlazo");
+        postAndRender("/inmueble/capacidad", {
+            ingreso_mensual: g("imCapIngreso"),
+            porcentaje_max: g("imCapPorcentaje") || 30,
+            deudas_actuales: g("imCapDeudas") || 0,
+            interest_rate: g("imCapRate"),
+            type_rate: gv("imCapRateType"),
+            period: gv("imCapRatePeriod"),
+            plazo_meses: plazoMeses,
+        }, displayCapacidad, "capacidadResultCard");
+    });
+
+    // Cuota inicial + precio
+    wireRateConversion(document.getElementById("imCiRate"), document.getElementById("imCiRateType"),
+        document.getElementById("imCiRatePeriod"), document.getElementById("imCiRateConversion"));
+    document.getElementById("calcularCuotaInicialBtn").addEventListener("click", () => {
+        const plazoMeses = gv("imCiPlazoUnit") === "years" ? g("imCiPlazo") * 12 : g("imCiPlazo");
+        postAndRender("/inmueble/cuota-inicial", {
+            precio: g("imCiPrecio"),
+            porcentaje_inicial: g("imCiPorcentaje") || 30,
+            interest_rate: g("imCiRate"),
+            type_rate: gv("imCiRateType"),
+            period: gv("imCiRatePeriod"),
+            plazo_meses: plazoMeses,
+        }, displayCuotaInicial, "cuotaInicialResultCard");
+    });
+
+    // Rentabilidad de arriendo
+    document.getElementById("calcularRentabilidadBtn").addEventListener("click", () => {
+        postAndRender("/inmueble/rentabilidad", {
+            precio: g("imRtPrecio"),
+            costos_compra_pct: g("imRtCostos") || 0,
+            arriendo_mensual: g("imRtArriendo"),
+            vacancia_meses: g("imRtVacancia") || 0,
+            comision_agencia_pct: g("imRtComision") || 0,
+            administracion_mensual: g("imRtAdmin") || 0,
+            predial_anual: g("imRtPredial") || 0,
+            mantenimiento_anual: g("imRtMantenimiento") || 0,
+            inflacion_pct: g("imRtInflacion") || 0,
+            valorizacion_real_pct: g("imRtValorizacion") || 0,
+            cdt_ea: g("imRtCdt") || 0,
+            retencion_cdt_pct: g("imRtRetencion") || 0,
+        }, displayRentabilidad, "rentabilidadResultCard");
+    });
 });
 
 
@@ -601,5 +690,84 @@ function displayMeta(r) {
             ${kpiHtml("Lo pone el interés", fmtMoney(r.interes_neto), "", "good")}
             ${kpiHtml("Plazo", `${r.plazo_meses} meses`)}
             ${kpiHtml("Tasa E.A.", fmtPct(r.tasa_ea))}
+        </div>`;
+}
+
+
+// ── Render: capacidad de endeudamiento ────────────────────────────────────────
+function displayCapacidad(r) {
+    const card = document.getElementById("capacidadResultCard");
+    card.classList.remove("hidden");
+    card.innerHTML = `
+        <h2>Tu <em>capacidad</em></h2>
+        <p class="resumen-narrativa">
+            Con un ingreso de <strong>${fmtMoney(r.ingreso_mensual)}</strong> y una cuota de hasta el
+            <strong>${fmtPct(r.porcentaje_max)}</strong>, te pueden prestar hasta
+            <strong>${fmtMoney(r.monto_max)}</strong> a ${r.plazo_meses} meses (${fmtPct(r.tasa_ea)} E.A.).
+        </p>
+        <div class="kpi-grid">
+            ${kpiHtml("Monto máximo", fmtMoney(r.monto_max), "", "good")}
+            ${kpiHtml("Cuota máxima", fmtMoney(r.cuota_max), `${fmtPct(r.porcentaje_max)} del ingreso`)}
+            ${kpiHtml("Plazo", `${r.plazo_meses} meses`)}
+            ${kpiHtml("Tasa E.A.", fmtPct(r.tasa_ea))}
+        </div>`;
+}
+
+
+// ── Render: cuota inicial + precio ────────────────────────────────────────────
+function displayCuotaInicial(r) {
+    const card = document.getElementById("cuotaInicialResultCard");
+    card.classList.remove("hidden");
+    card.innerHTML = `
+        <h2>Tu <em>financiación</em></h2>
+        <p class="resumen-narrativa">
+            Un inmueble de <strong>${fmtMoney(r.precio)}</strong> con <strong>${fmtPct(r.porcentaje_inicial)}</strong>
+            de cuota inicial (<strong>${fmtMoney(r.cuota_inicial)}</strong>) deja
+            <strong>${fmtMoney(r.monto_financiar)}</strong> a financiar → cuota de
+            <strong>${fmtMoney(r.cuota_mensual)}</strong> al mes.
+        </p>
+        <div class="kpi-grid">
+            ${kpiHtml("Cuota mensual", fmtMoney(r.cuota_mensual), "", "good")}
+            ${kpiHtml("Cuota inicial", fmtMoney(r.cuota_inicial), `${fmtPct(r.porcentaje_inicial)} del precio`)}
+            ${kpiHtml("Monto a financiar", fmtMoney(r.monto_financiar))}
+            ${kpiHtml("Total a pagar", fmtMoney(r.total_pagado))}
+            ${kpiHtml("Total intereses", fmtMoney(r.total_intereses))}
+            ${kpiHtml("Plazo", `${r.plazo_meses} meses`)}
+        </div>`;
+}
+
+
+// ── Render: rentabilidad de arriendo ──────────────────────────────────────────
+function displayRentabilidad(r) {
+    const card = document.getElementById("rentabilidadResultCard");
+    card.classList.remove("hidden");
+
+    const veredicto = r.conviene_inmueble
+        ? `Supera al CDT (<strong>${fmtPct(r.cdt_neto)}</strong> neto), y además queda un activo que puedes vender.`
+        : `Queda por debajo del CDT (<strong>${fmtPct(r.cdt_neto)}</strong> neto). En pura rentabilidad, el CDT gana.`;
+
+    card.innerHTML = `
+        <h2>Tu <em>rentabilidad</em></h2>
+        <p class="resumen-narrativa">
+            Arriendo neto <strong>${fmtPct(r.rent_neta)}</strong> + valorización
+            <strong>${fmtPct(r.valorizacion_total)}</strong> = <strong>${fmtPct(r.rent_total)}</strong> anual.
+            ${veredicto}
+        </p>
+        <div class="kpi-grid">
+            ${kpiHtml("Rentabilidad total", fmtPct(r.rent_total), "arriendo + valorización", "good")}
+            ${kpiHtml("Rent. neta arriendo", fmtPct(r.rent_neta))}
+            ${kpiHtml("Rent. bruta", fmtPct(r.rent_bruta))}
+            ${kpiHtml("Flujo mensual neto", fmtMoney(r.flujo_mensual))}
+            ${kpiHtml("Valorización", fmtPct(r.valorizacion_total))}
+            ${kpiHtml("CDT de referencia", fmtPct(r.cdt_neto), "neto")}
+        </div>
+        <h3>Desglose anual</h3>
+        <div class="kpi-grid">
+            ${kpiHtml("Inversión total", fmtMoney(r.inversion_total))}
+            ${kpiHtml("Ingreso arriendo", fmtMoney(r.ingreso_bruto_anual), "bruto/año")}
+            ${kpiHtml("Comisión agencia", fmtMoney(r.gastos.comision_agencia))}
+            ${kpiHtml("Administración", fmtMoney(r.gastos.administracion))}
+            ${kpiHtml("Predial", fmtMoney(r.gastos.predial))}
+            ${kpiHtml("Mantenimiento", fmtMoney(r.gastos.mantenimiento))}
         </div>`;
 }
