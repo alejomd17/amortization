@@ -1,8 +1,10 @@
-// En local la API la sirve el mismo FastAPI; en produccion vive en Render
-// (la pagina se sirve via proxy desde aleossa.com, por eso la URL absoluta).
-const API_BASE = ["localhost", "127.0.0.1"].includes(window.location.hostname)
-    ? ""
-    : "https://aleossa-api.onrender.com";
+// La pagina y la API se sirven juntas (en local por uvicorn, en produccion por
+// Vercel), asi que la ruta relativa basta. La excepcion es aleossa.com, donde
+// Netlify hace proxy y /amortization apunta a la raiz: ahi hace falta la absoluta.
+const PROXIED_HOSTS = ["aleossa.com", "www.aleossa.com"];
+const API_BASE = PROXIED_HOSTS.includes(window.location.hostname)
+    ? "https://amortization-sigma.vercel.app"
+    : "";
 
 document.addEventListener("DOMContentLoaded",() => {
 
