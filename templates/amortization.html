@@ -148,6 +148,12 @@
         <section id="panelAhorro" class="tab-panel hidden">
             <h1 class="page-title">Simula tu <em>ahorro</em></h1>
 
+            <div class="abono-mode-toggle" role="tablist">
+                <button type="button" id="ahModeCdt" class="mode-btn active" role="tab" aria-selected="true">CDT</button>
+                <button type="button" id="ahModeProgramado" class="mode-btn" role="tab" aria-selected="false">Programado</button>
+            </div>
+
+            <div id="ahPanelCdt" class="ahorro-submodo">
             <section class="card">
                 <p class="section-eyebrow">Datos del CDT</p>
                 <div class="field-grid">
@@ -199,6 +205,68 @@
             </div>
 
             <div id="ahorroResultCard" class="card resumen-card hidden"></div>
+            </div><!-- /ahPanelCdt -->
+
+            <!-- Sub-modo: Ahorro programado -->
+            <div id="ahPanelProgramado" class="ahorro-submodo hidden">
+                <section class="card">
+                    <p class="section-eyebrow">Ahorro programado</p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="ahPgAporte">Aporte mensual</label>
+                            <input type="number" id="ahPgAporte" placeholder="Ej. 500.000" required>
+                        </div>
+                        <div class="field">
+                            <label for="ahPgInicial">Monto inicial (opcional)</label>
+                            <input type="number" id="ahPgInicial" placeholder="Ej. 0">
+                        </div>
+                        <div class="field">
+                            <label for="ahPgPlazo">Plazo</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="ahPgPlazo" placeholder="Ej. 60" required>
+                                <select id="ahPgPlazoUnit" aria-label="Unidad del plazo">
+                                    <option value="months" selected>Meses</option>
+                                    <option value="years">Años</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="ahPgRate">Tasa de interés</label>
+                            <input type="number" id="ahPgRate" placeholder="Ej. 10" step="any" required>
+                            <p id="ahPgRateConversion" class="rate-conversion hidden"></p>
+                        </div>
+                        <div class="field">
+                            <label for="ahPgRateType">Tipo de tasa</label>
+                            <select id="ahPgRateType">
+                                <option value="Nominal">Nominal</option>
+                                <option value="Efectiva" selected>Efectiva</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="ahPgRatePeriod">Período de la tasa</label>
+                            <select id="ahPgRatePeriod">
+                                <option value="Anual" selected>Anual</option>
+                                <option value="Mensual">Mensual</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="ahPgRetencion">Retención en la fuente (%)</label>
+                            <input type="number" id="ahPgRetencion" value="7" step="any">
+                            <p class="hint">7% rendimientos generales · 4% si es CDT/renta fija</p>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="calcular-wrap">
+                    <button id="calcularProgramadoBtn" class="btn btn-primary">Calcular</button>
+                </div>
+
+                <div id="programadoResultCard" class="card resumen-card hidden"></div>
+            </div><!-- /ahPanelProgramado -->
         </section>
     </main>
 

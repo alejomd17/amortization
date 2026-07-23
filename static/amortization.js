@@ -41,6 +41,22 @@ function kpiHtml(label, value, sub = "", clase = "") {
     </div>`;
 }
 
+// Muestra el equivalente E.A./M.V. en vivo bajo un campo de tasa
+function wireRateConversion(rateEl, typeEl, periodEl, outEl) {
+    function update() {
+        const tasa = Number.parseFloat(rateEl.value);
+        if (!Number.isFinite(tasa) || tasa <= 0) {
+            outEl.classList.add("hidden");
+            return;
+        }
+        const ea = convertirTasa(tasa, typeEl.value, periodEl.value, "Anual");
+        const mv = convertirTasa(tasa, typeEl.value, periodEl.value, "Mensual");
+        outEl.innerHTML = `≈ <strong>${fmtPct(ea)}</strong> E.A. &nbsp;·&nbsp; <strong>${fmtPct(mv)}</strong> M.V.`;
+        outEl.classList.remove("hidden");
+    }
+    [rateEl, typeEl, periodEl].forEach((el) => el.addEventListener("input", update));
+}
+
 // "202607" -> valido si son 6 digitos y el mes esta entre 01 y 12
 function esAnnoMesValido(s) {
     if (!/^\d{6}$/.test(s)) return false;
@@ -314,6 +330,70 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Hubo un problema con el cálculo: " + error.message);
         }
     });
+
+    // ── Sub-modo Ahorro: CDT / Programado ────────────────────────────────────
+    const ahModeCdt = document.getElementById("ahModeCdt");
+    const ahModeProgramado = document.getElementById("ahModeProgramado");
+    const ahPanelCdt = document.getElementById("ahPanelCdt");
+    const ahPanelProgramado = document.getElementById("ahPanelProgramado");
+    function setAhorroModo(modo) {
+        const esCdt = modo === "cdt";
+        ahModeCdt.classList.toggle("active", esCdt);
+        ahModeProgramado.classList.toggle("active", !esCdt);
+        ahModeCdt.setAttribute("aria-selected", String(esCdt));
+        ahModeProgramado.setAttribute("aria-selected", String(!esCdt));
+        ahPanelCdt.classList.toggle("hidden", !esCdt);
+        ahPanelProgramado.classList.toggle("hidden", esCdt);
+    }
+    ahModeCdt.addEventListener("click", () => setAhorroModo("cdt"));
+    ahModeProgramado.addEventListener("click", () => setAhorroModo("programado"));
+
+    // ── AHORRO PROGRAMADO ────────────────────────────────────────────────────
+    const ahPgAporte = document.getElementById("ahPgAporte");
+    const ahPgInicial = document.getElementById("ahPgInicial");
+    const ahPgRate = document.getElementById("ahPgRate");
+    const ahPgRateType = document.getElementById("ahPgRateType");
+    const ahPgRatePeriod = document.getElementById("ahPgRatePeriod");
+    const ahPgPlazo = document.getElementById("ahPgPlazo");
+    const ahPgPlazoUnit = document.getElementById("ahPgPlazoUnit");
+    const ahPgRetencion = document.getElementById("ahPgRetencion");
+    const calcularProgramadoBtn = document.getElementById("calcularProgramadoBtn");
+
+    wireRateConversion(ahPgRate, ahPgRateType, ahPgRatePeriod,
+        document.getElementById("ahPgRateConversion"));
+
+    calcularProgramadoBtn.addEventListener("click", async () => {
+        const plazo = Number.parseFloat(ahPgPlazo.value);
+        const plazoMeses = ahPgPlazoUnit.value === "years" ? plazo * 12 : plazo;
+
+        const data = {
+            aporte_mensual: Number.parseFloat(ahPgAporte.value),
+            monto_inicial: Number.parseFloat(ahPgInicial.value) || 0,
+            interest_rate: Number.parseFloat(ahPgRate.value),
+            type_rate: ahPgRateType.value,
+            period: ahPgRatePeriod.value,
+            plazo_meses: plazoMeses,
+            retencion: Number.parseFloat(ahPgRetencion.value) || 0,
+        };
+
+        try {
+            const response = await fetch(`${API_BASE}/ahorro-programado`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data),
+            });
+            if (!response.ok) {
+                let detalle = "";
+                try { detalle = (await response.json()).detail || ""; } catch (e) {}
+                throw new Error(detalle || `HTTP ${response.status}`);
+            }
+            displayProgramado(await response.json());
+            document.getElementById("programadoResultCard").scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch (error) {
+            console.error("Error:", error);
+            alert("Hubo un problema con el cálculo: " + error.message);
+        }
+    });
 });
 
 
@@ -413,5 +493,33 @@ function displayAhorro(r) {
             ${kpiHtml("Retención", fmtMoney(r.retencion), `${fmtPct(r.retencion_pct)} en la fuente`)}
             ${kpiHtml("Tasa E.A.", fmtPct(r.tasa_ea))}
             ${kpiHtml("Tasa M.V.", fmtPct(r.tasa_mv))}
+        </div>`;
+}
+
+
+// ── Render: ahorro programado ─────────────────────────────────────────────────
+function displayProgramado(r) {
+    const card = document.getElementById("programadoResultCard");
+    card.classList.remove("hidden");
+
+    const inicialTxt = r.monto_inicial > 0
+        ? ` (más <strong>${fmtMoney(r.monto_inicial)}</strong> inicial)`
+        : "";
+
+    card.innerHTML = `
+        <h2>Tu <em>ahorro programado</em></h2>
+        <p class="resumen-narrativa">
+            Aportando <strong>${fmtMoney(r.aporte_mensual)}</strong> al mes durante
+            <strong>${r.plazo_meses} meses</strong>${inicialTxt}, acumulas
+            <strong>${fmtMoney(r.valor_final_neto)}</strong>. De eso,
+            <strong>${fmtMoney(r.interes_neto)}</strong> son intereses que no pusiste tú.
+        </p>
+        <div class="kpi-grid">
+            ${kpiHtml("Valor final neto", fmtMoney(r.valor_final_neto), "", "good")}
+            ${kpiHtml("Total aportado", fmtMoney(r.total_aportado), "lo que pusiste tú")}
+            ${kpiHtml("Interés neto", fmtMoney(r.interes_neto), "", "good")}
+            ${kpiHtml("Interés bruto", fmtMoney(r.interes_bruto))}
+            ${kpiHtml("Retención", fmtMoney(r.retencion), `${fmtPct(r.retencion_pct)} en la fuente`)}
+            ${kpiHtml("Tasa E.A.", fmtPct(r.tasa_ea))}
         </div>`;
 }

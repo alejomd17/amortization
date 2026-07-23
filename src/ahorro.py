@@ -58,3 +58,51 @@ class Ahorro:
             # rendimiento neto sobre el capital, en todo el plazo
             "rendimiento_neto_pct": round(interes_neto / monto * 100, 2) if monto else 0.0,
         }
+
+    def programado(self,
+                   aporte_mensual: float = 500000,
+                   monto_inicial: float = 0,
+                   interest_rate: float = 10,
+                   type_rate: str = "Efectiva",
+                   period: str = "Anual",
+                   plazo_meses: float = 60,
+                   retencion_pct: float = 7.0,
+                   ) -> dict:
+        """Ahorro programado: aportes mensuales fijos + un monto inicial opcional,
+        con interes compuesto (valor futuro de una anualidad vencida).
+
+        Rendimientos financieros generales: retencion tipica 7%.
+        """
+        im = self._tasa_mensual_efectiva(interest_rate, type_rate, period)
+        n = int(plazo_meses)
+
+        fv_inicial = monto_inicial * (1 + im) ** n
+        if im == 0:
+            fv_aportes = aporte_mensual * n
+        else:
+            fv_aportes = aporte_mensual * (((1 + im) ** n - 1) / im)
+
+        valor_final_bruto = fv_inicial + fv_aportes
+        total_aportado = monto_inicial + aporte_mensual * n
+        interes_bruto = valor_final_bruto - total_aportado
+        retencion = interes_bruto * (retencion_pct / 100)
+        interes_neto = interes_bruto - retencion
+        valor_final_neto = total_aportado + interes_neto
+
+        tasa_ea = interest_rates.calculate_interest_rate(interest_rate, type_rate, period, 'Anual')
+        tasa_mv = round(im * 100, 4)
+
+        return {
+            "aporte_mensual": round(float(aporte_mensual), 2),
+            "monto_inicial": round(float(monto_inicial), 2),
+            "plazo_meses": n,
+            "tasa_ea": tasa_ea,
+            "tasa_mv": tasa_mv,
+            "total_aportado": round(total_aportado, 2),
+            "interes_bruto": round(interes_bruto, 2),
+            "retencion_pct": round(float(retencion_pct), 2),
+            "retencion": round(retencion, 2),
+            "interes_neto": round(interes_neto, 2),
+            "valor_final_bruto": round(valor_final_bruto, 2),
+            "valor_final_neto": round(valor_final_neto, 2),
+        }

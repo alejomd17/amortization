@@ -146,6 +146,49 @@ async def calcular_ahorro(request: AhorroRequest):
         raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
 
 
+class ProgramadoRequest(BaseModel):
+    aporte_mensual: float
+    monto_inicial: float = 0.0
+    interest_rate: float
+    type_rate: str
+    period: str
+    plazo_meses: float
+    retencion: float = 7.0  # rendimientos financieros generales
+
+    @field_validator("retencion", "monto_inicial", mode="before")
+    @classmethod
+    def numero_por_defecto(cls, v, info):
+        default = 7.0 if info.field_name == "retencion" else 0.0
+        if v is None or v == "":
+            return default
+        try:
+            v = float(v)
+        except (TypeError, ValueError):
+            return default
+        return default if v != v else v  # NaN -> default
+
+
+@app.post('/ahorro-programado')
+async def calcular_ahorro_programado(request: ProgramadoRequest):
+    """Ahorro programado: aportes mensuales fijos + monto inicial, interes compuesto."""
+    try:
+        if request.plazo_meses <= 0:
+            raise ValueError("El plazo debe ser mayor a 0.")
+        return ahorro.programado(
+            aporte_mensual = request.aporte_mensual,
+            monto_inicial  = request.monto_inicial,
+            interest_rate  = request.interest_rate,
+            type_rate      = request.type_rate,
+            period         = request.period,
+            plazo_meses    = request.plazo_meses,
+            retencion_pct  = request.retencion,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
+
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     try:
