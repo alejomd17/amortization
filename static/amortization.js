@@ -252,7 +252,7 @@ function displayResumen(r) {
         ? `+ seguro ${fmtMoney(r.seguro)} = ${fmtMoney(r.cuota_total)}`
         : "";
 
-    let html = `<h2>Resumen</h2>
+    let html = `<h2>Tu <em>resumen</em></h2>
         <div class="kpi-grid">
             ${kpi("Cuota mensual", fmtMoney(r.cuota_mensual), seguroSub)}
             ${kpi("Tasa E.A.", fmtPct(r.tasa_ea))}
