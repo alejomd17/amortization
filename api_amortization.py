@@ -198,41 +198,51 @@ async def calcular_ahorro_programado(request: ProgramadoRequest):
 
 
 class MetaRequest(BaseModel):
+    modo: str = "aporte"           # "aporte" (dado el plazo) o "tiempo" (dado el aporte)
     meta_objetivo: float
     monto_inicial: float = 0.0
+    aporte_mensual: float = 0.0    # modo tiempo
+    plazo_meses: float = 0.0       # modo aporte
     interest_rate: float
     type_rate: str
     period: str
-    plazo_meses: float
-    retencion: float = 7.0
 
-    @field_validator("retencion", "monto_inicial", mode="before")
+    @field_validator("monto_inicial", "aporte_mensual", "plazo_meses", mode="before")
     @classmethod
-    def numero_por_defecto(cls, v, info):
-        default = 7.0 if info.field_name == "retencion" else 0.0
+    def numero_por_defecto(cls, v):
         if v is None or v == "":
-            return default
+            return 0.0
         try:
             v = float(v)
         except (TypeError, ValueError):
-            return default
-        return default if v != v else v
+            return 0.0
+        return 0.0 if v != v else v
 
 
 @app.post('/ahorro-meta')
 async def calcular_ahorro_meta(request: MetaRequest):
-    """Meta de ahorro: cuánto aportar al mes para llegar a un objetivo."""
+    """Meta de ahorro (valor bruto): cuánto aportar, o cuánto tiempo tarda."""
     try:
+        if request.modo == "tiempo":
+            if request.aporte_mensual <= 0:
+                raise ValueError("El aporte mensual debe ser mayor a 0.")
+            return ahorro.meta_tiempo(
+                meta_objetivo  = request.meta_objetivo,
+                monto_inicial  = request.monto_inicial,
+                aporte_mensual = request.aporte_mensual,
+                interest_rate  = request.interest_rate,
+                type_rate      = request.type_rate,
+                period         = request.period,
+            )
         if request.plazo_meses <= 0:
             raise ValueError("El plazo debe ser mayor a 0.")
-        return ahorro.meta(
+        return ahorro.meta_aporte(
             meta_objetivo = request.meta_objetivo,
             monto_inicial = request.monto_inicial,
             interest_rate = request.interest_rate,
             type_rate     = request.type_rate,
             period        = request.period,
             plazo_meses   = request.plazo_meses,
-            retencion_pct = request.retencion,
         )
     except ValueError as ve:
         raise HTTPException(status_code=422, detail=str(ve))

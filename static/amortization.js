@@ -417,7 +417,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ── AHORRO META ──────────────────────────────────────────────────────────
+    // ── AHORRO META (¿cuánto aporto? / ¿cuánto tardo?) ───────────────────────
     const ahMtObjetivo = document.getElementById("ahMtObjetivo");
     const ahMtInicial = document.getElementById("ahMtInicial");
     const ahMtRate = document.getElementById("ahMtRate");
@@ -425,43 +425,46 @@ document.addEventListener("DOMContentLoaded", () => {
     const ahMtRatePeriod = document.getElementById("ahMtRatePeriod");
     const ahMtPlazo = document.getElementById("ahMtPlazo");
     const ahMtPlazoUnit = document.getElementById("ahMtPlazoUnit");
-    const ahMtRetencion = document.getElementById("ahMtRetencion");
+    const ahMtAporte = document.getElementById("ahMtAporte");
+    const mtFieldPlazo = document.getElementById("mtFieldPlazo");
+    const mtFieldAporte = document.getElementById("mtFieldAporte");
+    const mtModeAporte = document.getElementById("mtModeAporte");
+    const mtModeTiempo = document.getElementById("mtModeTiempo");
     const calcularMetaBtn = document.getElementById("calcularMetaBtn");
+
+    let metaModo = "aporte";
+    function setMetaModo(modo) {
+        metaModo = modo;
+        const esAporte = modo === "aporte";
+        mtModeAporte.classList.toggle("active", esAporte);
+        mtModeTiempo.classList.toggle("active", !esAporte);
+        mtModeAporte.setAttribute("aria-selected", String(esAporte));
+        mtModeTiempo.setAttribute("aria-selected", String(!esAporte));
+        mtFieldPlazo.classList.toggle("hidden", !esAporte);
+        mtFieldAporte.classList.toggle("hidden", esAporte);
+    }
+    mtModeAporte.addEventListener("click", () => setMetaModo("aporte"));
+    mtModeTiempo.addEventListener("click", () => setMetaModo("tiempo"));
 
     wireRateConversion(ahMtRate, ahMtRateType, ahMtRatePeriod,
         document.getElementById("ahMtRateConversion"));
 
-    calcularMetaBtn.addEventListener("click", async () => {
-        const plazo = Number.parseFloat(ahMtPlazo.value);
-        const plazoMeses = ahMtPlazoUnit.value === "years" ? plazo * 12 : plazo;
-
+    calcularMetaBtn.addEventListener("click", () => {
         const data = {
+            modo: metaModo,
             meta_objetivo: Number.parseFloat(ahMtObjetivo.value),
             monto_inicial: Number.parseFloat(ahMtInicial.value) || 0,
             interest_rate: Number.parseFloat(ahMtRate.value),
             type_rate: ahMtRateType.value,
             period: ahMtRatePeriod.value,
-            plazo_meses: plazoMeses,
-            retencion: Number.parseFloat(ahMtRetencion.value) || 0,
         };
-
-        try {
-            const response = await fetch(`${API_BASE}/ahorro-meta`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data),
-            });
-            if (!response.ok) {
-                let detalle = "";
-                try { detalle = (await response.json()).detail || ""; } catch (e) {}
-                throw new Error(detalle || `HTTP ${response.status}`);
-            }
-            displayMeta(await response.json());
-            document.getElementById("metaResultCard").scrollIntoView({ behavior: "smooth", block: "start" });
-        } catch (error) {
-            console.error("Error:", error);
-            alert("Hubo un problema con el cálculo: " + error.message);
+        if (metaModo === "tiempo") {
+            data.aporte_mensual = Number.parseFloat(ahMtAporte.value) || 0;
+        } else {
+            const plazo = Number.parseFloat(ahMtPlazo.value);
+            data.plazo_meses = ahMtPlazoUnit.value === "years" ? plazo * 12 : plazo;
         }
+        postAndRender("/ahorro-meta", data, displayMeta, "metaResultCard");
     });
 
     // ── Sub-modo Inmobiliaria ────────────────────────────────────────────────
@@ -749,22 +752,51 @@ function displayProgramado(r) {
 }
 
 
-// ── Render: meta de ahorro ────────────────────────────────────────────────────
+// ── Render: meta de ahorro (bruto) ────────────────────────────────────────────
 function displayMeta(r) {
     const card = document.getElementById("metaResultCard");
     card.classList.remove("hidden");
 
+    if (r.modo === "tiempo" && r.alcanzable === false) {
+        card.innerHTML = `
+            <h2>Tu <em>meta</em></h2>
+            <p class="resumen-narrativa">
+                Con ese aporte y esa tasa no llegas a la meta de
+                <strong>${fmtMoney(r.meta_objetivo)}</strong> — sube el aporte o la tasa.
+            </p>`;
+        return;
+    }
     if (r.ya_alcanzada) {
         card.innerHTML = `
             <h2>Tu <em>meta</em></h2>
             <p class="resumen-narrativa">
-                Con tu monto inicial de <strong>${fmtMoney(r.monto_inicial)}</strong> ya superas la
+                Con tu monto inicial de <strong>${fmtMoney(r.monto_inicial)}</strong> ya alcanzas la
                 meta de <strong>${fmtMoney(r.meta_objetivo)}</strong> — no necesitas aportar nada más.
             </p>`;
         return;
     }
 
     const inicialTxt = r.monto_inicial > 0 ? ` (más <strong>${fmtMoney(r.monto_inicial)}</strong> inicial)` : "";
+
+    if (r.modo === "tiempo") {
+        card.innerHTML = `
+            <h2>Tu <em>meta</em></h2>
+            <p class="resumen-narrativa">
+                Aportando <strong>${fmtMoney(r.aporte_mensual)}</strong> al mes${inicialTxt} al
+                ${fmtPct(r.tasa_ea)} E.A., llegas a <strong>${fmtMoney(r.meta_objetivo)}</strong> en
+                <strong>${r.meses} meses</strong> (${r.anos} años).
+            </p>
+            <div class="kpi-grid">
+                ${kpiHtml("Tardas", `${r.meses} meses`, `${r.anos} años`, "good")}
+                ${kpiHtml("Meta", fmtMoney(r.meta_objetivo))}
+                ${kpiHtml("Aporte mensual", fmtMoney(r.aporte_mensual))}
+                ${kpiHtml("Total que aportas", fmtMoney(r.total_aportado), "de tu bolsillo")}
+                ${kpiHtml("Valor final", fmtMoney(r.valor_final), "bruto")}
+                ${kpiHtml("Tasa E.A.", fmtPct(r.tasa_ea))}
+            </div>`;
+        return;
+    }
+
     card.innerHTML = `
         <h2>Tu <em>meta</em></h2>
         <p class="resumen-narrativa">
@@ -776,7 +808,7 @@ function displayMeta(r) {
             ${kpiHtml("Aporte mensual", fmtMoney(r.aporte_mensual), "", "good")}
             ${kpiHtml("Meta", fmtMoney(r.meta_objetivo))}
             ${kpiHtml("Total que aportas", fmtMoney(r.total_aportado), "de tu bolsillo")}
-            ${kpiHtml("Lo pone el interés", fmtMoney(r.interes_neto), "", "good")}
+            ${kpiHtml("Lo pone el interés", fmtMoney(r.interes), "", "good")}
             ${kpiHtml("Plazo", `${r.plazo_meses} meses`)}
             ${kpiHtml("Tasa E.A.", fmtPct(r.tasa_ea))}
         </div>`;

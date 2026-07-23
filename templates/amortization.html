@@ -299,7 +299,7 @@
                             <input type="number" id="imCapPorcentaje" value="30" step="any">
                         </div>
                         <div class="field">
-                            <label for="imCapDeudas">Deudas mensuales actuales</label>
+                            <label for="imCapDeudas">Cuota mensual de otras deudas</label>
                             <input type="number" id="imCapDeudas" placeholder="Ej. 0 (opcional)">
                         </div>
                     </div>
@@ -317,6 +317,15 @@
                             </select>
                         </div>
                         <div class="field">
+                            <label for="imCapRatePeriod">Período de la tasa</label>
+                            <select id="imCapRatePeriod">
+                                <option value="Anual" selected>Anual</option>
+                                <option value="Mensual">Mensual</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
                             <label for="imCapPlazo">Plazo</label>
                             <div class="input-with-unit">
                                 <input type="number" id="imCapPlazo" placeholder="Ej. 20" required>
@@ -325,8 +334,9 @@
                                     <option value="months">Meses</option>
                                 </select>
                             </div>
-                            <input type="hidden" id="imCapRatePeriod" value="Anual">
                         </div>
+                        <div class="field"></div>
+                        <div class="field"></div>
                     </div>
                 </section>
                 <div class="calcular-wrap">
@@ -587,6 +597,10 @@
 
             <!-- Sub-modo: Meta de ahorro -->
             <div id="ahPanelMeta" class="ahorro-submodo hidden">
+                <div class="abono-mode-toggle" role="tablist">
+                    <button type="button" id="mtModeAporte" class="mode-btn active" role="tab" aria-selected="true">¿Cuánto aporto?</button>
+                    <button type="button" id="mtModeTiempo" class="mode-btn" role="tab" aria-selected="false">¿Cuánto tardo?</button>
+                </div>
                 <section class="card">
                     <p class="section-eyebrow">Meta de ahorro</p>
                     <div class="field-grid">
@@ -598,15 +612,19 @@
                             <label for="ahMtInicial">Monto inicial (opcional)</label>
                             <input type="number" id="ahMtInicial" placeholder="Ej. 0">
                         </div>
-                        <div class="field">
+                        <div class="field" id="mtFieldPlazo">
                             <label for="ahMtPlazo">Plazo</label>
                             <div class="input-with-unit">
-                                <input type="number" id="ahMtPlazo" placeholder="Ej. 60" required>
+                                <input type="number" id="ahMtPlazo" placeholder="Ej. 60">
                                 <select id="ahMtPlazoUnit" aria-label="Unidad del plazo">
                                     <option value="months" selected>Meses</option>
                                     <option value="years">Años</option>
                                 </select>
                             </div>
+                        </div>
+                        <div class="field hidden" id="mtFieldAporte">
+                            <label for="ahMtAporte">Aporte mensual</label>
+                            <input type="number" id="ahMtAporte" placeholder="Ej. 600.000">
                         </div>
                     </div>
                     <div class="field-grid">
@@ -628,13 +646,6 @@
                                 <option value="Anual" selected>Anual</option>
                                 <option value="Mensual">Mensual</option>
                             </select>
-                        </div>
-                    </div>
-                    <div class="field-grid">
-                        <div class="field">
-                            <label for="ahMtRetencion">Retención en la fuente (%)</label>
-                            <input type="number" id="ahMtRetencion" value="7" step="any">
-                            <p class="hint">7% rendimientos generales · 4% si es CDT/renta fija</p>
                         </div>
                     </div>
                 </section>
