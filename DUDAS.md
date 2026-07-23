@@ -12,9 +12,9 @@
   restante + costos del cambio); se ordena por costo total. Confirmado así por ahora.
 - **Costo real**: TIR del flujo (recibes monto − costos, pagas cuota + seguro), sobre el
   cronograma sin abonos; solo se muestra cuando hay costos.
+- **Abonar vs. invertir (versión fina)**: modela los flujos reales — al abonar, el crédito
+  termina antes y la cuota liberada se invierte hasta el fin del plazo original; compara el
+  patrimonio final de las dos estrategias. Requiere saldo + plazo restante del crédito.
 
 ## Abiertas
-- **Abonar vs. invertir — "hacerlo más fino"**: pendiente de tu confirmación tras mi explicación
-  (ver chat). La versión actual compara tasas y proyecta X·(1+tasa)^años; una más fina modelaría
-  reinvertir el flujo mensual que se libera al terminar antes el crédito.
 - **Arrendar vs. comprar**: lo diseñamos juntos (como el evaluador de arriendo) antes de construir.
