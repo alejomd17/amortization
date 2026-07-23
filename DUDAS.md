@@ -23,8 +23,8 @@
     él, comprar sale artificialmente bien.
   - Administración: la paga el comprador (propietario).
   - Muestra el año de equilibrio (break-even).
-  - **Simplificación v1**: predial y mantenimiento se mantienen constantes en el tiempo (el arriendo
-    sí sube con inflación año a año). ¿Los hacemos crecer con inflación también?
+  - Predial, administración y mantenimiento suben con inflación año a año (igual que el arriendo);
+    la cuota del crédito no (es fija).
 
 ## Abiertas
-- (ninguna por ahora)
+- (ninguna)

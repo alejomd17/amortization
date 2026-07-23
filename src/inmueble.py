@@ -174,7 +174,7 @@ class Inmueble:
         inv_neta_ea = tasa_inversion_ea * (1 - retencion_inversion_pct / 100)
         i_inv = (1 + inv_neta_ea / 100) ** (1 / 12) - 1
         valorizacion_total = inflacion_pct + valorizacion_real_pct  # anual, nominal
-        costos_prop_mes = predial_anual / 12 + administracion_mensual + mantenimiento_anual / 12
+        costos_prop_base = predial_anual / 12 + administracion_mensual + mantenimiento_anual / 12
 
         def _saldo(m):
             if m >= plazo:
@@ -193,8 +193,10 @@ class Inmueble:
             # Arrendar: cuota inicial invertida + diferencia mensual invertida
             fondo = desembolso_inicial * (1 + i_inv) ** meses
             for k in range(1, meses + 1):
-                arriendo_k = arriendo_mensual * (1 + inflacion_pct / 100) ** ((k - 1) // 12)
-                costo_comprar_k = (cuota if k <= plazo else 0.0) + costos_prop_mes
+                factor_infl = (1 + inflacion_pct / 100) ** ((k - 1) // 12)
+                arriendo_k = arriendo_mensual * factor_infl
+                # predial, administración y mantenimiento suben con inflación; la cuota no
+                costo_comprar_k = (cuota if k <= plazo else 0.0) + costos_prop_base * factor_infl
                 diferencia = costo_comprar_k - arriendo_k          # lo que ahorra al arrendar
                 fondo += diferencia * (1 + i_inv) ** (meses - k)
             return patr_comprar, fondo
