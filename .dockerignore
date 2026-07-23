@@ -1,0 +1,13 @@
+# Entorno local: la imagen construye el suyo con uv sync
+.venv
+__pycache__/
+*.py[cod]
+
+# Control de versiones y metadatos
+.git
+.gitignore
+.github
+
+# Exploracion: no hace falta en runtime
+exploration.ipynb
+.ipynb_checkpoints
