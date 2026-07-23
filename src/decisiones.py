@@ -4,10 +4,35 @@ from src.interest_rates import InterestRates
 interest_rates = InterestRates()
 
 
+def _cuota(monto, im, n):
+    if n <= 0:
+        return 0.0
+    if im == 0:
+        return monto / n
+    return monto * im * (1 + im) ** n / ((1 + im) ** n - 1)
+
+
 class Decisiones:
+    @staticmethod
+    def _saldo_restante(monto_inicial, im, plazo_total, cuotas_pagadas):
+        """Saldo de un crédito francés tras `cuotas_pagadas` cuotas."""
+        cuota = _cuota(monto_inicial, im, plazo_total)
+        if im == 0:
+            saldo = monto_inicial - cuota * cuotas_pagadas
+        else:
+            saldo = monto_inicial * (1 + im) ** cuotas_pagadas - cuota * ((1 + im) ** cuotas_pagadas - 1) / im
+        return max(saldo, 0.0)
+
     def abonar_vs_invertir(self,
-                           saldo: float = 150000000,
-                           plazo_restante_meses: float = 180,
+                           modo: str = "original",
+                           # modo "saldo": saldo actual + plazo restante
+                           saldo: float = 0,
+                           plazo_restante_meses: float = 0,
+                           # modo "original": deduce el saldo del crédito original
+                           monto_inicial: float = 0,
+                           plazo_total_meses: float = 0,
+                           cuotas_pagadas: float = 0,
+                           # comunes
                            tasa_credito: float = 14,
                            tc_type: str = "Efectiva",
                            tc_period: str = "Anual",
@@ -15,22 +40,28 @@ class Decisiones:
                            cdt_ea: float = 10,
                            retencion_cdt_pct: float = 4,
                            ) -> dict:
-        """Tienes plata extra: ¿abonar al crédito o invertir en un CDT?
+        """¿Abonar al crédito o invertir la plata extra en un CDT?
 
-        Modela los flujos reales: si abonas, el crédito termina antes y la cuota que se
-        libera se invierte hasta el fin del plazo original. Compara el patrimonio final
-        de las dos estrategias en ese horizonte.
+        Modela los flujos reales: si abonas, el crédito termina antes y la cuota liberada
+        se invierte hasta el fin del plazo original; compara el patrimonio final.
+
+        En modo "original" deduce el saldo actual y el plazo restante a partir del crédito
+        original (monto, plazo total, cuotas ya pagadas).
         """
         i_loan = interest_rates.calculate_interest_rate(tasa_credito, tc_type, tc_period, 'Mensual') / 100
-        n = int(plazo_restante_meses)
 
-        # Cuota del crédito (sistema francés)
-        if i_loan == 0:
-            cuota = saldo / n if n else 0.0
+        if modo == "original":
+            plazo_total = int(plazo_total_meses)
+            k = int(cuotas_pagadas)
+            saldo = self._saldo_restante(monto_inicial, i_loan, plazo_total, k)
+            n = plazo_total - k
         else:
-            cuota = saldo * i_loan * (1 + i_loan) ** n / ((1 + i_loan) ** n - 1)
+            n = int(plazo_restante_meses)
 
-        # Meses para pagar el saldo restante tras el abono
+        saldo = float(saldo)
+        cuota = _cuota(saldo, i_loan, n)
+
+        # Meses para pagar el saldo tras el abono
         nuevo_saldo = max(saldo - monto_extra, 0.0)
         if nuevo_saldo <= 0:
             m_a = 0
@@ -55,15 +86,14 @@ class Decisiones:
         # INVERTIR: el extra crece en el CDT por todo el plazo restante
         valor_invertir = monto_extra * (1 + i_cdt) ** n
 
-        # Intereses del crédito que te ahorras al abonar (cuotas evitadas menos el capital extra)
         interes_ahorrado = cuota * meses_ahorrados - monto_extra
         conviene_abonar = valor_abonar > valor_invertir
 
         return {
-            "saldo": round(float(saldo), 2),
+            "saldo": round(saldo, 2),
             "monto_extra": round(float(monto_extra), 2),
             "cuota": round(cuota, 2),
-            "plazo_restante_meses": n,
+            "plazo_restante_meses": int(n),
             "tasa_credito_ea": interest_rates.calculate_interest_rate(tasa_credito, tc_type, tc_period, 'Anual'),
             "cdt_neto_ea": round(cdt_neto_ea, 2),
             "meses_ahorrados": int(meses_ahorrados),

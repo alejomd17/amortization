@@ -603,18 +603,43 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ── Abonar vs. invertir ──────────────────────────────────────────────────
+    let aiModo = "original";
+    const aiFieldsOriginal = document.getElementById("aiFieldsOriginal");
+    const aiFieldsSaldo = document.getElementById("aiFieldsSaldo");
+    const aiModeOriginal = document.getElementById("aiModeOriginal");
+    const aiModeSaldo = document.getElementById("aiModeSaldo");
+    function setAiModo(modo) {
+        aiModo = modo;
+        const esOriginal = modo === "original";
+        aiModeOriginal.classList.toggle("active", esOriginal);
+        aiModeSaldo.classList.toggle("active", !esOriginal);
+        aiModeOriginal.setAttribute("aria-selected", String(esOriginal));
+        aiModeSaldo.setAttribute("aria-selected", String(!esOriginal));
+        aiFieldsOriginal.classList.toggle("hidden", !esOriginal);
+        aiFieldsSaldo.classList.toggle("hidden", esOriginal);
+    }
+    aiModeOriginal.addEventListener("click", () => setAiModo("original"));
+    aiModeSaldo.addEventListener("click", () => setAiModo("saldo"));
+
     document.getElementById("calcularAbonarInvertirBtn").addEventListener("click", () => {
-        const plazoMeses = gv("aiPlazoUnit") === "years" ? g("aiPlazo") * 12 : g("aiPlazo");
-        postAndRender("/decisiones/abonar-vs-invertir", {
-            saldo: g("aiSaldo"),
-            plazo_restante_meses: plazoMeses,
+        const data = {
+            modo: aiModo,
             tasa_credito: g("aiTasaCredito"),
             tc_type: gv("aiTcType"),
             tc_period: gv("aiTcPeriod"),
             monto_extra: g("aiMonto"),
             cdt_ea: g("aiCdt") || 0,
             retencion_cdt_pct: g("aiRetencion") || 0,
-        }, displayAbonarInvertir, "abonarInvertirResultCard");
+        };
+        if (aiModo === "original") {
+            data.monto_inicial = g("aiMontoInicial");
+            data.plazo_total_meses = gv("aiPlazoTotalUnit") === "years" ? g("aiPlazoTotal") * 12 : g("aiPlazoTotal");
+            data.cuotas_pagadas = g("aiCuotasPagadas") || 0;
+        } else {
+            data.saldo = g("aiSaldo");
+            data.plazo_restante_meses = gv("aiPlazoUnit") === "years" ? g("aiPlazo") * 12 : g("aiPlazo");
+        }
+        postAndRender("/decisiones/abonar-vs-invertir", data, displayAbonarInvertir, "abonarInvertirResultCard");
     });
 });
 
