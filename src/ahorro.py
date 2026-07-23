@@ -106,3 +106,50 @@ class Ahorro:
             "valor_final_bruto": round(valor_final_bruto, 2),
             "valor_final_neto": round(valor_final_neto, 2),
         }
+
+    def meta(self,
+             meta_objetivo: float = 50000000,
+             monto_inicial: float = 0,
+             interest_rate: float = 10,
+             type_rate: str = "Efectiva",
+             period: str = "Anual",
+             plazo_meses: float = 60,
+             retencion_pct: float = 7.0,
+             ) -> dict:
+        """Meta de ahorro (inverso del programado): cuánto aportar al mes para
+        llegar a `meta_objetivo` (valor final NETO) en `plazo_meses`.
+        """
+        im = self._tasa_mensual_efectiva(interest_rate, type_rate, period)
+        n = int(plazo_meses)
+        F = (1 + im) ** n
+        S = n if im == 0 else ((1 + im) ** n - 1) / im
+        r = 1 - retencion_pct / 100
+
+        # meta_neta = aportado + interes_neto  →  despejar el aporte mensual (PMT)
+        denom = n + r * (S - n)
+        aporte = (meta_objetivo - monto_inicial - r * monto_inicial * (F - 1)) / denom if denom else 0.0
+        ya_alcanzada = aporte <= 0
+        aporte = max(aporte, 0.0)
+
+        total_aportado = monto_inicial + aporte * n
+        fv_bruto = monto_inicial * F + aporte * S
+        interes_bruto = fv_bruto - total_aportado
+        retencion = interes_bruto * (retencion_pct / 100)
+        interes_neto = interes_bruto - retencion
+        valor_final_neto = total_aportado + interes_neto
+
+        tasa_ea = interest_rates.calculate_interest_rate(interest_rate, type_rate, period, 'Anual')
+
+        return {
+            "meta_objetivo": round(float(meta_objetivo), 2),
+            "aporte_mensual": round(aporte, 2),
+            "monto_inicial": round(float(monto_inicial), 2),
+            "plazo_meses": n,
+            "tasa_ea": tasa_ea,
+            "tasa_mv": round(im * 100, 4),
+            "total_aportado": round(total_aportado, 2),
+            "interes_neto": round(interes_neto, 2),
+            "retencion_pct": round(float(retencion_pct), 2),
+            "valor_final_neto": round(valor_final_neto, 2),
+            "ya_alcanzada": ya_alcanzada,  # el monto inicial solo ya supera la meta
+        }

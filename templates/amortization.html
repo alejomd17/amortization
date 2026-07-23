@@ -151,6 +151,7 @@
             <div class="abono-mode-toggle" role="tablist">
                 <button type="button" id="ahModeCdt" class="mode-btn active" role="tab" aria-selected="true">CDT</button>
                 <button type="button" id="ahModeProgramado" class="mode-btn" role="tab" aria-selected="false">Programado</button>
+                <button type="button" id="ahModeMeta" class="mode-btn" role="tab" aria-selected="false">Meta</button>
             </div>
 
             <div id="ahPanelCdt" class="ahorro-submodo">
@@ -267,6 +268,67 @@
 
                 <div id="programadoResultCard" class="card resumen-card hidden"></div>
             </div><!-- /ahPanelProgramado -->
+
+            <!-- Sub-modo: Meta de ahorro -->
+            <div id="ahPanelMeta" class="ahorro-submodo hidden">
+                <section class="card">
+                    <p class="section-eyebrow">Meta de ahorro</p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="ahMtObjetivo">Meta a alcanzar</label>
+                            <input type="number" id="ahMtObjetivo" placeholder="Ej. 50.000.000" required>
+                        </div>
+                        <div class="field">
+                            <label for="ahMtInicial">Monto inicial (opcional)</label>
+                            <input type="number" id="ahMtInicial" placeholder="Ej. 0">
+                        </div>
+                        <div class="field">
+                            <label for="ahMtPlazo">Plazo</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="ahMtPlazo" placeholder="Ej. 60" required>
+                                <select id="ahMtPlazoUnit" aria-label="Unidad del plazo">
+                                    <option value="months" selected>Meses</option>
+                                    <option value="years">Años</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="ahMtRate">Tasa de interés</label>
+                            <input type="number" id="ahMtRate" placeholder="Ej. 10" step="any" required>
+                            <p id="ahMtRateConversion" class="rate-conversion hidden"></p>
+                        </div>
+                        <div class="field">
+                            <label for="ahMtRateType">Tipo de tasa</label>
+                            <select id="ahMtRateType">
+                                <option value="Nominal">Nominal</option>
+                                <option value="Efectiva" selected>Efectiva</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="ahMtRatePeriod">Período de la tasa</label>
+                            <select id="ahMtRatePeriod">
+                                <option value="Anual" selected>Anual</option>
+                                <option value="Mensual">Mensual</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="ahMtRetencion">Retención en la fuente (%)</label>
+                            <input type="number" id="ahMtRetencion" value="7" step="any">
+                            <p class="hint">7% rendimientos generales · 4% si es CDT/renta fija</p>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="calcular-wrap">
+                    <button id="calcularMetaBtn" class="btn btn-primary">Calcular</button>
+                </div>
+
+                <div id="metaResultCard" class="card resumen-card hidden"></div>
+            </div><!-- /ahPanelMeta -->
         </section>
     </main>
 

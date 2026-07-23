@@ -189,6 +189,49 @@ async def calcular_ahorro_programado(request: ProgramadoRequest):
         raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
 
 
+class MetaRequest(BaseModel):
+    meta_objetivo: float
+    monto_inicial: float = 0.0
+    interest_rate: float
+    type_rate: str
+    period: str
+    plazo_meses: float
+    retencion: float = 7.0
+
+    @field_validator("retencion", "monto_inicial", mode="before")
+    @classmethod
+    def numero_por_defecto(cls, v, info):
+        default = 7.0 if info.field_name == "retencion" else 0.0
+        if v is None or v == "":
+            return default
+        try:
+            v = float(v)
+        except (TypeError, ValueError):
+            return default
+        return default if v != v else v
+
+
+@app.post('/ahorro-meta')
+async def calcular_ahorro_meta(request: MetaRequest):
+    """Meta de ahorro: cuánto aportar al mes para llegar a un objetivo."""
+    try:
+        if request.plazo_meses <= 0:
+            raise ValueError("El plazo debe ser mayor a 0.")
+        return ahorro.meta(
+            meta_objetivo = request.meta_objetivo,
+            monto_inicial = request.monto_inicial,
+            interest_rate = request.interest_rate,
+            type_rate     = request.type_rate,
+            period        = request.period,
+            plazo_meses   = request.plazo_meses,
+            retencion_pct = request.retencion,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
+
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     try:
