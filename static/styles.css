@@ -34,7 +34,7 @@ body {
 
 /* ===== TÍTULO ===== */
 .container {
-    max-width: 1200px;
+    max-width: 1440px;
     margin: 0 auto;
     padding: 48px 40px 64px;
 }
@@ -620,6 +620,7 @@ body {
     border-radius: var(--radius-sharp);
     padding: 16px 20px;
     margin-bottom: 16px;
+    max-width: 900px;   /* en pantallas anchas: líneas legibles, no de lado a lado */
 }
 .resumen-narrativa strong { color: var(--verde); font-weight: 500; }
 
