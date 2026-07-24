@@ -561,11 +561,120 @@ document.addEventListener("DOMContentLoaded", () => {
         }, displayArrendarComprar, "arrendarComprarResultCard");
     });
 
+    // ── FLUJO DE CRÉDITOS (cascada) ──────────────────────────────────────────
+    const flujoCreditos = [];
+
+    // "202701:35000000, 202803:50000000" -> {202701: 35000000, ...}
+    function parsePuntuales(txt) {
+        const out = {};
+        (txt || "").split(",").forEach((par) => {
+            const [f, m] = par.split(":").map((s) => (s || "").trim());
+            const monto = Number.parseFloat(m);
+            if (/^\d{6}$/.test(f) && monto > 0) out[f] = monto;
+        });
+        return out;
+    }
+
+    function displayFlujoCreditos() {
+        const tbody = document.querySelector("#fjTable tbody");
+        const tfoot = document.querySelector("#fjTable tfoot");
+        tbody.innerHTML = "";
+        tfoot.innerHTML = "";
+
+        flujoCreditos.forEach((c, i) => {
+            const row = tbody.insertRow();
+            row.insertCell(0).textContent = i + 1;
+            row.insertCell(1).textContent = c.nombre;
+            row.insertCell(2).textContent = fmtMoney(c.saldo);
+            row.insertCell(3).textContent = c.tasa > 0 ? fmtPct(c.tasa) : "sin interés";
+            row.insertCell(4).textContent = `${c.plazo_meses} m`;
+            row.insertCell(5).textContent = fmtMoney(cuotaEstimada(c));
+
+            const celdaOrden = row.insertCell(6);
+            [["▲", -1], ["▼", 1]].forEach(([txt, delta]) => {
+                const b = document.createElement("button");
+                b.className = "btn-remove-abono";
+                b.textContent = txt;
+                b.addEventListener("click", () => {
+                    const j = i + delta;
+                    if (j < 0 || j >= flujoCreditos.length) return;
+                    [flujoCreditos[i], flujoCreditos[j]] = [flujoCreditos[j], flujoCreditos[i]];
+                    displayFlujoCreditos();
+                });
+                celdaOrden.appendChild(b);
+            });
+
+            const del = document.createElement("button");
+            del.className = "btn-remove-abono";
+            del.textContent = "Eliminar";
+            del.addEventListener("click", () => { flujoCreditos.splice(i, 1); displayFlujoCreditos(); });
+            row.insertCell(7).appendChild(del);
+        });
+
+        if (flujoCreditos.length) {
+            const saldoTot = flujoCreditos.reduce((a, c) => a + c.saldo, 0);
+            const cuotaTot = flujoCreditos.reduce((a, c) => a + cuotaEstimada(c) + (c.seguro || 0), 0);
+            const r = tfoot.insertRow();
+            ["", `Total (${flujoCreditos.length})`, fmtMoney(saldoTot), "", "", fmtMoney(cuotaTot), "", ""]
+                .forEach((t, k) => { r.insertCell(k).textContent = t; });
+        }
+    }
+
+    document.getElementById("fjAddBtn").addEventListener("click", () => {
+        const saldo = g("fjSaldo");
+        const plazoRaw = g("fjPlazo");
+        if (!(saldo > 0) || !(plazoRaw > 0)) {
+            alert("Ingresa un saldo y un plazo válidos.");
+            return;
+        }
+        const plazo = gv("fjPlazoUnit") === "years" ? plazoRaw * 12 : plazoRaw;
+        flujoCreditos.push({
+            nombre: document.getElementById("fjNombre").value.trim() || `Crédito ${flujoCreditos.length + 1}`,
+            saldo,
+            tasa: g("fjTasa") || 0,
+            tipo_tasa: gv("fjTipoTasa"),
+            periodo_tasa: gv("fjPeriodoTasa"),
+            plazo_meses: Math.round(plazo),
+            seguro: g("fjSeguro") || 0,
+            abono_fijo: g("fjAbonoFijo") || 0,
+            abonos_puntuales: parsePuntuales(document.getElementById("fjPuntuales").value),
+        });
+        ["fjNombre", "fjSaldo", "fjPlazo", "fjSeguro", "fjAbonoFijo", "fjPuntuales"]
+            .forEach((id) => { document.getElementById(id).value = ""; });
+        document.getElementById("fjTasa").value = "0";
+        displayFlujoCreditos();
+    });
+
+    // Mes actual por defecto
+    const hoy = new Date();
+    document.getElementById("fjFechaInicio").value =
+        `${hoy.getFullYear()}${String(hoy.getMonth() + 1).padStart(2, "0")}`;
+
+    document.getElementById("calcularFlujoBtn").addEventListener("click", () => {
+        if (!flujoCreditos.length) {
+            alert("Agrega al menos un crédito.");
+            return;
+        }
+        const fecha = document.getElementById("fjFechaInicio").value.trim();
+        if (!/^\d{6}$/.test(fecha)) {
+            alert("El mes de inicio debe tener formato AAAAMM (ej. 202601).");
+            return;
+        }
+        postAndRender("/flujo", {
+            creditos: flujoCreditos,
+            fecha_inicio: fecha,
+            pct_reinversion: g("fjPctReinversion") || 100,
+            orden_manual: flujoCreditos.map((_, i) => i),   // el orden de la lista
+            vara: gv("fjVara"),
+        }, displayFlujo, "flujoResultCard");
+    });
+
     // ── Sub-modo Crédito: Amortización / Comparador ──────────────────────────
     const CREDITO_MODOS = [
         { key: "amortizacion", btn: "crModeAmortizacion", panel: "crPanelAmortizacion" },
         { key: "comparador", btn: "crModeComparador", panel: "crPanelComparador" },
         { key: "abonar-invertir", btn: "crModeAbonarInvertir", panel: "crPanelAbonarInvertir" },
+        { key: "flujo", btn: "crModeFlujo", panel: "crPanelFlujo" },
     ].map((m) => ({ ...m, btnEl: document.getElementById(m.btn), panelEl: document.getElementById(m.panel) }));
     function setCreditoModo(key) {
         CREDITO_MODOS.forEach((m) => {
@@ -943,6 +1052,99 @@ function displayRentabilidad(r) {
             ${kpiHtml("Administración", fmtMoney(r.gastos.administracion))}
             ${kpiHtml("Predial", fmtMoney(r.gastos.predial))}
             ${kpiHtml("Mantenimiento", fmtMoney(r.gastos.mantenimiento))}
+        </div>`;
+}
+
+
+// ── Flujo de créditos: cuota estimada en el cliente (preview de la lista) ─────
+function cuotaEstimada(c) {
+    const n = c.plazo_meses;
+    if (!n) return 0;
+    if (!c.tasa || c.tasa <= 0) return c.saldo / n;
+    const im = convertirTasa(c.tasa, c.tipo_tasa, c.periodo_tasa, "Mensual") / 100;
+    if (im === 0) return c.saldo / n;
+    return c.saldo * im * Math.pow(1 + im, n) / (Math.pow(1 + im, n) - 1);
+}
+
+
+// ── Render: flujo de créditos ─────────────────────────────────────────────────
+function displayFlujo(r) {
+    const card = document.getElementById("flujoResultCard");
+    card.classList.remove("hidden");
+    const esc = r.escenarios;
+    const base = esc[0];
+    const sug = esc.find((e) => e.clave === "sugerencia");
+
+    const filas = esc.map((e) => `
+        <tr class="${e.clave === "sugerencia" ? "row-abono" : ""}">
+            <td>${e.nombre}${e.metodo ? ` <span class="hint">(${e.metodo})</span>` : ""}</td>
+            <td>${e.anno_mes_libertad ? fmtMesAnno(e.anno_mes_libertad) : "—"}</td>
+            <td>${e.meses} meses</td>
+            <td>${fmtMoney(e.total_intereses)}</td>
+            <td>${fmtMoney(e.ahorro_intereses)}</td>
+            <td>${fmtMoney(e.flujo_ganado)}</td>
+        </tr>`).join("");
+
+    card.innerHTML = `
+        <h2>Tu <em>flujo de créditos</em></h2>
+        <p class="resumen-narrativa">
+            Con la cascada quedas libre en <strong>${fmtMesAnno(sug.anno_mes_libertad)}</strong>
+            (${sug.meses} meses) en vez de ${base.anno_mes_libertad ? fmtMesAnno(base.anno_mes_libertad) : "—"}:
+            <strong>${sug.meses_ahorrados} meses antes</strong> y
+            <strong>${fmtMoney(sug.ahorro_intereses)}</strong> menos en intereses.
+            Desde ese mes dispones de <strong>${fmtMoney(sug.flujo_mensual_liberado)}</strong> al mes.
+        </p>
+        <div class="kpi-grid">
+            ${kpiHtml("Libre de deudas", fmtMesAnno(sug.anno_mes_libertad), `${sug.meses} meses`, "good")}
+            ${kpiHtml("Dispones al mes", fmtMoney(sug.flujo_mensual_liberado), "desde esa fecha", "good")}
+            ${kpiHtml("Ahorro en intereses", fmtMoney(sug.ahorro_intereses), "vs. sin cascada", "good")}
+            ${kpiHtml("Meses que ahorras", `${sug.meses_ahorrados}`, "vs. sin cascada")}
+        </div>
+
+        <h3>Comparación de estrategias</h3>
+        <div class="table-scroll">
+            <table class="amort-table comparador-table">
+                <thead><tr>
+                    <th>Estrategia</th><th>Libre</th><th>Plazo</th>
+                    <th>Intereses</th><th>Ahorro</th><th>Flujo ganado</th>
+                </tr></thead>
+                <tbody>${filas}</tbody>
+            </table>
+        </div>
+
+        <h3>Orden sugerido</h3>
+        <p class="resumen-narrativa">${sug.orden_nombres.join(" &rarr; ")}</p>
+
+        <h3>Ver el mes a mes de</h3>
+        <select id="fjEscenarioSel">
+            ${esc.map((e) => `<option value="${e.clave}"${e.clave === "sugerencia" ? " selected" : ""}>${e.nombre}</option>`).join("")}
+        </select>`;
+
+    document.getElementById("fjEscenarioSel")
+        .addEventListener("change", (ev) => renderFlujoDetalle(r, ev.target.value));
+    renderFlujoDetalle(r, "sugerencia");
+}
+
+
+function renderFlujoDetalle(r, clave) {
+    const card = document.getElementById("flujoDetalleCard");
+    card.classList.remove("hidden");
+    const filas = r.detalle[clave] || [];
+    const nombres = r.creditos.map((c) => c.nombre);
+    const esc = r.escenarios.find((e) => e.clave === clave);
+
+    const head = `<th>#</th><th>Mes</th>${nombres.map((n) => `<th>${n}</th>`).join("")}<th>Pago total</th><th>Liberado</th>`;
+    const body = filas.map((f) => `
+        <tr class="${f.liberado > 0 ? "row-abono" : ""}">
+            <td>${f.num}</td><td>${f.anno_mes}</td>
+            ${f.saldos.map((s) => `<td>${s > 0 ? fmtMoney(s) : "—"}</td>`).join("")}
+            <td>${fmtMoney(f.pago_total)}</td><td>${fmtMoney(f.liberado)}</td>
+        </tr>`).join("");
+
+    card.innerHTML = `
+        <p class="section-eyebrow">Mes a mes — ${esc ? esc.nombre : clave}</p>
+        <div class="table-scroll">
+            <table class="amort-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
         </div>`;
 }
 

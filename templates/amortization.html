@@ -26,6 +26,7 @@
                 <button type="button" id="crModeAmortizacion" class="mode-btn active" role="tab" aria-selected="true">Amortización</button>
                 <button type="button" id="crModeComparador" class="mode-btn" role="tab" aria-selected="false">Comparador</button>
                 <button type="button" id="crModeAbonarInvertir" class="mode-btn" role="tab" aria-selected="false">Abonar vs. invertir</button>
+                <button type="button" id="crModeFlujo" class="mode-btn" role="tab" aria-selected="false">Flujo de créditos</button>
             </div>
 
             <div id="crPanelAmortizacion" class="ahorro-submodo">
@@ -313,6 +314,111 @@
                 </div>
                 <div id="abonarInvertirResultCard" class="card resumen-card hidden"></div>
             </div><!-- /crPanelAbonarInvertir -->
+
+            <div id="crPanelFlujo" class="ahorro-submodo hidden">
+                <section class="card">
+                    <p class="section-eyebrow">Agrega tus créditos</p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="fjNombre">Nombre</label>
+                            <input type="text" id="fjNombre" placeholder="Ej. Faro">
+                        </div>
+                        <div class="field">
+                            <label for="fjSaldo">Saldo actual</label>
+                            <input type="number" id="fjSaldo" placeholder="Ej. 240.000.000">
+                        </div>
+                        <div class="field">
+                            <label for="fjPlazo">Plazo restante</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="fjPlazo" placeholder="Ej. 20">
+                                <select id="fjPlazoUnit" aria-label="Unidad del plazo">
+                                    <option value="months" selected>Meses</option>
+                                    <option value="years">Años</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="fjTasa">Tasa (0 si no tiene interés)</label>
+                            <input type="number" id="fjTasa" value="0" step="any">
+                        </div>
+                        <div class="field">
+                            <label for="fjTipoTasa">Tipo de tasa</label>
+                            <select id="fjTipoTasa">
+                                <option value="Nominal">Nominal</option>
+                                <option value="Efectiva" selected>Efectiva</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="fjPeriodoTasa">Período de la tasa</label>
+                            <select id="fjPeriodoTasa">
+                                <option value="Anual" selected>Anual</option>
+                                <option value="Mensual">Mensual</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="fjSeguro">Seguro mensual (opcional)</label>
+                            <input type="number" id="fjSeguro" placeholder="Ej. 0">
+                        </div>
+                        <div class="field">
+                            <label for="fjAbonoFijo">Abono fijo mensual (opcional)</label>
+                            <input type="number" id="fjAbonoFijo" placeholder="Ej. 0">
+                        </div>
+                        <div class="field field-btn">
+                            <button type="button" id="fjAddBtn" class="btn btn-outline">Agregar crédito</button>
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field field-wide">
+                            <label for="fjPuntuales">Abonos puntuales a este crédito (opcional)</label>
+                            <input type="text" id="fjPuntuales" placeholder="Ej. 202701:35000000, 202803:50000000">
+                            <p class="hint">Formato <code>AAAAMM:monto</code>, separados por coma. Ej: primas, cesantías, AFC.</p>
+                        </div>
+                        <div class="field"></div>
+                    </div>
+
+                    <table id="fjTable" class="abonos-table">
+                        <thead>
+                            <tr><th>#</th><th>Crédito</th><th>Saldo</th><th>Tasa</th><th>Plazo</th><th>Cuota</th><th>Orden</th><th></th></tr>
+                        </thead>
+                        <tbody></tbody>
+                        <tfoot></tfoot>
+                    </table>
+                    <p class="hint">El orden de esta lista es tu <strong>orden manual</strong>. Muévelos con ▲▼ para probar otra estrategia.</p>
+                </section>
+
+                <section class="card card-soft">
+                    <p class="section-eyebrow">Configuración de la cascada</p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="fjFechaInicio">Mes de inicio</label>
+                            <input type="text" id="fjFechaInicio" placeholder="Ej. 202601">
+                        </div>
+                        <div class="field">
+                            <label for="fjPctReinversion">% de cuota liberada que reinviertes</label>
+                            <input type="number" id="fjPctReinversion" value="100" step="any">
+                        </div>
+                        <div class="field">
+                            <label for="fjVara">La sugerencia optimiza</label>
+                            <select id="fjVara">
+                                <option value="intereses" selected>Menos intereses</option>
+                                <option value="flujo">Liberar flujo más rápido</option>
+                                <option value="tiempo">Salir de deudas antes</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="calcular-wrap">
+                    <button id="calcularFlujoBtn" class="btn btn-primary">Calcular flujo</button>
+                </div>
+
+                <div id="flujoResultCard" class="card resumen-card hidden"></div>
+                <div id="flujoDetalleCard" class="card results-card hidden"></div>
+            </div><!-- /crPanelFlujo -->
         </section>
 
         <!-- ============ PESTAÑA INMOBILIARIA ============ -->

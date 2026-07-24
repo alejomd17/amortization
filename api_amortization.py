@@ -11,6 +11,7 @@ from src.ahorro import Ahorro
 from src.inmueble import Inmueble
 from src.comparador import Comparador
 from src.decisiones import Decisiones
+from src.flujo import Flujo
 
 # Rutas absolutas: en serverless el directorio de trabajo no es la raiz del proyecto
 BASE_DIR = Path(__file__).resolve().parent
@@ -22,6 +23,7 @@ ahorro = Ahorro()
 inmueble = Inmueble()
 comparador = Comparador()
 decisiones = Decisiones()
+flujo = Flujo()
 
 origins = [
     "https://aleossa.com",
@@ -409,6 +411,50 @@ async def calcular_abonar_vs_invertir(request: AbonarVsInvertirRequest):
         elif request.plazo_restante_meses <= 0:
             raise ValueError("El plazo restante debe ser mayor a 0.")
         return decisiones.abonar_vs_invertir(**request.model_dump())
+    except ValueError as ve:
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
+
+
+class CreditoFlujo(BaseModel):
+    nombre: str = ""
+    saldo: float
+    tasa: float = 0                 # 0 = sin interés
+    tipo_tasa: str = "Efectiva"
+    periodo_tasa: str = "Anual"
+    plazo_meses: float
+    seguro: float = 0
+    abono_fijo: float = 0
+    abonos_puntuales: Dict[str, float] = {}
+
+
+class FlujoRequest(BaseModel):
+    creditos: List[CreditoFlujo]
+    fecha_inicio: str
+    pct_reinversion: float = 100
+    orden_manual: List[int] | None = None
+    vara: str = "intereses"         # intereses | tiempo | flujo
+
+
+@app.post('/flujo')
+async def calcular_flujo(request: FlujoRequest):
+    """Flujo de créditos con cascada: compara órdenes y proyecta mes a mes."""
+    try:
+        if len(request.creditos) < 1:
+            raise ValueError("Agrega al menos un crédito.")
+        if len(request.fecha_inicio) != 6 or not request.fecha_inicio.isdigit():
+            raise ValueError("Formato de fecha inválido. Debe ser AAAAMM.")
+        for c in request.creditos:
+            if c.plazo_meses <= 0:
+                raise ValueError(f"El plazo de '{c.nombre or 'un crédito'}' debe ser mayor a 0.")
+        return flujo.comparar(
+            creditos        = [c.model_dump() for c in request.creditos],
+            fecha_inicio    = request.fecha_inicio,
+            pct_reinversion = request.pct_reinversion,
+            orden_manual    = request.orden_manual,
+            vara            = request.vara,
+        )
     except ValueError as ve:
         raise HTTPException(status_code=422, detail=str(ve))
     except Exception as e:
