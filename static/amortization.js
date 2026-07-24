@@ -980,15 +980,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("fjCancelEditBtn").addEventListener("click", fjSalirEdicion);
 
-    // Abonos puntuales: se agregan a un crédito ya creado
-    document.getElementById("fjPuntAddBtn").addEventListener("click", () => {
+    // Abonos puntuales: modo Único (un mes) / Mensual fijo (un rango), como en amortización
+    const fjPuntUnicoPanel = document.getElementById("fjPuntUnicoPanel");
+    const fjPuntRecPanel = document.getElementById("fjPuntRecPanel");
+    const fjPuntModeUnico = document.getElementById("fjPuntModeUnico");
+    const fjPuntModeRec = document.getElementById("fjPuntModeRec");
+    function setPuntModo(esUnico) {
+        fjPuntModeUnico.classList.toggle("active", esUnico);
+        fjPuntModeRec.classList.toggle("active", !esUnico);
+        fjPuntModeUnico.setAttribute("aria-selected", String(esUnico));
+        fjPuntModeRec.setAttribute("aria-selected", String(!esUnico));
+        fjPuntUnicoPanel.classList.toggle("hidden", !esUnico);
+        fjPuntRecPanel.classList.toggle("hidden", esUnico);
+    }
+    fjPuntModeUnico.addEventListener("click", () => setPuntModo(true));
+    fjPuntModeRec.addEventListener("click", () => setPuntModo(false));
+
+    // Devuelve el crédito elegido en el selector, o null avisando
+    function fjCreditoDelSelector() {
         const idx = Number.parseInt(document.getElementById("fjPuntCredito").value, 10);
-        const fecha = document.getElementById("fjPuntFecha").value.trim();
-        const monto = g("fjPuntMonto");
         if (Number.isNaN(idx) || !flujoCreditos[idx]) {
             alert("Primero agrega un crédito.");
-            return;
+            return null;
         }
+        return flujoCreditos[idx];
+    }
+
+    document.getElementById("fjPuntAddBtn").addEventListener("click", () => {
+        const c = fjCreditoDelSelector();
+        if (!c) return;
+        const fecha = document.getElementById("fjPuntFecha").value.trim();
+        const monto = g("fjPuntMonto");
         if (!esAnnoMesValido(fecha)) {
             alert("El mes debe tener formato AAAAMM (ej. 202701).");
             return;
@@ -997,10 +1019,37 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Ingresa un monto mayor a 0.");
             return;
         }
-        flujoCreditos[idx].abonos_puntuales = flujoCreditos[idx].abonos_puntuales || {};
-        flujoCreditos[idx].abonos_puntuales[fecha] = monto;   // si ya había ese mes, lo reemplaza
+        c.abonos_puntuales = c.abonos_puntuales || {};
+        c.abonos_puntuales[fecha] = monto;   // si ya había ese mes, lo reemplaza
         document.getElementById("fjPuntFecha").value = "";
         document.getElementById("fjPuntMonto").value = "";
+        refrescarFlujoUI();
+    });
+
+    // Mensual fijo: el mismo monto en cada mes del rango del crédito elegido
+    document.getElementById("fjPuntRecAddBtn").addEventListener("click", () => {
+        const c = fjCreditoDelSelector();
+        if (!c) return;
+        const desde = document.getElementById("fjPuntRecDesde").value.trim();
+        const hasta = document.getElementById("fjPuntRecHasta").value.trim();
+        const monto = g("fjPuntRecMonto");
+        if (!esAnnoMesValido(desde) || !esAnnoMesValido(hasta)) {
+            alert("Ingresa 'Desde' y 'Hasta' en formato AAAAMM (ej. 202701).");
+            return;
+        }
+        if (desde > hasta) {
+            alert("'Desde' debe ser menor o igual que 'Hasta'.");
+            return;
+        }
+        if (!(monto > 0)) {
+            alert("Ingresa un monto mensual mayor a 0.");
+            return;
+        }
+        c.abonos_puntuales = c.abonos_puntuales || {};
+        mesesEnRango(desde, hasta).forEach((m) => { c.abonos_puntuales[m] = monto; });
+        document.getElementById("fjPuntRecDesde").value = "";
+        document.getElementById("fjPuntRecHasta").value = "";
+        document.getElementById("fjPuntRecMonto").value = "";
         refrescarFlujoUI();
     });
 

@@ -63,7 +63,10 @@
     ese orden. En "Sin cascada" no se numeran ni se habla de orden, porque ahí no hay cascada.
 
   - **Abonos puntuales**: lista con botón (eliges el crédito, el mes y el monto). Si repites un
-    mes en el mismo crédito, el nuevo monto reemplaza al anterior.
+    mes en el mismo crédito, el nuevo monto reemplaza al anterior. Igual que en amortización,
+    tiene toggle **Único / Mensual fijo**: el "mensual fijo" asigna el mismo monto a cada mes de
+    un rango (desde-hasta) del crédito elegido — se expande en entradas puntuales individuales.
+    (Distinto del campo "Abono fijo mensual" del crédito, que aplica toda la vida sin rango.)
   - **Persistencia**: los créditos y la configuración se guardan en `localStorage` del navegador
     bajo la clave `amortizacion.flujo.v1`, con botón "Limpiar todo". **Limitación honesta: es por
     navegador/dispositivo** — no sigue al usuario entre su computador y su celular. Para eso

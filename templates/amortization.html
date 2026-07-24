@@ -444,17 +444,45 @@
                             <label for="fjPuntCredito">¿A cuál crédito?</label>
                             <select id="fjPuntCredito"></select>
                         </div>
-                        <div class="field">
-                            <label for="fjPuntFecha">Mes del abono</label>
-                            <input type="text" id="fjPuntFecha" placeholder="Ej. 202701">
+                    </div>
+                    <div class="abono-mode-toggle" role="tablist">
+                        <button type="button" id="fjPuntModeUnico" class="mode-btn active" role="tab" aria-selected="true">Único</button>
+                        <button type="button" id="fjPuntModeRec" class="mode-btn" role="tab" aria-selected="false">Mensual fijo</button>
+                    </div>
+                    <div id="fjPuntUnicoPanel" class="abono-panel">
+                        <div class="field-grid">
+                            <div class="field">
+                                <label for="fjPuntFecha">Mes del abono</label>
+                                <input type="text" id="fjPuntFecha" placeholder="Ej. 202701">
+                            </div>
+                            <div class="field">
+                                <label for="fjPuntMonto">Monto</label>
+                                <input type="number" id="fjPuntMonto" placeholder="Ej. 35.000.000">
+                            </div>
+                            <div class="field field-btn">
+                                <button type="button" id="fjPuntAddBtn" class="btn btn-outline">Agregar abono</button>
+                            </div>
                         </div>
-                        <div class="field">
-                            <label for="fjPuntMonto">Monto</label>
-                            <input type="number" id="fjPuntMonto" placeholder="Ej. 35.000.000">
+                    </div>
+                    <div id="fjPuntRecPanel" class="abono-panel hidden">
+                        <div class="field-grid">
+                            <div class="field">
+                                <label for="fjPuntRecDesde">Desde</label>
+                                <input type="text" id="fjPuntRecDesde" placeholder="Ej. 202701">
+                            </div>
+                            <div class="field">
+                                <label for="fjPuntRecHasta">Hasta</label>
+                                <input type="text" id="fjPuntRecHasta" placeholder="Ej. 202712">
+                            </div>
+                            <div class="field">
+                                <label for="fjPuntRecMonto">Monto mensual</label>
+                                <input type="number" id="fjPuntRecMonto" placeholder="Ej. 1.000.000">
+                            </div>
+                            <div class="field field-btn">
+                                <button type="button" id="fjPuntRecAddBtn" class="btn btn-outline">Agregar rango</button>
+                            </div>
                         </div>
-                        <div class="field field-btn">
-                            <button type="button" id="fjPuntAddBtn" class="btn btn-outline">Agregar abono</button>
-                        </div>
+                        <p class="hint">Al crédito elegido, el mismo monto en cada mes del rango (extremos incluidos). Si un mes ya tenía abono, lo reemplaza.</p>
                     </div>
                     <p class="hint">Para inyecciones puntuales: primas, cesantías, AFC, bonos.</p>
                     <table id="fjPuntTable" class="abonos-table">
