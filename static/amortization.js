@@ -687,7 +687,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!d) return;
             flujoCreditos = Array.isArray(d.creditos) ? d.creditos : [];
             if (d.fecha_inicio) document.getElementById("fjFechaInicio").value = d.fecha_inicio;
-            if (d.vara) fjVaraActual = d.vara;
+            // "tiempo" ya no está en el selector (era idéntico a "intereses"): se mapea
+            if (d.vara) fjVaraActual = d.vara === "tiempo" ? "intereses" : d.vara;
             document.getElementById("fjVara").value = fjVaraActual;
         } catch (e) { flujoCreditos = []; }
     }
@@ -1137,7 +1138,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     cargados = Array.isArray(d) ? d : d.creditos;
                     if (!Array.isArray(cargados)) throw new Error("el JSON no trae una lista de créditos");
                     if (d.fecha_inicio) document.getElementById("fjFechaInicio").value = d.fecha_inicio;
-                    if (d.vara) { fjVaraActual = d.vara; document.getElementById("fjVara").value = fjVaraActual; }
+                    if (d.vara) {
+                        fjVaraActual = d.vara === "tiempo" ? "intereses" : d.vara;
+                        document.getElementById("fjVara").value = fjVaraActual;
+                    }
                 } else {
                     cargados = parseCSV(txt);
                 }

@@ -37,6 +37,12 @@
   - Abonos dirigidos por crédito: fijo mensual + puntuales.
   - Búsqueda: fuerza bruta hasta 7 créditos (óptimo exacto); de 8 en adelante búsqueda local
     por intercambios (dice "mejor encontrado", no miente sobre optimalidad).
+  - **Solo 2 objetivos en el selector**: "menos intereses / salir antes" y "liberar flujo".
+    Medido en 300 escenarios: la vara `tiempo` ("salir antes") dio el **mismo orden que
+    `intereses` el 100%** de las veces — porque con presupuesto fijo el orden casi no cambia la
+    fecha de libertad (95% idéntica), así que `tiempo` desempata por intereses y son la misma
+    cosa. `flujo` sí difiere ~53% de las veces (trade-off real). El backend sigue soportando
+    `tiempo` por compatibilidad, pero no se ofrece; un `tiempo` guardado se mapea a `intereses`.
   - El **flujo liberado se normaliza** al horizonte del escenario base; sin eso, "sin cascada"
     parecía el mejor solo por durar más. La búsqueda optimiza esa misma métrica normalizada.
   - **Al liquidarse un crédito se libera cuota + seguro** (no solo la cuota): dejas de pagar
