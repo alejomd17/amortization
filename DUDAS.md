@@ -103,7 +103,10 @@
     toggle "Pagos" muestra lo que se le paga a cada crédito cada mes (cuota+seguro+abonos);
     ahí se ve el pago final en junio y el "—" del mes de arranque/desembolso (no se paga ese
     mes). La suma de pagos por crédito = el pago total. Se guarda en cada fila (`pagos`),
-    con la misma convención que `saldos` (None = aún no nace). (`mes_inicio`, AAAAMM, opcional). Antes de esa fecha el
+    con la misma convención que `saldos` (None = aún no nace).
+  - **Columnas Cuotas / Abonos** (a la derecha del mes a mes): "Cuotas" = solo las cuotas+seguros
+    programados de ese mes; "Abonos" = lo extra (dirigidos + cascada). Juntas = `pago_total`.
+    Se separó para que "la total" muestre solo cuotas, con los abonos aparte. (`mes_inicio`, AAAAMM, opcional). Antes de esa fecha el
     crédito **no existe**: sin saldo, sin cuota, sin intereses. Se desembolsa en ese mes y paga
     su primera cuota al mes siguiente (igual que los créditos que ya tienes, que arrancan en la
     fila 0 y pagan en la 1). Decisiones tomadas:

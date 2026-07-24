@@ -1861,7 +1861,9 @@ function renderFlujoDetalle(r, clave) {
         // nota de arriba ya avisan que el crédito aún no se ha desembolsado.
         return `<th>${hayCascada ? `<span class="orden-pos">${turno[idx]}</span> ` : ""}${c.nombre}</th>`;
     }).join("");
-    const head = `<th>#</th><th>Mes</th>${cols}<th>Pago total</th><th>Liberado</th>`;
+    // "Cuotas" = solo las cuotas+seguros del mes; "Abonos" = lo extra (dirigidos + cascada).
+    // Juntas suman lo que pagas ese mes (pago_total).
+    const head = `<th>#</th><th>Mes</th>${cols}<th>Cuotas</th><th>Abonos</th><th>Liberado</th>`;
     // Celda de cada crédito según la vista: saldo restante o lo pagado ese mes.
     // null = todavía no se desembolsa (·). En saldos, "—" = ya se pagó;
     // en pagos, "—" = ese mes no se le pagó nada (p. ej. el mes del desembolso).
@@ -1874,7 +1876,9 @@ function renderFlujoDetalle(r, clave) {
         <tr class="${f.liberado > 0 ? "row-abono" : ""}">
             <td>${f.num}</td><td>${f.anno_mes}</td>
             ${secuencia.map((idx) => celda(f, idx)).join("")}
-            <td>${fmtMoney(f.pago_total)}</td><td>${fmtMoney(f.liberado)}</td>
+            <td>${fmtMoney(f.pago_total - f.abonos_total)}</td>
+            <td>${f.abonos_total > 0 ? fmtMoney(f.abonos_total) : "—"}</td>
+            <td>${fmtMoney(f.liberado)}</td>
         </tr>`).join("");
 
     const notaCascada = !hayCascada

@@ -128,7 +128,7 @@ class Flujo:
             return [round(s, 2) if nacidos[i] else None for i, s in enumerate(saldos)]
 
         filas = [{
-            "num": 0, "anno_mes": fecha_inicio, "pago_total": 0.0, "liberado": 0.0,
+            "num": 0, "anno_mes": fecha_inicio, "pago_total": 0.0, "abonos_total": 0.0, "liberado": 0.0,
             "saldos": foto_saldos(),
             "pagos": [0.0 if nacidos[i] else None for i in range(len(preparados))],
         }]
@@ -143,7 +143,8 @@ class Flujo:
             anno_mes = _sumar_meses(fecha_inicio, mes)
             extra = pool               # el pool va al primer crédito activo del orden
             sobrante = 0.0             # lo que sobra de una última cuota; se reparte al final
-            pago_mes = 0.0
+            pago_mes = 0.0             # total pagado ese mes (cuotas + seguros + abonos)
+            abonos_mes = 0.0           # solo la parte de abonos (dirigidos + cascada)
             filas_mes = {}             # fila de detalle de cada crédito, por si hay que corregirla
             pagos_credito = {}         # lo que se le paga a cada crédito ESTE mes (cuota+seguro+abono)
 
@@ -196,6 +197,7 @@ class Flujo:
                     cuota_pagada = c["cuota"]
 
                 pago_mes += pago + c["seguro"]
+                abonos_mes += abono_aplicado
                 pagos_credito[idx] = pago + c["seguro"]
 
                 if detallar:
@@ -224,6 +226,7 @@ class Flujo:
                 saldos[objetivo] -= aplicado
                 sobrante -= aplicado
                 pago_mes += aplicado
+                abonos_mes += aplicado
                 pagos_credito[objetivo] = pagos_credito.get(objetivo, 0.0) + aplicado
                 if saldos[objetivo] <= 0.005:
                     saldos[objetivo] = 0.0
@@ -251,6 +254,7 @@ class Flujo:
             filas.append({
                 "num": mes, "anno_mes": anno_mes,
                 "pago_total": round(pago_mes, 2),
+                "abonos_total": round(abonos_mes, 2),   # la parte de abonos; cuotas = pago_total − abonos
                 "liberado": round(liberado, 2),
                 # saldo que debías ESTE mes, antes de pagar (ver saldos_display arriba)
                 "saldos": saldos_display,
