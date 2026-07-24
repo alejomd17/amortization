@@ -348,12 +348,13 @@ class Flujo:
                       ) -> dict:
         """Tabla de amortización de un crédito, en dos versiones:
 
-        - `solo`:    las condiciones que te dio el banco. Sin abonos y sin cascada.
-        - `en_plan`: el mismo crédito dentro del orden dado, recibiendo sus abonos y
-                     las cuotas liberadas de los que ya se pagaron. Solo si llega `orden`.
+        - `solo`:    el crédito por su cuenta, con tus abonos dirigidos (fijo y puntuales)
+                     pero **sin la cascada** de los otros créditos.
+        - `en_plan`: el mismo crédito dentro del orden dado, sumándole las cuotas liberadas
+                     de los que ya se pagaron. Solo si llega `orden`.
 
-        Son números distintos a propósito: la diferencia entre las dos es justo lo que
-        gana la estrategia de cascada.
+        Lo único que cambia entre las dos es la cascada: la diferencia es exactamente
+        lo que gana la estrategia de orden.
         """
         validos = [c for c in creditos if float(c.get("saldo", 0) or 0) > 0]
         p = self._preparar(validos, fecha_inicio)
@@ -362,10 +363,9 @@ class Flujo:
         if not 0 <= indice < len(p):
             raise ValueError("El crédito seleccionado no existe.")
 
-        # Se conserva mes_inicio para que las fechas de la tabla sean las reales,
-        # pero se le quitan los abonos: son decisiones tuyas, no condiciones del crédito.
-        desnudo = dict(validos[indice], abono_fijo=0, abonos_puntuales={})
-        p_solo = self._preparar([desnudo], fecha_inicio)
+        # Se simula el crédito aislado tal cual está: conserva mes_inicio y sus abonos
+        # dirigidos. Lo único que le falta frente a `en_plan` es la cascada.
+        p_solo = self._preparar([validos[indice]], fecha_inicio)
         res_solo = self._simular(p_solo, [0], 0, fecha_inicio, con_cascada=False, detallar=True)
 
         out = {

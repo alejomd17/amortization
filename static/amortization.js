@@ -827,12 +827,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     const celda = panel.insertCell(0);
                     celda.colSpan = 9;
                     celda.innerHTML = `
-                        <p class="section-eyebrow">${d.nombre} — condiciones del crédito</p>
+                        <p class="section-eyebrow">${d.nombre} — el crédito por su cuenta</p>
                         <p class="hint">Cuota <strong>${fmtMoney(d.solo.cuota)}</strong> ·
                             termina en <strong>${fmtMesAnno(d.solo.anno_mes_fin)}</strong> ·
                             intereses <strong>${fmtMoney(d.solo.total_intereses)}</strong>.
-                            Esta es la tabla del crédito <strong>solo</strong>, sin abonos y sin
-                            la cascada. Dentro de tu plan termina antes: eso lo ves en los resultados.</p>
+                            Incluye tus abonos dirigidos, pero <strong>no la cascada</strong> de los
+                            otros créditos. Dentro de tu plan termina antes: eso lo ves en los resultados.</p>
                         ${tablaAmortHtml(d.solo.tabla, d.seguro > 0)}`;
                     const csv = document.createElement("button");
                     csv.className = "btn-remove-abono";
@@ -1619,11 +1619,11 @@ async function cargarTablaCredito(r, clave, indice, modo) {
     const solo = d.solo, plan = d.en_plan;
     // La comparación explícita evita que las dos tablas se lean como contradictorias
     const comparacion = (plan && solo.anno_mes_fin && plan.anno_mes_fin)
-        ? `Solo el crédito termina en <strong>${fmtMesAnno(solo.anno_mes_fin)}</strong>
+        ? `Por su cuenta termina en <strong>${fmtMesAnno(solo.anno_mes_fin)}</strong>
            con <strong>${fmtMoney(solo.total_intereses)}</strong> de intereses.
            Dentro de tu plan termina en <strong>${fmtMesAnno(plan.anno_mes_fin)}</strong>
-           con <strong>${fmtMoney(plan.total_intereses)}</strong> — recibe
-           <strong>${fmtMoney(plan.total_abonos)}</strong> en abonos y se ahorra
+           con <strong>${fmtMoney(plan.total_intereses)}</strong>: la cascada le mete
+           <strong>${fmtMoney(plan.total_abonos - solo.total_abonos)}</strong> extra y le ahorra
            <strong>${fmtMoney(solo.total_intereses - plan.total_intereses)}</strong>.`
         : "";
 
@@ -1644,10 +1644,11 @@ async function cargarTablaCredito(r, clave, indice, modo) {
         </div>
         <p class="hint">${comparacion}</p>
         <div class="kpi-grid">
-            ${kpiHtml("Cuota", fmtMoney(vista.cuota))}
+            ${kpiHtml("Cuota", fmtMoney(vista.cuota), d.seguro > 0 ? `+ ${fmtMoney(d.seguro)} de seguro` : "")}
             ${kpiHtml("Termina", vista.anno_mes_fin ? fmtMesAnno(vista.anno_mes_fin) : "—", `${vista.meses} cuotas`)}
             ${kpiHtml("Intereses", fmtMoney(vista.total_intereses))}
-            ${kpiHtml("Abonos recibidos", fmtMoney(vista.total_abonos), modo === "solo" ? "sin cascada" : "de la cascada")}
+            ${kpiHtml("Abonos", fmtMoney(vista.total_abonos),
+                      modo === "solo" ? "solo los tuyos" : "tuyos + cascada")}
         </div>
         ${tablaAmortHtml(vista.tabla, d.seguro > 0)}
         <button type="button" class="btn btn-outline" id="fjCredCsv">Descargar CSV</button>`;

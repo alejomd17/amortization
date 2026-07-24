@@ -50,11 +50,12 @@
 
   - **Tabla de amortización por crédito** (`POST /flujo/credito`). Devuelve **dos** tablas
     del mismo crédito, y son números distintos a propósito:
-    - `solo`: las condiciones que te dio el banco — saldo, tasa y plazo. **Sin abonos** (los
-      abonos son decisiones tuyas, no condiciones del crédito) y sin cascada. Conserva
-      `mes_inicio` para que las fechas sean las reales.
-    - `en_plan`: el mismo crédito dentro del orden escogido, recibiendo sus abonos y las
-      cuotas liberadas. La **diferencia entre las dos es justo lo que gana la cascada**.
+    - `solo`: el crédito por su cuenta, **con tus abonos dirigidos** (fijo y puntuales) pero
+      sin la cascada. Conserva `mes_inicio` para que las fechas sean las reales.
+    - `en_plan`: el mismo crédito dentro del orden escogido, sumándole las cuotas liberadas
+      de los que ya se pagaron.
+    - Lo **único** que cambia entre las dos es la cascada, así que la diferencia mide
+      exactamente lo que gana la estrategia de orden — que es la pregunta del módulo.
     - Dónde vive cada una: arriba, en la lista, un botón "Ver tabla" **colapsado por defecto**
       que solo puede mostrar `solo` (ahí todavía no hay escenario escogido) y lo dice
       explícitamente. Abajo, en resultados, las dos con un toggle.
