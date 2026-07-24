@@ -1596,13 +1596,14 @@ async function cargarTablaCredito(r, clave, indice, modo) {
     if (!esc || !r.creditos.length) { card.classList.add("hidden"); return; }
 
     // sin índice se arranca por el primero de la cascada, no por el primero de la lista
-    fjCreditoVisible = (indice === null || indice === undefined || !esc.orden.includes(indice))
-        ? esc.orden[0]
+    const { secuencia, turno } = ordenParaMostrar(r, esc.orden);
+    fjCreditoVisible = (indice === null || indice === undefined || !secuencia.includes(indice))
+        ? secuencia[0]
         : indice;
     fjModoTabla = modo;
     fjUltimoResultado = r;
     fjUltimaClave = clave;
-    fjOrdenActual = esc.orden;
+    fjOrdenActual = secuencia;
     card.classList.remove("hidden");
 
     let d;
@@ -1632,9 +1633,9 @@ async function cargarTablaCredito(r, clave, indice, modo) {
            <strong>${fmtMoney(solo.total_intereses - plan.total_intereses)}</strong>.`
         : "";
 
-    const chips = esc.orden.map((idx, pos) =>
+    const chips = secuencia.map((idx) =>
         `<button type="button" class="chip-credito${idx === fjCreditoVisible ? " activo" : ""}"
-                 data-i="${idx}"><span class="orden-pos">${pos + 1}</span> ${r.creditos[idx].nombre}</button>`)
+                 data-i="${idx}"><span class="orden-pos">${turno[idx]}</span> ${r.creditos[idx].nombre}</button>`)
         .join("");
 
     card.innerHTML = `
@@ -1661,10 +1662,10 @@ async function cargarTablaCredito(r, clave, indice, modo) {
         ${tablaAmortHtml(vista.tabla, d.seguro > 0)}
         <button type="button" class="btn btn-outline" id="fjCredCsv">Descargar CSV</button>`;
 
-    // Las flechas se mueven por el orden de la cascada, no por el de la lista
-    const n = esc.orden.length;
-    const pos = esc.orden.indexOf(fjCreditoVisible);
-    const irPos = (p) => cargarTablaCredito(r, clave, esc.orden[(p + n) % n], fjModoTabla);
+    // Las flechas se mueven por el orden en que se ven las pestañas
+    const n = secuencia.length;
+    const pos = secuencia.indexOf(fjCreditoVisible);
+    const irPos = (p) => cargarTablaCredito(r, clave, secuencia[(p + n) % n], fjModoTabla);
     card.querySelectorAll(".chip-credito[data-i]").forEach((b) =>
         b.addEventListener("click", () => cargarTablaCredito(r, clave, Number(b.dataset.i), fjModoTabla)));
     card.querySelectorAll(".chip-credito[data-modo]").forEach((b) =>
@@ -1674,6 +1675,21 @@ async function cargarTablaCredito(r, clave, indice, modo) {
     document.getElementById("fjCredCsv").addEventListener("click", () => descargarArchivo(
         `${d.nombre}-${modo === "solo" ? "solo" : "en-mi-plan"}.csv`,
         tablaAmortCsv(vista.tabla), "text/csv"));
+}
+
+
+// Orden en que se MUESTRAN los créditos: el de la cascada, pero los que todavía no se
+// desembolsan van al final — no influyen en el flujo hasta que existan y solo dejarían
+// una columna vacía en la mitad. El número que se pinta sigue siendo su turno real en
+// la cascada, que sí importa: apenas nacen se cuelan en esa posición.
+function ordenParaMostrar(r, orden) {
+    const turno = {};
+    orden.forEach((idx, p) => { turno[idx] = p + 1; });
+    return {
+        secuencia: [...orden.filter((i) => !r.creditos[i].mes_inicio),
+                    ...orden.filter((i) => r.creditos[i].mes_inicio)],
+        turno,
+    };
 }
 
 
@@ -1687,9 +1703,11 @@ function renderFlujoDetalle(r, clave) {
     // lee de izquierda a derecha quién le pasa la cuota liberada a quién.
     const orden = esc ? esc.orden : r.creditos.map((_, i) => i);
     const hayCascada = clave !== "base";   // en "Sin cascada" no hay orden que numerar
-    const cols = orden.map((idx, pos) => {
+    const { secuencia, turno } = ordenParaMostrar(r, orden);
+    const hayFuturos = secuencia.some((i) => r.creditos[i].mes_inicio);
+    const cols = secuencia.map((idx) => {
         const c = r.creditos[idx];
-        return `<th>${hayCascada ? `<span class="orden-pos">${pos + 1}</span> ` : ""}${c.nombre}${
+        return `<th>${hayCascada ? `<span class="orden-pos">${turno[idx]}</span> ` : ""}${c.nombre}${
             c.mes_inicio ? `<span class="badge-futuro">desde ${fmtMesAnno(c.mes_inicio)}</span>` : ""}</th>`;
     }).join("");
     const head = `<th>#</th><th>Mes</th>${cols}<th>Pago total</th><th>Liberado</th>`;
@@ -1697,7 +1715,7 @@ function renderFlujoDetalle(r, clave) {
     const body = filas.map((f) => `
         <tr class="${f.liberado > 0 ? "row-abono" : ""}">
             <td>${f.num}</td><td>${f.anno_mes}</td>
-            ${orden.map((idx) => f.saldos[idx] === null
+            ${secuencia.map((idx) => f.saldos[idx] === null
                 ? `<td class="sin-desembolsar" title="Aún no se ha desembolsado">·</td>`
                 : `<td>${f.saldos[idx] > 0 ? fmtMoney(f.saldos[idx]) : "—"}</td>`).join("")}
             <td>${fmtMoney(f.pago_total)}</td><td>${fmtMoney(f.liberado)}</td>
@@ -1705,11 +1723,14 @@ function renderFlujoDetalle(r, clave) {
 
     card.innerHTML = `
         <p class="section-eyebrow">Mes a mes — ${esc ? esc.nombre : clave}</p>
-        <p class="hint">${hayCascada
-            ? `Las columnas van <strong>en el orden en que la cascada paga</strong>, no en el de tu lista.
-               Lo que se libera de una pasa siempre a la primera que siga viva a su derecha.`
-            : `Acá cada crédito va por su cuenta: nadie le pasa nada a nadie. Es el escenario contra
-               el que se comparan los demás.`}</p>
+        <p class="hint">${!hayCascada
+            ? `Acá cada crédito va por su cuenta: nadie le pasa nada a nadie. Es el escenario contra
+               el que se comparan los demás.`
+            : `El número es el <strong>turno en la cascada</strong>: lo que se libera de un crédito pasa
+               siempre al de menor turno que siga vivo.` + (hayFuturos
+               ? ` Los que están <strong>por desembolsar van al final</strong> porque hoy no influyen en el
+                   flujo — pero apenas nacen se cuelan en su turno.`
+               : ``)}</p>
         <div class="table-scroll">
             <table class="amort-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
         </div>`;
