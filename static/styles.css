@@ -390,6 +390,21 @@ body {
 }
 .sin-desembolsar { color: var(--negro); opacity: 0.25; }
 
+/* Crédito excluido de la cascada (no recibe abonos) */
+.badge-sinabono {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 7px;
+    border-radius: var(--radius-sharp);
+    background: var(--crema-oscuro);
+    color: var(--negro);
+    opacity: 0.65;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
 /* Tabla de condiciones desplegada bajo una fila de la lista */
 .fila-tabla td {
     background: var(--crema);

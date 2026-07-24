@@ -424,10 +424,12 @@ class CreditoFlujo(BaseModel):
     tipo_tasa: str = "Efectiva"
     periodo_tasa: str = "Anual"
     plazo_meses: float
+    cuota: float = 0                 # 0 = se calcula sola; >0 = cuota fija dada por el usuario
     seguro: float = 0
     abono_fijo: float = 0
     abonos_puntuales: Dict[str, float] = {}
     mes_inicio: str | None = None   # AAAAMM del desembolso; vacío = ya lo tienes hoy
+    recibe_abono: bool = True        # False = la cascada no le mete abonos
 
 
 class FlujoRequest(BaseModel):

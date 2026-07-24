@@ -342,9 +342,11 @@
                                 <tr><th>tipo_tasa</th><td>Efectiva</td><td>o Nominal</td></tr>
                                 <tr><th>periodo_tasa</th><td>Anual</td><td>o Mensual</td></tr>
                                 <tr><th>plazo_meses</th><td>26</td><td>siempre en meses</td></tr>
+                                <tr><th>cuota</th><td>1400000</td><td>opcional, cuota fija; vacío = se calcula sola</td></tr>
                                 <tr><th>seguro</th><td>0</td><td>opcional, mensual</td></tr>
                                 <tr><th>abono_fijo</th><td>0</td><td>opcional, mensual</td></tr>
                                 <tr><th>mes_inicio</th><td>202801</td><td>opcional, mes del desembolso; vacío = ya lo tienes</td></tr>
+                                <tr><th>recibe_abono</th><td>no</td><td>opcional; "no" lo excluye de la cascada. vacío = sí</td></tr>
                                 <tr><th>abonos_puntuales</th><td>202701:35000000|202803:50000000</td><td>opcional, AAAAMM:monto separados por |</td></tr>
                             </tbody>
                         </table>
@@ -407,6 +409,17 @@
                             <label for="fjMesInicio">Mes de desembolso (opcional)</label>
                             <input type="text" id="fjMesInicio" placeholder="Ej. 202801" maxlength="6"
                                    inputmode="numeric" pattern="[0-9]{6}">
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="fjCuota">Cuota fija (opcional)</label>
+                            <input type="number" id="fjCuota" placeholder="Se calcula sola">
+                        </div>
+                        <div class="field" style="justify-content: flex-end;">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="fjRecibeAbono" checked> Recibe abonos de la cascada
+                            </label>
                         </div>
                     </div>
                     <div class="form-actions">

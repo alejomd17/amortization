@@ -99,6 +99,17 @@
     - **Pendiente / duda abierta**: la plata que liberas *entre* que se acaban tus créditos
       actuales y llega el desembolso nuevo hoy simplemente queda libre mes a mes; no se acumula
       como ahorro para entrar de cuota inicial al crédito nuevo. ¿Vale la pena modelarlo?
+  - **Cuota fija (opcional)**: si la dejas vacía se calcula por sistema francés con el plazo;
+    si la escribes, manda esa y el **plazo se deriva de ella** (lo que muestra la lista y las
+    tablas, no el que digitaste). Sirve para créditos donde conoces la cuota real y no cuadra
+    con saldo+plazo (redondeos del banco, etc.). Se valida que cubra al menos el interés del
+    primer mes; si no, se rechaza (mismo criterio de "cuota que no cubre interés" del resto).
+  - **Recibe abonos de la cascada** (checkbox, por defecto sí): al desmarcarlo, el crédito
+    **no es destino** del pool liberado — la plata sigue de largo al siguiente que sí reciba.
+    Su cuota, cuando se paga, **sí** se libera al pool (no recibir ≠ no aportar). Pensado para
+    créditos 0% donde abonar no ahorra interés: excluirlos deja que la cascada ataque los caros
+    (comprobado: en un caso salió libre un mes antes). Su `abono_fijo`/puntuales, si los pones,
+    siguen aplicando (son elección explícita por crédito, aparte de la cascada).
   - **Editar un crédito ya agregado**: el botón "Editar" carga el crédito en el mismo
     formulario de arriba (el botón pasa a "Guardar cambios" + aparece "Cancelar", y la fila
     se resalta). Al guardar **se queda en el mismo puesto del orden** y **conserva sus abonos

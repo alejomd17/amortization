@@ -3,6 +3,7 @@
 Cuando un crédito se termina de pagar, su cuota se libera y se reinyecta como abono
 al siguiente crédito según el orden activo. Permite comparar estrategias de orden.
 """
+import math
 from itertools import permutations
 
 from src.interest_rates import InterestRates
@@ -35,6 +36,19 @@ def _cuota_francesa(saldo: float, im: float, n: int) -> float:
     return saldo * im * (1 + im) ** n / ((1 + im) ** n - 1)
 
 
+def _plazo_desde_cuota(saldo: float, im: float, cuota: float) -> int:
+    """Meses para pagar `saldo` con una cuota fija dada. Lo inverso de la francesa:
+    cuando el usuario fija su cuota, el plazo es el que resulte, no el que digitó.
+    Devuelve None si la cuota no alcanza ni a cubrir el interés (nunca se pagaría)."""
+    if cuota <= 0:
+        return 0
+    if im == 0:
+        return math.ceil(saldo / cuota - 1e-9)
+    if cuota <= saldo * im:
+        return None
+    return math.ceil(-math.log(1 - saldo * im / cuota) / math.log(1 + im) - 1e-9)
+
+
 class Flujo:
     # ── Preparación ───────────────────────────────────────────────────────────
     def _preparar(self, creditos: list[dict], fecha_inicio: str) -> list[dict]:
@@ -60,18 +74,36 @@ class Flujo:
             # un desembolso en el pasado es un crédito que ya tienes: nace en 0
             nace = max(_diff_meses(fecha_inicio, mes_ini), 0) if valido else 0
 
+            nombre = c.get("nombre") or f"Crédito {len(preparados) + 1}"
+
+            # Cuota: si el usuario la fija, manda esa y el plazo se deriva de ella.
+            # Si no, se calcula por sistema francés con el plazo que digitó.
+            cuota_manual = float(c.get("cuota") or 0)
+            if cuota_manual > 0:
+                plazo_real = _plazo_desde_cuota(saldo, im, cuota_manual)
+                if plazo_real is None:
+                    raise ValueError(
+                        f"La cuota de '{nombre}' (${cuota_manual:,.0f}) no cubre ni el interés del "
+                        f"primer mes; así el saldo nunca bajaría. Súbela o baja la tasa.")
+                cuota, plazo_efectivo = cuota_manual, plazo_real
+            else:
+                cuota, plazo_efectivo = _cuota_francesa(saldo, im, plazo), plazo
+
             preparados.append({
-                "nombre": c.get("nombre") or f"Crédito {len(preparados) + 1}",
+                "nombre": nombre,
                 "mes_inicio": mes_ini if valido and nace > 0 else None,
                 "nace": nace,
                 "saldo_inicial": saldo,
                 "im": im,
                 "tasa_ea": tasa_ea,
-                "plazo_meses": plazo,
-                "cuota": _cuota_francesa(saldo, im, plazo),
+                "plazo_meses": plazo_efectivo,
+                "cuota": cuota,
+                "cuota_fija": cuota_manual > 0,
                 "seguro": float(c.get("seguro", 0) or 0),
                 "abono_fijo": float(c.get("abono_fijo", 0) or 0),
                 "puntuales": {str(k): float(v) for k, v in (c.get("abonos_puntuales") or {}).items()},
+                # por defecto recibe abonos de la cascada; el usuario puede excluirlo
+                "recibe_abono": c.get("recibe_abono", True) is not False,
             })
         return preparados
 
@@ -121,8 +153,12 @@ class Flujo:
                 total_intereses += interes
 
                 dirigido = c["abono_fijo"] + c["puntuales"].get(anno_mes, 0.0)
-                aporte_extra = extra
-                extra = 0.0
+                # los excluidos no son destino de la cascada: el pool sigue de largo
+                if c["recibe_abono"]:
+                    aporte_extra = extra
+                    extra = 0.0
+                else:
+                    aporte_extra = 0.0
 
                 capital = c["cuota"] - interes
                 reduccion = capital + dirigido + aporte_extra
@@ -165,7 +201,8 @@ class Flujo:
             # Antes se lo quedaba el que iba justo detrás del que se liquidó: eran dos
             # reglas para la misma plata y el abono "aparecía y se devolvía" al mes.
             while sobrante > 0.005:
-                objetivo = next((i for i in orden if nacidos[i] and saldos[i] > 0), None)
+                objetivo = next((i for i in orden if nacidos[i] and saldos[i] > 0
+                                 and preparados[i]["recibe_abono"]), None)
                 if objetivo is None:
                     break              # no queda a quién abonarle: ese mes te sobra la plata
                 aplicado = min(sobrante, saldos[objetivo])
@@ -336,6 +373,7 @@ class Flujo:
                 "cuota": round(c["cuota"], 2), "seguro": round(c["seguro"], 2),
                 "tasa_ea": c["tasa_ea"], "plazo_meses": c["plazo_meses"],
                 "mes_inicio": c["mes_inicio"],
+                "cuota_fija": c["cuota_fija"], "recibe_abono": c["recibe_abono"],
             } for c in p],
             # se devuelven los créditos tal como entraron (ya filtrados, para que los
             # índices coincidan) porque /flujo/credito necesita re-simular con ellos

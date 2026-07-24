@@ -636,7 +636,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let fjEditando = null;      // crédito en edición (null = agregando uno nuevo)
 
     const FJ_CAMPOS = ["fjNombre", "fjSaldo", "fjPlazo", "fjTasa", "fjSeguro",
-                       "fjAbonoFijo", "fjMesInicio"];
+                       "fjAbonoFijo", "fjMesInicio", "fjCuota"];
 
     function fjSalirEdicion() {
         fjEditando = null;
@@ -645,6 +645,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("fjPlazoUnit").value = "months";
         document.getElementById("fjTipoTasa").value = "Efectiva";
         document.getElementById("fjPeriodoTasa").value = "Anual";
+        document.getElementById("fjRecibeAbono").checked = true;
         document.getElementById("fjAddBtn").textContent = "Agregar crédito";
         document.getElementById("fjCancelEditBtn").hidden = true;
     }
@@ -662,6 +663,8 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("fjSeguro").value = c.seguro || "";
         document.getElementById("fjAbonoFijo").value = c.abono_fijo || "";
         document.getElementById("fjMesInicio").value = c.mes_inicio || "";
+        document.getElementById("fjCuota").value = c.cuota || "";
+        document.getElementById("fjRecibeAbono").checked = c.recibe_abono !== false;
         document.getElementById("fjAddBtn").textContent = "Guardar cambios";
         document.getElementById("fjCancelEditBtn").hidden = false;
         document.getElementById("fjNombre").scrollIntoView({ behavior: "smooth", block: "center" });
@@ -757,6 +760,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 badge.textContent = `desde ${fmtMesAnno(c.mes_inicio)}`;
                 celdaNombre.appendChild(badge);
             }
+            if (c.recibe_abono === false) {   // excluido de la cascada
+                const badge = document.createElement("span");
+                badge.className = "badge-sinabono";
+                badge.textContent = "sin abonos";
+                celdaNombre.appendChild(badge);
+            }
 
             row.insertCell(2).textContent = fmtMoney(c.saldo);
 
@@ -771,8 +780,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 celdaTasa.textContent = "sin interés";
             }
 
-            row.insertCell(4).textContent = `${c.plazo_meses} m`;
-            row.insertCell(5).textContent = fmtMoney(cuotaEstimada(c));
+            const plazoReal = plazoEstimado(c);
+            row.insertCell(4).textContent = plazoReal ? `${plazoReal} m` : `${c.plazo_meses} m`;
+
+            const celdaCuota = row.insertCell(5);
+            celdaCuota.textContent = fmtMoney(cuotaEstimada(c));
+            if (c.cuota > 0) {   // la fijó el usuario, no se calculó
+                const marca = document.createElement("span");
+                marca.className = "tasa-sub";
+                marca.textContent = " fija";
+                celdaCuota.appendChild(marca);
+            }
 
             const nAbonos = Object.keys(c.abonos_puntuales || {}).length;
             row.insertCell(6).textContent = nAbonos ? `${nAbonos}` : "—";
@@ -929,12 +947,20 @@ document.addEventListener("DOMContentLoaded", () => {
             tipo_tasa: gv("fjTipoTasa"),
             periodo_tasa: gv("fjPeriodoTasa"),
             plazo_meses: Math.round(plazo),
+            cuota: g("fjCuota") || 0,        // 0 = se calcula sola
             seguro: g("fjSeguro") || 0,
             abono_fijo: g("fjAbonoFijo") || 0,
             mes_inicio: mesInicio || null,   // null = ya lo tienes hoy
+            recibe_abono: document.getElementById("fjRecibeAbono").checked,
             // al editar se conservan los abonos puntuales: se administran en su propia tabla
             abonos_puntuales: editando ? (fjEditando.abonos_puntuales || {}) : {},
         };
+        // con cuota fija, el plazo se deriva; si no cubre el interés no se pagaría nunca
+        if (credito.cuota > 0 && plazoEstimado(credito) === null) {
+            alert("Esa cuota fija no cubre ni el interés del primer mes; así el saldo nunca bajaría. "
+                + "Súbela, o déjala vacía para que se calcule sola.");
+            return;
+        }
         if (editando) {
             flujoCreditos[idx] = credito;   // se queda en el mismo puesto del orden
         } else {
@@ -979,8 +1005,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ── Carga / descarga de archivo ──────────────────────────────────────────
-    const CSV_COLS = ["nombre", "saldo", "tasa", "tipo_tasa", "periodo_tasa",
-                      "plazo_meses", "seguro", "abono_fijo", "mes_inicio", "abonos_puntuales"];
+    const CSV_COLS = ["nombre", "saldo", "tasa", "tipo_tasa", "periodo_tasa", "plazo_meses",
+                      "cuota", "seguro", "abono_fijo", "mes_inicio", "recibe_abono", "abonos_puntuales"];
 
     // Acepta formatos colombianos: "240.000.000" -> 240000000 · "12,5" -> 12.5
     function parseNumeroCsv(txt) {
@@ -1029,10 +1055,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 tipo_tasa: get("tipo_tasa") || "Efectiva",
                 periodo_tasa: get("periodo_tasa") || "Anual",
                 plazo_meses: Math.round(parseNumeroCsv(get("plazo_meses"))),
+                cuota: parseNumeroCsv(get("cuota")),   // 0 = se calcula sola
                 seguro: parseNumeroCsv(get("seguro")),
                 abono_fijo: parseNumeroCsv(get("abono_fijo")),
                 // no pasa por parseNumeroCsv: es una fecha AAAAMM, no un monto
                 mes_inicio: /^\d{6}$/.test(get("mes_inicio")) ? get("mes_inicio") : null,
+                // "no"/"false"/"0" -> no recibe; vacío o cualquier otra cosa -> sí (default)
+                recibe_abono: !/^(no|false|0)$/i.test(get("recibe_abono").trim()),
                 abonos_puntuales: parsePuntualesCampo(get("abonos_puntuales")),
             };
         });
@@ -1051,9 +1080,10 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("fjPlantillaBtn").addEventListener("click", () => {
         descargarArchivo("plantilla-creditos.csv", [
             CSV_COLS.join(","),
-            "Faro,240000000,12,Efectiva,Anual,240,0,0,,",
-            "Terrabonga,42739600,0,Efectiva,Anual,18,0,0,,202701:35000000|202803:50000000",
-            "Casa nueva,50000000,11,Efectiva,Anual,24,0,0,202801,",
+            "Faro,240000000,12,Efectiva,Anual,240,,0,0,,,",
+            "Terrabonga,42739600,0,Efectiva,Anual,18,,0,0,,,202701:35000000|202803:50000000",
+            "Casa nueva,50000000,11,Efectiva,Anual,24,,0,0,202801,,",
+            "Sierra,32800000,0,Efectiva,Anual,17,1400000,0,0,,no,",
         ].join("\n"), "text/csv");
     });
 
@@ -1534,13 +1564,27 @@ function displayRentabilidad(r) {
 
 
 // ── Flujo de créditos: cuota estimada en el cliente (preview de la lista) ─────
+function tasaMensual(c) {
+    if (!c.tasa || c.tasa <= 0) return 0;
+    return convertirTasa(c.tasa, c.tipo_tasa, c.periodo_tasa, "Mensual") / 100;
+}
+
 function cuotaEstimada(c) {
+    if (c.cuota > 0) return c.cuota;        // el usuario fijó su cuota
     const n = c.plazo_meses;
     if (!n) return 0;
-    if (!c.tasa || c.tasa <= 0) return c.saldo / n;
-    const im = convertirTasa(c.tasa, c.tipo_tasa, c.periodo_tasa, "Mensual") / 100;
+    const im = tasaMensual(c);
     if (im === 0) return c.saldo / n;
     return c.saldo * im * Math.pow(1 + im, n) / (Math.pow(1 + im, n) - 1);
+}
+
+// Plazo real: con cuota fija el plazo se deriva de ella, no es el que se digitó
+function plazoEstimado(c) {
+    if (!(c.cuota > 0)) return c.plazo_meses;
+    const im = tasaMensual(c);
+    if (im === 0) return Math.ceil(c.saldo / c.cuota - 1e-9);
+    if (c.cuota <= c.saldo * im) return null;   // no cubre el interés
+    return Math.ceil(-Math.log(1 - c.saldo * im / c.cuota) / Math.log(1 + im) - 1e-9);
 }
 
 
