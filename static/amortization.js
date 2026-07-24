@@ -562,17 +562,80 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ── FLUJO DE CRÉDITOS (cascada) ──────────────────────────────────────────
-    const flujoCreditos = [];
+    // Se guarda en este navegador para no volver a escribir todo cada vez.
+    const FLUJO_STORE = "amortizacion.flujo.v1";
+    let flujoCreditos = [];
 
-    // "202701:35000000, 202803:50000000" -> {202701: 35000000, ...}
-    function parsePuntuales(txt) {
-        const out = {};
-        (txt || "").split(",").forEach((par) => {
-            const [f, m] = par.split(":").map((s) => (s || "").trim());
-            const monto = Number.parseFloat(m);
-            if (/^\d{6}$/.test(f) && monto > 0) out[f] = monto;
+    function guardarFlujo() {
+        try {
+            localStorage.setItem(FLUJO_STORE, JSON.stringify({
+                creditos: flujoCreditos,
+                fecha_inicio: document.getElementById("fjFechaInicio").value,
+                pct: document.getElementById("fjPctReinversion").value,
+                vara: gv("fjVara"),
+            }));
+        } catch (e) { /* modo privado o sin espacio: seguimos sin persistir */ }
+    }
+
+    function cargarFlujo() {
+        try {
+            const d = JSON.parse(localStorage.getItem(FLUJO_STORE) || "null");
+            if (!d) return;
+            flujoCreditos = Array.isArray(d.creditos) ? d.creditos : [];
+            if (d.fecha_inicio) document.getElementById("fjFechaInicio").value = d.fecha_inicio;
+            if (d.pct) document.getElementById("fjPctReinversion").value = d.pct;
+            if (d.vara) document.getElementById("fjVara").value = d.vara;
+        } catch (e) { flujoCreditos = []; }
+    }
+
+    function refrescarFlujoUI() {
+        displayFlujoCreditos();
+        displayPuntualesSelect();
+        displayPuntualesTabla();
+        guardarFlujo();
+    }
+
+    function displayPuntualesSelect() {
+        const sel = document.getElementById("fjPuntCredito");
+        const previo = sel.value;
+        sel.innerHTML = flujoCreditos
+            .map((c, i) => `<option value="${i}">${c.nombre}</option>`).join("");
+        if (previo && flujoCreditos[previo]) sel.value = previo;
+    }
+
+    function displayPuntualesTabla() {
+        const tbody = document.querySelector("#fjPuntTable tbody");
+        const tfoot = document.querySelector("#fjPuntTable tfoot");
+        tbody.innerHTML = "";
+        tfoot.innerHTML = "";
+        let total = 0, cuantos = 0;
+
+        flujoCreditos.forEach((c, i) => {
+            Object.entries(c.abonos_puntuales || {})
+                .sort((a, b) => a[0].localeCompare(b[0]))
+                .forEach(([fecha, monto]) => {
+                    total += monto; cuantos += 1;
+                    const row = tbody.insertRow();
+                    row.insertCell(0).textContent = c.nombre;
+                    row.insertCell(1).textContent = fmtMesAnno(fecha);
+                    row.insertCell(2).textContent = fmtMoney(monto);
+                    const b = document.createElement("button");
+                    b.className = "btn-remove-abono";
+                    b.textContent = "Eliminar";
+                    b.addEventListener("click", () => {
+                        delete flujoCreditos[i].abonos_puntuales[fecha];
+                        refrescarFlujoUI();
+                    });
+                    row.insertCell(3).appendChild(b);
+                });
         });
-        return out;
+
+        if (cuantos) {
+            const r = tfoot.insertRow();
+            ["", `Total (${cuantos})`, fmtMoney(total), ""].forEach((t, k) => {
+                r.insertCell(k).textContent = t;
+            });
+        }
     }
 
     function displayFlujoCreditos() {
@@ -590,7 +653,10 @@ document.addEventListener("DOMContentLoaded", () => {
             row.insertCell(4).textContent = `${c.plazo_meses} m`;
             row.insertCell(5).textContent = fmtMoney(cuotaEstimada(c));
 
-            const celdaOrden = row.insertCell(6);
+            const nAbonos = Object.keys(c.abonos_puntuales || {}).length;
+            row.insertCell(6).textContent = nAbonos ? `${nAbonos}` : "—";
+
+            const celdaOrden = row.insertCell(7);
             [["▲", -1], ["▼", 1]].forEach(([txt, delta]) => {
                 const b = document.createElement("button");
                 b.className = "btn-remove-abono";
@@ -599,7 +665,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const j = i + delta;
                     if (j < 0 || j >= flujoCreditos.length) return;
                     [flujoCreditos[i], flujoCreditos[j]] = [flujoCreditos[j], flujoCreditos[i]];
-                    displayFlujoCreditos();
+                    refrescarFlujoUI();
                 });
                 celdaOrden.appendChild(b);
             });
@@ -607,15 +673,15 @@ document.addEventListener("DOMContentLoaded", () => {
             const del = document.createElement("button");
             del.className = "btn-remove-abono";
             del.textContent = "Eliminar";
-            del.addEventListener("click", () => { flujoCreditos.splice(i, 1); displayFlujoCreditos(); });
-            row.insertCell(7).appendChild(del);
+            del.addEventListener("click", () => { flujoCreditos.splice(i, 1); refrescarFlujoUI(); });
+            row.insertCell(8).appendChild(del);
         });
 
         if (flujoCreditos.length) {
             const saldoTot = flujoCreditos.reduce((a, c) => a + c.saldo, 0);
             const cuotaTot = flujoCreditos.reduce((a, c) => a + cuotaEstimada(c) + (c.seguro || 0), 0);
             const r = tfoot.insertRow();
-            ["", `Total (${flujoCreditos.length})`, fmtMoney(saldoTot), "", "", fmtMoney(cuotaTot), "", ""]
+            ["", `Total (${flujoCreditos.length})`, fmtMoney(saldoTot), "", "", fmtMoney(cuotaTot), "", "", ""]
                 .forEach((t, k) => { r.insertCell(k).textContent = t; });
         }
     }
@@ -637,18 +703,55 @@ document.addEventListener("DOMContentLoaded", () => {
             plazo_meses: Math.round(plazo),
             seguro: g("fjSeguro") || 0,
             abono_fijo: g("fjAbonoFijo") || 0,
-            abonos_puntuales: parsePuntuales(document.getElementById("fjPuntuales").value),
+            abonos_puntuales: {},
         });
-        ["fjNombre", "fjSaldo", "fjPlazo", "fjSeguro", "fjAbonoFijo", "fjPuntuales"]
+        ["fjNombre", "fjSaldo", "fjPlazo", "fjSeguro", "fjAbonoFijo"]
             .forEach((id) => { document.getElementById(id).value = ""; });
         document.getElementById("fjTasa").value = "0";
-        displayFlujoCreditos();
+        refrescarFlujoUI();
     });
 
-    // Mes actual por defecto
-    const hoy = new Date();
-    document.getElementById("fjFechaInicio").value =
-        `${hoy.getFullYear()}${String(hoy.getMonth() + 1).padStart(2, "0")}`;
+    // Abonos puntuales: se agregan a un crédito ya creado
+    document.getElementById("fjPuntAddBtn").addEventListener("click", () => {
+        const idx = Number.parseInt(document.getElementById("fjPuntCredito").value, 10);
+        const fecha = document.getElementById("fjPuntFecha").value.trim();
+        const monto = g("fjPuntMonto");
+        if (Number.isNaN(idx) || !flujoCreditos[idx]) {
+            alert("Primero agrega un crédito.");
+            return;
+        }
+        if (!esAnnoMesValido(fecha)) {
+            alert("El mes debe tener formato AAAAMM (ej. 202701).");
+            return;
+        }
+        if (!(monto > 0)) {
+            alert("Ingresa un monto mayor a 0.");
+            return;
+        }
+        flujoCreditos[idx].abonos_puntuales = flujoCreditos[idx].abonos_puntuales || {};
+        flujoCreditos[idx].abonos_puntuales[fecha] = monto;   // si ya había ese mes, lo reemplaza
+        document.getElementById("fjPuntFecha").value = "";
+        document.getElementById("fjPuntMonto").value = "";
+        refrescarFlujoUI();
+    });
+
+    document.getElementById("fjLimpiarBtn").addEventListener("click", () => {
+        if (!confirm("¿Borrar todos los créditos guardados en este navegador?")) return;
+        flujoCreditos = [];
+        try { localStorage.removeItem(FLUJO_STORE); } catch (e) {}
+        refrescarFlujoUI();
+    });
+
+    // Restaurar lo guardado; si no hay fecha, arrancar en el mes actual
+    cargarFlujo();
+    if (!document.getElementById("fjFechaInicio").value) {
+        const hoy = new Date();
+        document.getElementById("fjFechaInicio").value =
+            `${hoy.getFullYear()}${String(hoy.getMonth() + 1).padStart(2, "0")}`;
+    }
+    ["fjFechaInicio", "fjPctReinversion", "fjVara"].forEach((id) =>
+        document.getElementById(id).addEventListener("change", guardarFlujo));
+    refrescarFlujoUI();
 
     document.getElementById("calcularFlujoBtn").addEventListener("click", () => {
         if (!flujoCreditos.length) {

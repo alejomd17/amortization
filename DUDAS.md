@@ -35,11 +35,18 @@
   - El **flujo liberado se normaliza** al horizonte del escenario base; sin eso, "sin cascada"
     parecía el mejor solo por durar más. La búsqueda optimiza esa misma métrica normalizada.
 
+  - **Abonos puntuales**: lista con botón (eliges el crédito, el mes y el monto). Si repites un
+    mes en el mismo crédito, el nuevo monto reemplaza al anterior.
+  - **Persistencia**: los créditos y la configuración se guardan en `localStorage` del navegador
+    bajo la clave `amortizacion.flujo.v1`, con botón "Limpiar todo". **Limitación honesta: es por
+    navegador/dispositivo** — no sigue al usuario entre su computador y su celular. Para eso
+    haría falta base de datos + login (otro proyecto).
+
 ## Abiertas
 - **Reordenar es con botones ▲▼**, no arrastrando. Es más simple y funciona en móvil.
   ¿Te sirve así o quieres arrastre real (drag & drop)?
-- **Abonos puntuales se escriben como texto** `AAAAMM:monto, AAAAMM:monto`. ¿Suficiente,
-  o prefieres una lista con botón "agregar abono" como en la amortización?
+- ¿La persistencia debería extenderse a las otras calculadoras, o solo al flujo (que es la de
+  más digitación)?
 
 ## Hallazgo importante (flujo de créditos)
 Con presupuesto mensual constante (cascada al 100%), probando los 5.040 órdenes del caso real:
