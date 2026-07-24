@@ -784,8 +784,15 @@ document.addEventListener("DOMContentLoaded", () => {
             row.insertCell(4).textContent = plazoReal ? `${plazoReal} m` : `${c.plazo_meses} m`;
 
             const celdaCuota = row.insertCell(5);
-            celdaCuota.textContent = fmtMoney(cuotaEstimada(c));
-            if (c.cuota > 0) {   // la fijó el usuario, no se calculó
+            // lo que pagas al mes = cuota + seguro (igual que la tabla y el Total de abajo)
+            celdaCuota.textContent = fmtMoney(cuotaEstimada(c) + (c.seguro || 0));
+            if (c.seguro > 0) {   // se avisa que ese número ya trae el seguro
+                const marca = document.createElement("span");
+                marca.className = "tasa-sub";
+                marca.textContent = " c/seguro";
+                celdaCuota.appendChild(marca);
+            }
+            if (c.cuota > 0) {   // la cuota base la fijó el usuario, no se calculó
                 const marca = document.createElement("span");
                 marca.className = "tasa-sub";
                 marca.textContent = " fija";
