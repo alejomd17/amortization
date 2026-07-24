@@ -1602,6 +1602,8 @@ function displayFlujo(r) {
     const esc = r.escenarios;
     const base = esc[0];
     const sug = esc.find((e) => e.clave === "sugerencia");
+    // por defecto se muestra "Tu orden" si existe; si no, la Sugerencia
+    const claveInicial = esc.some((e) => e.clave === "manual") ? "manual" : "sugerencia";
 
     const filas = esc.map((e) => `
         <tr class="${e.clave === "sugerencia" ? "row-abono" : ""}">
@@ -1645,7 +1647,7 @@ function displayFlujo(r) {
 
         <h3>Ver el mes a mes de</h3>
         <div class="chips-credito" id="fjEscenarioSel">
-            ${esc.map((e) => `<button type="button" class="chip-credito${e.clave === "sugerencia" ? " activo" : ""}"
+            ${esc.map((e) => `<button type="button" class="chip-credito${e.clave === claveInicial ? " activo" : ""}"
                 data-clave="${e.clave}">${e.nombre}</button>`).join("")}
         </div>`;
 
@@ -1655,8 +1657,8 @@ function displayFlujo(r) {
         renderFlujoDetalle(r, b.dataset.clave);
         cargarTablaCredito(r, b.dataset.clave, fjCreditoVisible, fjModoTabla);   // conserva el crédito visible
     }));
-    renderFlujoDetalle(r, "sugerencia");
-    cargarTablaCredito(r, "sugerencia", null, fjModoTabla);   // null = el primero de la cascada
+    renderFlujoDetalle(r, claveInicial);
+    cargarTablaCredito(r, claveInicial, null, fjModoTabla);   // null = el primero de la cascada
 }
 
 
@@ -1797,8 +1799,9 @@ function renderFlujoDetalle(r, clave) {
     const hayFuturos = secuencia.some((i) => r.creditos[i].mes_inicio);
     const cols = secuencia.map((idx) => {
         const c = r.creditos[idx];
-        return `<th>${hayCascada ? `<span class="orden-pos">${turno[idx]}</span> ` : ""}${c.nombre}${
-            c.mes_inicio ? `<span class="badge-futuro">desde ${fmtMesAnno(c.mes_inicio)}</span>` : ""}</th>`;
+        // sin el badge "desde …": ensancha mucho la columna. El "·" en las celdas y la
+        // nota de arriba ya avisan que el crédito aún no se ha desembolsado.
+        return `<th>${hayCascada ? `<span class="orden-pos">${turno[idx]}</span> ` : ""}${c.nombre}</th>`;
     }).join("");
     const head = `<th>#</th><th>Mes</th>${cols}<th>Pago total</th><th>Liberado</th>`;
     // Celda de cada crédito según la vista: saldo restante o lo pagado ese mes.
