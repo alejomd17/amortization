@@ -1785,11 +1785,14 @@ function ordenParaMostrar(r, orden) {
 }
 
 
+let fjVistaMesAMes = "saldos";   // "saldos" | "pagos" — qué muestran las columnas por crédito
+
 function renderFlujoDetalle(r, clave) {
     const card = document.getElementById("flujoDetalleCard");
     card.classList.remove("hidden");
     const filas = r.detalle[clave] || [];
     const esc = r.escenarios.find((e) => e.clave === clave);
+    const vista = fjVistaMesAMes;   // saldo restante, o lo pagado ese mes
 
     // Las columnas van en el ORDEN DE LA CASCADA, no en el de la lista de arriba: así se
     // lee de izquierda a derecha quién le pasa la cuota liberada a quién.
@@ -1803,29 +1806,49 @@ function renderFlujoDetalle(r, clave) {
             c.mes_inicio ? `<span class="badge-futuro">desde ${fmtMesAnno(c.mes_inicio)}</span>` : ""}</th>`;
     }).join("");
     const head = `<th>#</th><th>Mes</th>${cols}<th>Pago total</th><th>Liberado</th>`;
-    // null = todavía no se desembolsa · 0 = ya se pagó. Son cosas distintas.
+    // Celda de cada crédito según la vista: saldo restante o lo pagado ese mes.
+    // null = todavía no se desembolsa (·). En saldos, "—" = ya se pagó;
+    // en pagos, "—" = ese mes no se le pagó nada (p. ej. el mes del desembolso).
+    const celda = (f, idx) => {
+        const v = f[vista][idx];
+        if (v === null) return `<td class="sin-desembolsar" title="Aún no se ha desembolsado">·</td>`;
+        return `<td>${v > 0 ? fmtMoney(v) : "—"}</td>`;
+    };
     const body = filas.map((f) => `
         <tr class="${f.liberado > 0 ? "row-abono" : ""}">
             <td>${f.num}</td><td>${f.anno_mes}</td>
-            ${secuencia.map((idx) => f.saldos[idx] === null
-                ? `<td class="sin-desembolsar" title="Aún no se ha desembolsado">·</td>`
-                : `<td>${f.saldos[idx] > 0 ? fmtMoney(f.saldos[idx]) : "—"}</td>`).join("")}
+            ${secuencia.map((idx) => celda(f, idx)).join("")}
             <td>${fmtMoney(f.pago_total)}</td><td>${fmtMoney(f.liberado)}</td>
         </tr>`).join("");
 
+    const notaCascada = !hayCascada
+        ? `Acá cada crédito va por su cuenta: nadie le pasa nada a nadie. Es el escenario contra
+           el que se comparan los demás.`
+        : `El número es el <strong>turno en la cascada</strong>: lo que se libera de un crédito pasa
+           siempre al de menor turno que siga vivo.` + (hayFuturos
+           ? ` Los que están <strong>por desembolsar van al final</strong> porque hoy no influyen en el
+               flujo — pero apenas nacen se cuelan en su turno.`
+           : ``);
+    const notaVista = vista === "saldos"
+        ? `Cada columna es el <strong>saldo que queda</strong> después del pago de ese mes.`
+        : `Cada columna es <strong>lo que le pagas</strong> a cada crédito ese mes (cuota + seguro + abonos).
+           El mes del desembolso muestra "—": aún no se paga.`;
+
     card.innerHTML = `
         <p class="section-eyebrow">Mes a mes — ${esc ? esc.nombre : clave}</p>
-        <p class="hint">${!hayCascada
-            ? `Acá cada crédito va por su cuenta: nadie le pasa nada a nadie. Es el escenario contra
-               el que se comparan los demás.`
-            : `El número es el <strong>turno en la cascada</strong>: lo que se libera de un crédito pasa
-               siempre al de menor turno que siga vivo.` + (hayFuturos
-               ? ` Los que están <strong>por desembolsar van al final</strong> porque hoy no influyen en el
-                   flujo — pero apenas nacen se cuelan en su turno.`
-               : ``)}</p>
+        <div class="toggle-tabla">
+            <button type="button" class="chip-credito${vista === "saldos" ? " activo" : ""}" data-vista="saldos">Saldos</button>
+            <button type="button" class="chip-credito${vista === "pagos" ? " activo" : ""}" data-vista="pagos">Pagos</button>
+        </div>
+        <p class="hint">${notaVista} ${notaCascada}</p>
         <div class="table-scroll">
             <table class="amort-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
         </div>`;
+
+    card.querySelectorAll("[data-vista]").forEach((b) => b.addEventListener("click", () => {
+        fjVistaMesAMes = b.dataset.vista;
+        renderFlujoDetalle(r, clave);   // re-render conservando el escenario
+    }));
 }
 
 

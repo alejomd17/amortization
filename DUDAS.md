@@ -84,7 +84,14 @@
       simulaciones y guardar cada fila la volvería lenta y pesada sin que nadie las lea.
       Por eso la tabla se pide aparte en vez de viajar dentro de `/flujo`.
     - Las dos tablas se pueden **descargar en CSV**.
-  - **Crédito con desembolso futuro** (`mes_inicio`, AAAAMM, opcional). Antes de esa fecha el
+  - **Mes a mes: toggle Saldos / Pagos**. La tabla mostraba solo saldos (el que queda
+    *después* de pagar), y eso confundía: el último saldo visible de un crédito es el del mes
+    ANTERIOR al último pago, así que parecía terminar un mes antes (ej: Terrabonga con último
+    saldo en mayo, pero el pago que lo liquida es en junio — que es lo que dice el banco). El
+    toggle "Pagos" muestra lo que se le paga a cada crédito cada mes (cuota+seguro+abonos);
+    ahí se ve el pago final en junio y el "—" del mes de arranque/desembolso (no se paga ese
+    mes). La suma de pagos por crédito = el pago total. Se guarda en cada fila (`pagos`),
+    con la misma convención que `saldos` (None = aún no nace). (`mes_inicio`, AAAAMM, opcional). Antes de esa fecha el
     crédito **no existe**: sin saldo, sin cuota, sin intereses. Se desembolsa en ese mes y paga
     su primera cuota al mes siguiente (igual que los créditos que ya tienes, que arrancan en la
     fila 0 y pagan en la 1). Decisiones tomadas:

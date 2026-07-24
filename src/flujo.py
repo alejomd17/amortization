@@ -130,6 +130,7 @@ class Flujo:
         filas = [{
             "num": 0, "anno_mes": fecha_inicio, "pago_total": 0.0, "liberado": 0.0,
             "saldos": foto_saldos(),
+            "pagos": [0.0 if nacidos[i] else None for i in range(len(preparados))],
         }]
         total_intereses = 0.0
         total_pagado = 0.0
@@ -144,6 +145,7 @@ class Flujo:
             sobrante = 0.0             # lo que sobra de una última cuota; se reparte al final
             pago_mes = 0.0
             filas_mes = {}             # fila de detalle de cada crédito, por si hay que corregirla
+            pagos_credito = {}         # lo que se le paga a cada crédito ESTE mes (cuota+seguro+abono)
 
             for idx in orden:
                 if not nacidos[idx] or saldos[idx] <= 0:
@@ -183,6 +185,7 @@ class Flujo:
                     cuota_pagada = c["cuota"]
 
                 pago_mes += pago + c["seguro"]
+                pagos_credito[idx] = pago + c["seguro"]
 
                 if detallar:
                     filas_mes[idx] = {
@@ -210,6 +213,7 @@ class Flujo:
                 saldos[objetivo] -= aplicado
                 sobrante -= aplicado
                 pago_mes += aplicado
+                pagos_credito[objetivo] = pagos_credito.get(objetivo, 0.0) + aplicado
                 if saldos[objetivo] <= 0.005:
                     saldos[objetivo] = 0.0
                     pool += preparados[objetivo]["cuota"] * pct
@@ -237,6 +241,10 @@ class Flujo:
                 "pago_total": round(pago_mes, 2),
                 "liberado": round(liberado, 2),
                 "saldos": foto_saldos(),
+                # lo pagado a cada crédito este mes: None si aún no nace, 0 si nació pero no pagó
+                # (justo el mes del desembolso), >0 si pagó. Suma = pago_total.
+                "pagos": [round(pagos_credito.get(i, 0.0), 2) if nacidos[i] else None
+                          for i in range(len(preparados))],
             })
 
             # No hay libertad mientras falte desembolsar un crédito que ya está planeado
