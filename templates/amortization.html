@@ -324,17 +324,29 @@
                             <input type="file" id="fjArchivo" accept=".json,.csv,text/csv,application/json">
                         </div>
                         <div class="field field-btn">
-                            <button type="button" id="fjExportBtn" class="btn btn-outline">Descargar mis créditos</button>
+                            <button type="button" id="fjExportBtn" class="btn btn-outline">Guardar los míos (.json)</button>
                         </div>
                         <div class="field field-btn">
-                            <button type="button" id="fjPlantillaBtn" class="btn btn-outline">Descargar plantilla CSV</button>
+                            <button type="button" id="fjPlantillaBtn" class="btn btn-outline">Bajar plantilla (.csv)</button>
                         </div>
                     </div>
-                    <p class="hint">
-                        Columnas del CSV: <code>nombre, saldo, tasa, tipo_tasa, periodo_tasa, plazo_meses, seguro, abono_fijo, abonos_puntuales</code>.
-                        Los abonos puntuales van como <code>202701:35000000|202803:50000000</code>.
-                        Al subir un archivo se <strong>reemplaza</strong> la lista actual.
-                    </p>
+                    <details class="formato-archivo">
+                        <summary>¿Qué columnas lleva el archivo?</summary>
+                        <table class="formato-table">
+                            <tbody>
+                                <tr><th>nombre</th><td>Laureles</td><td>texto libre</td></tr>
+                                <tr><th>saldo</th><td>48210444</td><td>también acepta 48.210.444 o $ 48.210.444</td></tr>
+                                <tr><th>tasa</th><td>10</td><td>0 si el crédito no tiene interés</td></tr>
+                                <tr><th>tipo_tasa</th><td>Efectiva</td><td>o Nominal</td></tr>
+                                <tr><th>periodo_tasa</th><td>Anual</td><td>o Mensual</td></tr>
+                                <tr><th>plazo_meses</th><td>26</td><td>siempre en meses</td></tr>
+                                <tr><th>seguro</th><td>0</td><td>opcional, mensual</td></tr>
+                                <tr><th>abono_fijo</th><td>0</td><td>opcional, mensual</td></tr>
+                                <tr><th>abonos_puntuales</th><td>202701:35000000|202803:50000000</td><td>opcional, AAAAMM:monto separados por |</td></tr>
+                            </tbody>
+                        </table>
+                    </details>
+                    <p class="hint">Al subir un archivo se <strong>reemplaza</strong> la lista actual.</p>
                 </section>
 
                 <section class="card">

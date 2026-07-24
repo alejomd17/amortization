@@ -10,6 +10,7 @@
     --blanco: #ffffff;
 
     --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
 
     --radius: 4px;
     --radius-sharp: 2px;
@@ -190,8 +191,75 @@ body {
 .hint {
     font-size: 12px;
     color: var(--negro);
-    opacity: 0.45;
+    opacity: 0.6;      /* 0.45 quedaba por debajo del contraste mínimo legible */
     margin-top: 12px;
+}
+
+/* ===== FORMATO DEL ARCHIVO (plegable) ===== */
+.formato-archivo {
+    margin-top: 16px;
+    border-top: 1px solid var(--crema-oscuro);
+    padding-top: 14px;
+}
+.formato-archivo summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    cursor: pointer;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    color: var(--verde);
+    opacity: 0.75;
+    transition: opacity 0.15s;
+    list-style: none;                 /* Firefox */
+}
+.formato-archivo summary::-webkit-details-marker { display: none; }
+.formato-archivo summary::before {
+    content: "▸";
+    display: inline-block;
+    transition: transform 0.15s;
+}
+.formato-archivo[open] summary::before { transform: rotate(90deg); }
+.formato-archivo summary:hover { opacity: 1; }
+
+.formato-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+    font-size: 12px;
+    table-layout: fixed;
+}
+.formato-table th,
+.formato-table td {
+    text-align: left;
+    font-weight: 400;
+    padding: 7px 14px 7px 0;
+    vertical-align: top;
+    word-break: break-word;
+}
+.formato-table tr + tr th,
+.formato-table tr + tr td { border-top: 1px solid var(--crema-oscuro); }
+.formato-table th {                   /* nombre de la columna */
+    font-family: var(--font-mono);
+    color: var(--verde);
+    width: 30%;
+}
+.formato-table td:first-of-type {     /* valor de ejemplo */
+    font-family: var(--font-mono);
+    color: var(--negro);
+    width: 34%;
+}
+.formato-table td:last-child {        /* nota */
+    color: var(--negro);
+    opacity: 0.5;
+}
+@media (max-width: 560px) {
+    .formato-table, .formato-table tbody, .formato-table tr,
+    .formato-table th, .formato-table td { display: block; width: auto; }
+    .formato-table tr { padding: 10px 0; border-top: 1px solid var(--crema-oscuro); }
+    .formato-table tr + tr th, .formato-table tr + tr td { border-top: none; }
+    .formato-table th, .formato-table td { padding: 1px 0; }
 }
 
 /* Checkbox dentro de un campo (ej. "vender al final") */
