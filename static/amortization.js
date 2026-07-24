@@ -742,6 +742,135 @@ document.addEventListener("DOMContentLoaded", () => {
         refrescarFlujoUI();
     });
 
+    // ── Carga / descarga de archivo ──────────────────────────────────────────
+    const CSV_COLS = ["nombre", "saldo", "tasa", "tipo_tasa", "periodo_tasa",
+                      "plazo_meses", "seguro", "abono_fijo", "abonos_puntuales"];
+
+    // Acepta formatos colombianos: "240.000.000" -> 240000000 · "12,5" -> 12.5
+    function parseNumeroCsv(txt) {
+        let s = String(txt ?? "").replace(/[^\d,.\-]/g, "").trim();
+        if (!s) return 0;
+        const coma = s.includes(","), punto = s.includes(".");
+        if (coma && punto) {
+            // el separador decimal es el último que aparezca
+            s = s.lastIndexOf(",") > s.lastIndexOf(".")
+                ? s.replace(/\./g, "").replace(",", ".")
+                : s.replace(/,/g, "");
+        } else if (coma) {
+            s = s.replace(",", ".");
+        } else if (/^\d{1,3}(\.\d{3})+$/.test(s)) {
+            s = s.replace(/\./g, "");            // puntos de miles
+        }
+        const n = Number.parseFloat(s);
+        return Number.isFinite(n) ? n : 0;
+    }
+
+    function parsePuntualesCampo(txt) {
+        const out = {};
+        String(txt || "").split(/[|;]/).forEach((par) => {
+            const [f, m] = par.split(":").map((s) => (s || "").trim());
+            const monto = parseNumeroCsv(m);
+            if (/^\d{6}$/.test(f) && monto > 0) out[f] = monto;
+        });
+        return out;
+    }
+
+    function parseCSV(texto) {
+        const lineas = texto.split(/\r?\n/).filter((l) => l.trim());
+        if (!lineas.length) throw new Error("el archivo está vacío");
+        const sep = lineas[0].includes(";") && !lineas[0].includes(",") ? ";" : ",";
+        const cab = lineas[0].split(sep).map((h) => h.trim().toLowerCase());
+        if (!cab.includes("saldo") || !cab.includes("plazo_meses")) {
+            throw new Error("faltan las columnas 'saldo' y 'plazo_meses'");
+        }
+        return lineas.slice(1).map((linea, i) => {
+            const v = linea.split(sep).map((x) => x.trim());
+            const get = (col) => { const k = cab.indexOf(col); return k >= 0 ? (v[k] || "") : ""; };
+            return {
+                nombre: get("nombre") || `Crédito ${i + 1}`,
+                saldo: parseNumeroCsv(get("saldo")),
+                tasa: parseNumeroCsv(get("tasa")),
+                tipo_tasa: get("tipo_tasa") || "Efectiva",
+                periodo_tasa: get("periodo_tasa") || "Anual",
+                plazo_meses: Math.round(parseNumeroCsv(get("plazo_meses"))),
+                seguro: parseNumeroCsv(get("seguro")),
+                abono_fijo: parseNumeroCsv(get("abono_fijo")),
+                abonos_puntuales: parsePuntualesCampo(get("abonos_puntuales")),
+            };
+        });
+    }
+
+    function descargarArchivo(nombre, contenido, tipo) {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([contenido], { type: tipo }));
+        a.download = nombre;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
+    document.getElementById("fjExportBtn").addEventListener("click", () => {
+        if (!flujoCreditos.length) { alert("No hay créditos para descargar."); return; }
+        descargarArchivo("mis-creditos.json", JSON.stringify({
+            creditos: flujoCreditos,
+            fecha_inicio: document.getElementById("fjFechaInicio").value,
+            pct: document.getElementById("fjPctReinversion").value,
+            vara: gv("fjVara"),
+        }, null, 2), "application/json");
+    });
+
+    document.getElementById("fjPlantillaBtn").addEventListener("click", () => {
+        descargarArchivo("plantilla-creditos.csv", [
+            CSV_COLS.join(","),
+            "Faro,240000000,12,Efectiva,Anual,240,0,0,",
+            "Terrabonga,42739600,0,Efectiva,Anual,18,0,0,202701:35000000|202803:50000000",
+        ].join("\n"), "text/csv");
+    });
+
+    document.getElementById("fjArchivo").addEventListener("change", (ev) => {
+        const file = ev.target.files && ev.target.files[0];
+        if (!file) return;
+        const lector = new FileReader();
+        lector.onload = () => {
+            try {
+                const txt = String(lector.result);
+                let cargados;
+                if (file.name.toLowerCase().endsWith(".json")) {
+                    const d = JSON.parse(txt);
+                    cargados = Array.isArray(d) ? d : d.creditos;
+                    if (!Array.isArray(cargados)) throw new Error("el JSON no trae una lista de créditos");
+                    if (d.fecha_inicio) document.getElementById("fjFechaInicio").value = d.fecha_inicio;
+                    if (d.pct) document.getElementById("fjPctReinversion").value = d.pct;
+                    if (d.vara) document.getElementById("fjVara").value = d.vara;
+                } else {
+                    cargados = parseCSV(txt);
+                }
+                const validos = cargados
+                    .map((c, i) => ({
+                        nombre: c.nombre || `Crédito ${i + 1}`,
+                        saldo: Number(c.saldo) || 0,
+                        tasa: Number(c.tasa) || 0,
+                        tipo_tasa: c.tipo_tasa || "Efectiva",
+                        periodo_tasa: c.periodo_tasa || "Anual",
+                        plazo_meses: Math.round(Number(c.plazo_meses) || 0),
+                        seguro: Number(c.seguro) || 0,
+                        abono_fijo: Number(c.abono_fijo) || 0,
+                        abonos_puntuales: c.abonos_puntuales || {},
+                    }))
+                    .filter((c) => c.saldo > 0 && c.plazo_meses > 0);
+                if (!validos.length) throw new Error("no se encontró ningún crédito válido");
+                const descartados = cargados.length - validos.length;
+                flujoCreditos = validos;
+                refrescarFlujoUI();
+                alert(`Se cargaron ${validos.length} créditos.` +
+                      (descartados ? ` Se ignoraron ${descartados} filas sin saldo o plazo válidos.` : ""));
+            } catch (e) {
+                alert("No se pudo leer el archivo: " + e.message);
+            }
+            ev.target.value = "";
+        };
+        lector.readAsText(file);
+    });
+
     // Restaurar lo guardado; si no hay fecha, arrancar en el mes actual
     cargarFlujo();
     if (!document.getElementById("fjFechaInicio").value) {

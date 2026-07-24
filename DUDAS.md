@@ -41,6 +41,12 @@
     bajo la clave `amortizacion.flujo.v1`, con botón "Limpiar todo". **Limitación honesta: es por
     navegador/dispositivo** — no sigue al usuario entre su computador y su celular. Para eso
     haría falta base de datos + login (otro proyecto).
+  - **Carga por archivo**: se puede subir `.json` (ida y vuelta exacta) o `.csv`, y descargar los
+    créditos o una plantilla. **No se lee `.xlsx` directamente** a propósito: requeriría una
+    librería JS o `openpyxl` en el backend, y el proyecto no tiene dependencias de JS y el bundle
+    se mantiene en 14MB. Con "Guardar como CSV" desde Excel se logra lo mismo.
+    El parser entiende formato colombiano (`240.000.000`, `$ 42.739.600`, `12,5`) y separador
+    `,` o `;`. El archivo **reemplaza** la lista actual (no la mezcla).
 
 ## Abiertas
 - **Reordenar es con botones ▲▼**, no arrastrando. Es más simple y funciona en móvil.

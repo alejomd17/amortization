@@ -316,6 +316,27 @@
             </div><!-- /crPanelAbonarInvertir -->
 
             <div id="crPanelFlujo" class="ahorro-submodo hidden">
+                <section class="card card-soft">
+                    <p class="section-eyebrow">Cargar desde archivo</p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="fjArchivo">Subir .json o .csv</label>
+                            <input type="file" id="fjArchivo" accept=".json,.csv,text/csv,application/json">
+                        </div>
+                        <div class="field field-btn">
+                            <button type="button" id="fjExportBtn" class="btn btn-outline">Descargar mis créditos</button>
+                        </div>
+                        <div class="field field-btn">
+                            <button type="button" id="fjPlantillaBtn" class="btn btn-outline">Descargar plantilla CSV</button>
+                        </div>
+                    </div>
+                    <p class="hint">
+                        Columnas del CSV: <code>nombre, saldo, tasa, tipo_tasa, periodo_tasa, plazo_meses, seguro, abono_fijo, abonos_puntuales</code>.
+                        Los abonos puntuales van como <code>202701:35000000|202803:50000000</code>.
+                        Al subir un archivo se <strong>reemplaza</strong> la lista actual.
+                    </p>
+                </section>
+
                 <section class="card">
                     <p class="section-eyebrow">Agrega tus créditos</p>
                     <div class="field-grid">
