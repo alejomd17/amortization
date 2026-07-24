@@ -427,6 +427,7 @@ class CreditoFlujo(BaseModel):
     seguro: float = 0
     abono_fijo: float = 0
     abonos_puntuales: Dict[str, float] = {}
+    mes_inicio: str | None = None   # AAAAMM del desembolso; vacío = ya lo tienes hoy
 
 
 class FlujoRequest(BaseModel):
@@ -448,6 +449,10 @@ async def calcular_flujo(request: FlujoRequest):
         for c in request.creditos:
             if c.plazo_meses <= 0:
                 raise ValueError(f"El plazo de '{c.nombre or 'un crédito'}' debe ser mayor a 0.")
+            mi = (c.mes_inicio or "").strip()
+            if mi and (len(mi) != 6 or not mi.isdigit()):
+                raise ValueError(
+                    f"El mes de desembolso de '{c.nombre or 'un crédito'}' debe ser AAAAMM (ej. 202801).")
         return flujo.comparar(
             creditos        = [c.model_dump() for c in request.creditos],
             fecha_inicio    = request.fecha_inicio,

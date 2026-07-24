@@ -48,6 +48,21 @@
     El parser entiende formato colombiano (`240.000.000`, `$ 42.739.600`, `12,5`) y separador
     `,` o `;`. El archivo **reemplaza** la lista actual (no la mezcla).
 
+  - **Crédito con desembolso futuro** (`mes_inicio`, AAAAMM, opcional). Antes de esa fecha el
+    crédito **no existe**: sin saldo, sin cuota, sin intereses. Se desembolsa en ese mes y paga
+    su primera cuota al mes siguiente (igual que los créditos que ya tienes, que arrancan en la
+    fila 0 y pagan en la 1). Decisiones tomadas:
+    - La **fecha de libertad espera el desembolso**: no se declara "libre de deudas" en un mes
+      en el que todavía falta desembolsar un crédito ya planeado.
+    - El **flujo liberado no cuenta** la cuota de un crédito que aún no nace — nunca fue una
+      obligación, contarla infla la métrica.
+    - En la tabla mes a mes: `·` = todavía no se desembolsa · `—` = ya se pagó. Son distintos.
+    - Un `mes_inicio` en el pasado se trata como "ya lo tienes hoy" (nace en 0).
+    - El "Total" de la lista **sí suma los créditos futuros** (saldo y cuota); la etiqueta avisa
+      cuántos están por desembolsar para que no se lea como "lo que pago hoy".
+    - **Pendiente / duda abierta**: la plata que liberas *entre* que se acaban tus créditos
+      actuales y llega el desembolso nuevo hoy simplemente queda libre mes a mes; no se acumula
+      como ahorro para entrar de cuota inicial al crédito nuevo. ¿Vale la pena modelarlo?
   - **Editar un crédito ya agregado**: el botón "Editar" carga el crédito en el mismo
     formulario de arriba (el botón pasa a "Guardar cambios" + aparece "Cancelar", y la fila
     se resalta). Al guardar **se queda en el mismo puesto del orden** y **conserva sus abonos

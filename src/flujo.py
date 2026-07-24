@@ -20,6 +20,13 @@ def _sumar_meses(anno_mes: str, meses: int) -> str:
     return f"{total // 12}{total % 12 + 1:02d}"
 
 
+def _diff_meses(desde: str, hasta: str) -> int:
+    """Meses entre dos 'AAAAMM'. '202607' -> '202801' = 18."""
+    a = int(desde[:4]) * 12 + int(desde[4:])
+    b = int(hasta[:4]) * 12 + int(hasta[4:])
+    return b - a
+
+
 def _cuota_francesa(saldo: float, im: float, n: int) -> float:
     if n <= 0:
         return saldo
@@ -30,8 +37,12 @@ def _cuota_francesa(saldo: float, im: float, n: int) -> float:
 
 class Flujo:
     # ── Preparación ───────────────────────────────────────────────────────────
-    def _preparar(self, creditos: list[dict]) -> list[dict]:
-        """Normaliza cada crédito y le deriva la cuota."""
+    def _preparar(self, creditos: list[dict], fecha_inicio: str) -> list[dict]:
+        """Normaliza cada crédito, le deriva la cuota y calcula en qué mes nace.
+
+        `mes_inicio` permite modelar un crédito que todavía no existe (un desembolso
+        futuro): antes de esa fecha no tiene saldo, ni cuota, ni intereses.
+        """
         preparados = []
         for c in creditos:
             saldo = float(c.get("saldo", 0) or 0)
@@ -44,8 +55,15 @@ class Flujo:
                     tasa, c.get("tipo_tasa", "Efectiva"), c.get("periodo_tasa", "Anual"), 'Anual')
             else:
                 im, tasa_ea = 0.0, 0.0
+            mes_ini = str(c.get("mes_inicio") or "").strip()
+            valido = len(mes_ini) == 6 and mes_ini.isdigit()
+            # un desembolso en el pasado es un crédito que ya tienes: nace en 0
+            nace = max(_diff_meses(fecha_inicio, mes_ini), 0) if valido else 0
+
             preparados.append({
                 "nombre": c.get("nombre") or f"Crédito {len(preparados) + 1}",
+                "mes_inicio": mes_ini if valido and nace > 0 else None,
+                "nace": nace,
                 "saldo_inicial": saldo,
                 "im": im,
                 "tasa_ea": tasa_ea,
@@ -62,13 +80,19 @@ class Flujo:
                  fecha_inicio: str, con_cascada: bool = True) -> dict:
         """Simula mes a mes. `orden` son índices; el pool de cuotas liberadas va al
         primer crédito activo del orden (y el sobrante baja al siguiente)."""
-        saldos = [c["saldo_inicial"] for c in preparados]
+        # Un crédito con desembolso futuro todavía no existe: sin saldo y sin cuota.
+        nacidos = [c["nace"] <= 0 for c in preparados]
+        saldos = [c["saldo_inicial"] if nacidos[i] else 0.0 for i, c in enumerate(preparados)]
         pool = 0.0                     # cuotas liberadas (ya escaladas por pct)
         pct = pct_reinversion / 100 if con_cascada else 0.0
 
+        def foto_saldos():
+            """None = todavía no se ha desembolsado (distinto de 0 = ya se pagó)."""
+            return [round(s, 2) if nacidos[i] else None for i, s in enumerate(saldos)]
+
         filas = [{
             "num": 0, "anno_mes": fecha_inicio, "pago_total": 0.0, "liberado": 0.0,
-            "saldos": [round(s, 2) for s in saldos],
+            "saldos": foto_saldos(),
         }]
         total_intereses = 0.0
         total_pagado = 0.0
@@ -81,7 +105,7 @@ class Flujo:
             pago_mes = 0.0
 
             for idx in orden:
-                if saldos[idx] <= 0:
+                if not nacidos[idx] or saldos[idx] <= 0:
                     continue
                 c = preparados[idx]
                 interes = saldos[idx] * c["im"]
@@ -108,19 +132,29 @@ class Flujo:
 
                 pago_mes += pago + c["seguro"]
 
-            # obligación mensual ya liberada (cuota+seguro de los créditos muertos)
-            liberado = sum(c["cuota"] + c["seguro"] for i, c in enumerate(preparados) if saldos[i] <= 0)
+            # obligación mensual ya liberada (cuota+seguro de los créditos muertos).
+            # Un crédito que aún no nace no cuenta: nunca fue una obligación.
+            liberado = sum(c["cuota"] + c["seguro"] for i, c in enumerate(preparados)
+                           if nacidos[i] and saldos[i] <= 0)
             flujo_liberado_acum += liberado
             total_pagado += pago_mes
+
+            # Desembolsos de este mes: el crédito aparece con saldo y empieza a pagar
+            # el mes siguiente (igual que los que ya existen en la fila 0).
+            for i, c in enumerate(preparados):
+                if not nacidos[i] and c["nace"] == mes:
+                    saldos[i] = c["saldo_inicial"]
+                    nacidos[i] = True
 
             filas.append({
                 "num": mes, "anno_mes": anno_mes,
                 "pago_total": round(pago_mes, 2),
                 "liberado": round(liberado, 2),
-                "saldos": [round(s, 2) for s in saldos],
+                "saldos": foto_saldos(),
             })
 
-            if all(s <= 0 for s in saldos):
+            # No hay libertad mientras falte desembolsar un crédito que ya está planeado
+            if all(nacidos) and all(s <= 0 for s in saldos):
                 mes_libertad = mes
                 break
 
@@ -203,7 +237,7 @@ class Flujo:
                  vara: str = "intereses",
                  ) -> dict:
         """Corre los escenarios y devuelve la comparación + el detalle mes a mes."""
-        p = self._preparar([c for c in creditos if float(c.get("saldo", 0) or 0) > 0])
+        p = self._preparar([c for c in creditos if float(c.get("saldo", 0) or 0) > 0], fecha_inicio)
         if not p:
             raise ValueError("Agrega al menos un crédito con saldo mayor a 0.")
 
@@ -251,6 +285,7 @@ class Flujo:
                 "nombre": c["nombre"], "saldo": round(c["saldo_inicial"], 2),
                 "cuota": round(c["cuota"], 2), "seguro": round(c["seguro"], 2),
                 "tasa_ea": c["tasa_ea"], "plazo_meses": c["plazo_meses"],
+                "mes_inicio": c["mes_inicio"],
             } for c in p],
             "fecha_inicio": fecha_inicio,
             "pct_reinversion": pct_reinversion,

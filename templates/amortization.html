@@ -342,6 +342,7 @@
                                 <tr><th>plazo_meses</th><td>26</td><td>siempre en meses</td></tr>
                                 <tr><th>seguro</th><td>0</td><td>opcional, mensual</td></tr>
                                 <tr><th>abono_fijo</th><td>0</td><td>opcional, mensual</td></tr>
+                                <tr><th>mes_inicio</th><td>202801</td><td>opcional, mes del desembolso; vacío = ya lo tienes</td></tr>
                                 <tr><th>abonos_puntuales</th><td>202701:35000000|202803:50000000</td><td>opcional, AAAAMM:monto separados por |</td></tr>
                             </tbody>
                         </table>
@@ -400,10 +401,15 @@
                             <label for="fjAbonoFijo">Abono fijo mensual (opcional)</label>
                             <input type="number" id="fjAbonoFijo" placeholder="Ej. 0">
                         </div>
-                        <div class="field field-btn">
-                            <button type="button" id="fjAddBtn" class="btn btn-outline">Agregar crédito</button>
-                            <button type="button" id="fjCancelEditBtn" class="btn btn-outline" hidden>Cancelar</button>
+                        <div class="field">
+                            <label for="fjMesInicio">Mes de desembolso (opcional)</label>
+                            <input type="text" id="fjMesInicio" placeholder="Ej. 202801" maxlength="6"
+                                   inputmode="numeric" pattern="[0-9]{6}">
                         </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="fjAddBtn" class="btn btn-outline">Agregar crédito</button>
+                        <button type="button" id="fjCancelEditBtn" class="btn btn-outline" hidden>Cancelar</button>
                     </div>
                     <table id="fjTable" class="abonos-table">
                         <thead>
@@ -412,7 +418,8 @@
                         <tbody></tbody>
                         <tfoot></tfoot>
                     </table>
-                    <p class="hint">El orden de esta lista es tu <strong>orden manual</strong>. <strong>Arrastra las filas</strong> para probar otra estrategia.</p>
+                    <p class="hint">El orden de esta lista es tu <strong>orden manual</strong>. <strong>Arrastra las filas</strong> para probar otra estrategia.
+                        Si un crédito todavía no existe (un desembolso que viene), ponle el <strong>mes de desembolso</strong>: antes de esa fecha no cobra cuota ni intereses.</p>
                 </section>
 
                 <section class="card card-soft">

@@ -570,7 +570,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // fila no deja la edición apuntando al crédito equivocado.
     let fjEditando = null;      // crédito en edición (null = agregando uno nuevo)
 
-    const FJ_CAMPOS = ["fjNombre", "fjSaldo", "fjPlazo", "fjTasa", "fjSeguro", "fjAbonoFijo"];
+    const FJ_CAMPOS = ["fjNombre", "fjSaldo", "fjPlazo", "fjTasa", "fjSeguro",
+                       "fjAbonoFijo", "fjMesInicio"];
 
     function fjSalirEdicion() {
         fjEditando = null;
@@ -595,6 +596,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("fjPeriodoTasa").value = c.periodo_tasa || "Anual";
         document.getElementById("fjSeguro").value = c.seguro || "";
         document.getElementById("fjAbonoFijo").value = c.abono_fijo || "";
+        document.getElementById("fjMesInicio").value = c.mes_inicio || "";
         document.getElementById("fjAddBtn").textContent = "Guardar cambios";
         document.getElementById("fjCancelEditBtn").hidden = false;
         document.getElementById("fjNombre").scrollIntoView({ behavior: "smooth", block: "center" });
@@ -681,7 +683,16 @@ document.addEventListener("DOMContentLoaded", () => {
         flujoCreditos.forEach((c, i) => {
             const row = tbody.insertRow();
             row.insertCell(0).textContent = i + 1;
-            row.insertCell(1).textContent = c.nombre;
+
+            const celdaNombre = row.insertCell(1);
+            celdaNombre.textContent = c.nombre;
+            if (c.mes_inicio) {   // desembolso futuro: hoy todavía no existe
+                const badge = document.createElement("span");
+                badge.className = "badge-futuro";
+                badge.textContent = `desde ${fmtMesAnno(c.mes_inicio)}`;
+                celdaNombre.appendChild(badge);
+            }
+
             row.insertCell(2).textContent = fmtMoney(c.saldo);
             row.insertCell(3).textContent = c.tasa > 0 ? fmtPct(c.tasa) : "sin interés";
             row.insertCell(4).textContent = `${c.plazo_meses} m`;
@@ -764,8 +775,13 @@ document.addEventListener("DOMContentLoaded", () => {
         if (flujoCreditos.length) {
             const saldoTot = flujoCreditos.reduce((a, c) => a + c.saldo, 0);
             const cuotaTot = flujoCreditos.reduce((a, c) => a + cuotaEstimada(c) + (c.seguro || 0), 0);
+            // el total incluye los créditos futuros: se avisa para que no se lea como "lo que pago hoy"
+            const futuros = flujoCreditos.filter((c) => c.mes_inicio).length;
+            const etiqueta = futuros
+                ? `Total (${flujoCreditos.length}, ${futuros} por desembolsar)`
+                : `Total (${flujoCreditos.length})`;
             const r = tfoot.insertRow();
-            ["", `Total (${flujoCreditos.length})`, fmtMoney(saldoTot), "", "", fmtMoney(cuotaTot), "", "", ""]
+            ["", etiqueta, fmtMoney(saldoTot), "", "", fmtMoney(cuotaTot), "", "", ""]
                 .forEach((t, k) => { r.insertCell(k).textContent = t; });
         }
     }
@@ -775,6 +791,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const plazoRaw = g("fjPlazo");
         if (!(saldo > 0) || !(plazoRaw > 0)) {
             alert("Ingresa un saldo y un plazo válidos.");
+            return;
+        }
+        const mesInicio = document.getElementById("fjMesInicio").value.trim();
+        if (mesInicio && !esAnnoMesValido(mesInicio)) {
+            alert("El mes de desembolso debe tener formato AAAAMM (ej. 202801). Déjalo vacío si ya tienes el crédito.");
             return;
         }
         const plazo = gv("fjPlazoUnit") === "years" ? plazoRaw * 12 : plazoRaw;
@@ -790,6 +811,7 @@ document.addEventListener("DOMContentLoaded", () => {
             plazo_meses: Math.round(plazo),
             seguro: g("fjSeguro") || 0,
             abono_fijo: g("fjAbonoFijo") || 0,
+            mes_inicio: mesInicio || null,   // null = ya lo tienes hoy
             // al editar se conservan los abonos puntuales: se administran en su propia tabla
             abonos_puntuales: editando ? (fjEditando.abonos_puntuales || {}) : {},
         };
@@ -838,7 +860,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ── Carga / descarga de archivo ──────────────────────────────────────────
     const CSV_COLS = ["nombre", "saldo", "tasa", "tipo_tasa", "periodo_tasa",
-                      "plazo_meses", "seguro", "abono_fijo", "abonos_puntuales"];
+                      "plazo_meses", "seguro", "abono_fijo", "mes_inicio", "abonos_puntuales"];
 
     // Acepta formatos colombianos: "240.000.000" -> 240000000 · "12,5" -> 12.5
     function parseNumeroCsv(txt) {
@@ -889,6 +911,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 plazo_meses: Math.round(parseNumeroCsv(get("plazo_meses"))),
                 seguro: parseNumeroCsv(get("seguro")),
                 abono_fijo: parseNumeroCsv(get("abono_fijo")),
+                // no pasa por parseNumeroCsv: es una fecha AAAAMM, no un monto
+                mes_inicio: /^\d{6}$/.test(get("mes_inicio")) ? get("mes_inicio") : null,
                 abonos_puntuales: parsePuntualesCampo(get("abonos_puntuales")),
             };
         });
@@ -915,8 +939,9 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("fjPlantillaBtn").addEventListener("click", () => {
         descargarArchivo("plantilla-creditos.csv", [
             CSV_COLS.join(","),
-            "Faro,240000000,12,Efectiva,Anual,240,0,0,",
-            "Terrabonga,42739600,0,Efectiva,Anual,18,0,0,202701:35000000|202803:50000000",
+            "Faro,240000000,12,Efectiva,Anual,240,0,0,,",
+            "Terrabonga,42739600,0,Efectiva,Anual,18,0,0,,202701:35000000|202803:50000000",
+            "Casa nueva,50000000,11,Efectiva,Anual,24,0,0,202801,",
         ].join("\n"), "text/csv");
     });
 
@@ -1457,14 +1482,19 @@ function renderFlujoDetalle(r, clave) {
     const card = document.getElementById("flujoDetalleCard");
     card.classList.remove("hidden");
     const filas = r.detalle[clave] || [];
-    const nombres = r.creditos.map((c) => c.nombre);
     const esc = r.escenarios.find((e) => e.clave === clave);
 
-    const head = `<th>#</th><th>Mes</th>${nombres.map((n) => `<th>${n}</th>`).join("")}<th>Pago total</th><th>Liberado</th>`;
+    const cols = r.creditos.map((c) => c.mes_inicio
+        ? `<th>${c.nombre}<span class="badge-futuro">desde ${fmtMesAnno(c.mes_inicio)}</span></th>`
+        : `<th>${c.nombre}</th>`).join("");
+    const head = `<th>#</th><th>Mes</th>${cols}<th>Pago total</th><th>Liberado</th>`;
+    // null = todavía no se desembolsa · 0 = ya se pagó. Son cosas distintas.
     const body = filas.map((f) => `
         <tr class="${f.liberado > 0 ? "row-abono" : ""}">
             <td>${f.num}</td><td>${f.anno_mes}</td>
-            ${f.saldos.map((s) => `<td>${s > 0 ? fmtMoney(s) : "—"}</td>`).join("")}
+            ${f.saldos.map((s) => s === null
+                ? `<td class="sin-desembolsar" title="Aún no se ha desembolsado">·</td>`
+                : `<td>${s > 0 ? fmtMoney(s) : "—"}</td>`).join("")}
             <td>${fmtMoney(f.pago_total)}</td><td>${fmtMoney(f.liberado)}</td>
         </tr>`).join("");
 

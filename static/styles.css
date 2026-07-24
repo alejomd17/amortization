@@ -367,6 +367,29 @@ body {
 
 .abonos-table td button + button { margin-left: 6px; }
 
+/* Botonera propia del formulario (queda fuera de la grilla de campos) */
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+/* Crédito con desembolso futuro: hoy todavía no existe */
+.badge-futuro {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 7px;
+    border-radius: var(--radius-sharp);
+    background: var(--verde-claro);
+    color: var(--verde);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.sin-desembolsar { color: var(--negro); opacity: 0.25; }
+
 /* Fila que se está editando arriba, en el formulario */
 .fila-editando td { background: var(--verde-claro); }
 .fila-editando td:first-child { box-shadow: inset 3px 0 0 var(--verde-medio); }
@@ -532,4 +555,5 @@ body {
     .field-wide { grid-column: span 1; }
     .field-btn .btn { width: 100%; }
     .btn-primary { width: 100%; }
+    .form-actions { flex-direction: column; }
 }
