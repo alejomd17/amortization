@@ -147,6 +147,16 @@ class Flujo:
             filas_mes = {}             # fila de detalle de cada crédito, por si hay que corregirla
             pagos_credito = {}         # lo que se le paga a cada crédito ESTE mes (cuota+seguro+abono)
 
+            # Saldo que AÚN DEBES este mes (antes de pagar): es lo que se muestra en la vista
+            # Saldos, para que el último mes con saldo sea el de la última cuota. Un crédito que
+            # se desembolsa este mes ya lo debes (aunque el primer pago sea el mes siguiente);
+            # antes de nacer es None.
+            saldos_display = [
+                round(saldos[i], 2) if nacidos[i]
+                else (round(c["saldo_inicial"], 2) if c["nace"] == mes else None)
+                for i, c in enumerate(preparados)
+            ]
+
             for idx in orden:
                 if not nacidos[idx] or saldos[idx] <= 0:
                     continue
@@ -240,7 +250,8 @@ class Flujo:
                 "num": mes, "anno_mes": anno_mes,
                 "pago_total": round(pago_mes, 2),
                 "liberado": round(liberado, 2),
-                "saldos": foto_saldos(),
+                # saldo que debías ESTE mes, antes de pagar (ver saldos_display arriba)
+                "saldos": saldos_display,
                 # lo pagado a cada crédito este mes: None si aún no nace, 0 si nació pero no pagó
                 # (justo el mes del desembolso), >0 si pagó. Suma = pago_total.
                 "pagos": [round(pagos_credito.get(i, 0.0), 2) if nacidos[i] else None

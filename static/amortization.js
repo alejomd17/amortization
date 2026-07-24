@@ -1830,7 +1830,8 @@ function renderFlujoDetalle(r, clave) {
                flujo — pero apenas nacen se cuelan en su turno.`
            : ``);
     const notaVista = vista === "saldos"
-        ? `Cada columna es el <strong>saldo que queda</strong> después del pago de ese mes.`
+        ? `Cada columna es el <strong>saldo que aún debes</strong> ese mes, antes de pagar: el último
+           mes con saldo es cuando terminas de pagar ese crédito.`
         : `Cada columna es <strong>lo que le pagas</strong> a cada crédito ese mes (cuota + seguro + abonos).
            El mes del desembolso muestra "—": aún no se paga.`;
 
