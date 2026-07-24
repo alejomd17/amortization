@@ -186,7 +186,8 @@ class Flujo:
                     capital_cuota = saldos[idx] - abono_aplicado
                     cuota_pagada = capital_cuota + interes
                     saldos[idx] = 0.0
-                    pool += c["cuota"] * pct
+                    # al liquidarse deja de pagarse cuota Y seguro: ambos se liberan al pool
+                    pool += (c["cuota"] + c["seguro"]) * pct
                 else:
                     saldos[idx] -= reduccion
                     pago = c["cuota"] + dirigido + aporte_extra
@@ -226,7 +227,8 @@ class Flujo:
                 pagos_credito[objetivo] = pagos_credito.get(objetivo, 0.0) + aplicado
                 if saldos[objetivo] <= 0.005:
                     saldos[objetivo] = 0.0
-                    pool += preparados[objetivo]["cuota"] * pct
+                    o = preparados[objetivo]
+                    pool += (o["cuota"] + o["seguro"]) * pct
                 if detallar and objetivo in filas_mes:
                     fila = filas_mes[objetivo]
                     fila["abono_capital"] = round(fila["abono_capital"] + aplicado, 2)

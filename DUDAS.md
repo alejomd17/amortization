@@ -39,6 +39,9 @@
     por intercambios (dice "mejor encontrado", no miente sobre optimalidad).
   - El **flujo liberado se normaliza** al horizonte del escenario base; sin eso, "sin cascada"
     parecía el mejor solo por durar más. La búsqueda optimiza esa misma métrica normalizada.
+  - **Al liquidarse un crédito se libera cuota + seguro** (no solo la cuota): dejas de pagar
+    ambos, así que los dos entran al pool que cae sobre el siguiente. Coherente con que "lo que
+    pagas" es cuota + seguro.
   - **Una sola regla para la plata que se libera**: todo (la cuota liberada *y* el sobrante de
     una última cuota) va al **primer crédito activo del orden**. Antes el sobrante se lo quedaba
     el que iba justo detrás del que se liquidaba, mientras la cuota liberada arrancaba desde el
