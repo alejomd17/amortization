@@ -1634,6 +1634,9 @@ function displayFlujo(r) {
         <div class="kpi-grid">
             ${kpiHtml("Libre de deudas", fmtMesAnno(sug.anno_mes_libertad), `${sug.meses} meses`, "good")}
             ${kpiHtml("Dispones al mes", fmtMoney(sug.flujo_mensual_liberado), "desde esa fecha", "good")}
+            ${kpiHtml("Terminas pagando", fmtMoney(sug.total_pagado),
+                      base.total_pagado - sug.total_pagado > 0
+                          ? `${fmtMoney(base.total_pagado - sug.total_pagado)} menos que sin cascada` : "en total", "good")}
             ${kpiHtml("Ahorro en intereses", fmtMoney(sug.ahorro_intereses), "vs. sin cascada", "good")}
             ${kpiHtml("Meses que ahorras", `${sug.meses_ahorrados}`, "vs. sin cascada")}
         </div>
