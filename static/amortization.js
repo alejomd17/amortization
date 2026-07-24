@@ -1083,14 +1083,45 @@ document.addEventListener("DOMContentLoaded", () => {
         }, null, 2), "application/json");
     });
 
+    // Un crédito -> una fila CSV, en el mismo orden y formato que la lectura (CSV_COLS),
+    // para que el archivo que bajas se pueda volver a subir tal cual.
+    function serializarPuntuales(p) {
+        return Object.entries(p || {})
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([f, m]) => `${f}:${Math.round(m)}`).join("|");
+    }
+    function creditoACsvRow(c) {
+        const campos = {
+            nombre: String(c.nombre || "").replace(/[,\n;]/g, " ").trim(),   // sin separadores: romperían el CSV
+            saldo: c.saldo || 0,
+            tasa: c.tasa || 0,
+            tipo_tasa: c.tipo_tasa || "Efectiva",
+            periodo_tasa: c.periodo_tasa || "Anual",
+            plazo_meses: c.plazo_meses || 0,
+            cuota: c.cuota > 0 ? c.cuota : "",
+            seguro: c.seguro > 0 ? c.seguro : "",
+            abono_fijo: c.abono_fijo > 0 ? c.abono_fijo : "",
+            mes_inicio: c.mes_inicio || "",
+            recibe_abono: c.recibe_abono === false ? "no" : "",
+            abonos_puntuales: serializarPuntuales(c.abonos_puntuales),
+        };
+        return CSV_COLS.map((col) => campos[col]).join(",");
+    }
+
     document.getElementById("fjPlantillaBtn").addEventListener("click", () => {
-        descargarArchivo("plantilla-creditos.csv", [
-            CSV_COLS.join(","),
-            "Faro,240000000,12,Efectiva,Anual,240,,0,0,,,",
-            "Terrabonga,42739600,0,Efectiva,Anual,18,,0,0,,,202701:35000000|202803:50000000",
-            "Casa nueva,50000000,11,Efectiva,Anual,24,,0,0,202801,,",
-            "Sierra,32800000,0,Efectiva,Anual,17,1400000,0,0,,no,",
-        ].join("\n"), "text/csv");
+        // Con créditos, baja los TUYOS en CSV (listo para re-subir). Sin créditos,
+        // una plantilla con ejemplos para empezar de cero en Excel.
+        const filas = flujoCreditos.length
+            ? flujoCreditos.map(creditoACsvRow)
+            : [
+                "Faro,240000000,12,Efectiva,Anual,240,,0,0,,,",
+                "Terrabonga,42739600,0,Efectiva,Anual,18,,0,0,,,202701:35000000|202803:50000000",
+                "Casa nueva,50000000,11,Efectiva,Anual,24,,0,0,202801,,",
+                "Sierra,32800000,0,Efectiva,Anual,17,1400000,0,0,,no,",
+            ];
+        descargarArchivo(
+            flujoCreditos.length ? "mis-creditos.csv" : "plantilla-creditos.csv",
+            [CSV_COLS.join(","), ...filas].join("\n"), "text/csv");
     });
 
     document.getElementById("fjArchivo").addEventListener("change", (ev) => {

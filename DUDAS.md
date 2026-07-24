@@ -62,8 +62,11 @@
     bajo la clave `amortizacion.flujo.v1`, con botón "Limpiar todo". **Limitación honesta: es por
     navegador/dispositivo** — no sigue al usuario entre su computador y su celular. Para eso
     haría falta base de datos + login (otro proyecto).
-  - **Carga por archivo**: se puede subir `.json` (ida y vuelta exacta) o `.csv`, y descargar los
-    créditos o una plantilla. **No se lee `.xlsx` directamente** a propósito: requeriría una
+  - **Carga por archivo**: se puede subir `.json` (ida y vuelta exacta) o `.csv`. Se descargan
+    los créditos en dos formatos: "Guardar los míos (.json)" (exacto) y "Guardar los míos (.csv)"
+    (mismo formato que la lectura, round-trip exacto salvo comas en el nombre, que se limpian).
+    El CSV **exporta tus créditos reales**; solo cuando la lista está vacía baja una plantilla
+    con ejemplos. **No se lee `.xlsx` directamente** a propósito: requeriría una
     librería JS o `openpyxl` en el backend, y el proyecto no tiene dependencias de JS y el bundle
     se mantiene en 14MB. Con "Guardar como CSV" desde Excel se logra lo mismo.
     El parser entiende formato colombiano (`240.000.000`, `$ 42.739.600`, `12,5`) y separador
