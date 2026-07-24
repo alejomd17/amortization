@@ -108,8 +108,10 @@ class Flujo:
 
         for mes in range(1, MAX_MESES + 1):
             anno_mes = _sumar_meses(fecha_inicio, mes)
-            extra = pool               # el pool baja por el orden
+            extra = pool               # el pool va al primer crédito activo del orden
+            sobrante = 0.0             # lo que sobra de una última cuota; se reparte al final
             pago_mes = 0.0
+            filas_mes = {}             # fila de detalle de cada crédito, por si hay que corregirla
 
             for idx in orden:
                 if not nacidos[idx] or saldos[idx] <= 0:
@@ -128,8 +130,8 @@ class Flujo:
                 # tolerancia de medio centavo: sin ella un residuo de coma flotante
                 # genera una cuota fantasma extra (mismo bug que se corrigió en amortización)
                 if saldos[idx] - reduccion <= 0.005:
-                    # última cuota: se ajusta al saldo exacto y el sobrante sigue al siguiente
-                    extra = max(reduccion - saldos[idx], 0.0)
+                    # última cuota: se ajusta al saldo exacto y lo que sobre se reparte abajo
+                    sobrante += max(reduccion - saldos[idx], 0.0)
                     pago = saldos[idx] + interes
                     # el abono no puede pasarse del saldo; lo que quede lo cubre la cuota
                     abono_aplicado = min(dirigido + aporte_extra, saldos[idx])
@@ -147,7 +149,7 @@ class Flujo:
                 pago_mes += pago + c["seguro"]
 
                 if detallar:
-                    detalle_creditos[idx].append({
+                    filas_mes[idx] = {
                         "num": mes, "anno_mes": anno_mes,
                         "interest": round(interes, 2),
                         "capital": round(capital_cuota, 2),
@@ -155,7 +157,28 @@ class Flujo:
                         "payment": round(cuota_pagada, 2),
                         "abono_capital": round(abono_aplicado, 2),
                         "balance": round(saldos[idx], 2),
-                    })
+                    }
+                    detalle_creditos[idx].append(filas_mes[idx])
+
+            # Sobrante de una última cuota: vuelve al PRIMER crédito activo del orden,
+            # que es la misma regla que sigue la cuota liberada a partir del mes siguiente.
+            # Antes se lo quedaba el que iba justo detrás del que se liquidó: eran dos
+            # reglas para la misma plata y el abono "aparecía y se devolvía" al mes.
+            while sobrante > 0.005:
+                objetivo = next((i for i in orden if nacidos[i] and saldos[i] > 0), None)
+                if objetivo is None:
+                    break              # no queda a quién abonarle: ese mes te sobra la plata
+                aplicado = min(sobrante, saldos[objetivo])
+                saldos[objetivo] -= aplicado
+                sobrante -= aplicado
+                pago_mes += aplicado
+                if saldos[objetivo] <= 0.005:
+                    saldos[objetivo] = 0.0
+                    pool += preparados[objetivo]["cuota"] * pct
+                if detallar and objetivo in filas_mes:
+                    fila = filas_mes[objetivo]
+                    fila["abono_capital"] = round(fila["abono_capital"] + aplicado, 2)
+                    fila["balance"] = round(saldos[objetivo], 2)
 
             # obligación mensual ya liberada (cuota+seguro de los créditos muertos).
             # Un crédito que aún no nace no cuenta: nunca fue una obligación.

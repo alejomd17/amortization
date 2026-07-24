@@ -1631,8 +1631,16 @@ async function cargarTablaCredito(r, clave, indice, modo) {
         `<button type="button" class="chip-credito${i === fjCreditoVisible ? " activo" : ""}"
                  data-i="${i}">${c.nombre}</button>`).join("");
 
+    // El orden a la vista: sin esto no se entiende por qué la cuota liberada de un
+    // crédito le llega a otro y no al que estás mirando.
+    const cadena = esc.orden_nombres.map((n, k) =>
+        `<span class="${k === esc.orden.indexOf(fjCreditoVisible) ? "paso-activo" : ""}">${n}</span>`)
+        .join(" &rarr; ");
+
     card.innerHTML = `
         <p class="section-eyebrow">Detalle por crédito — ${esc.nombre}</p>
+        <p class="hint">La cascada paga en este orden: ${cadena}.
+            Lo que se libera va siempre al primero que siga vivo.</p>
         <div class="selector-credito">
             <button type="button" class="flecha-credito" id="fjCredPrev" aria-label="Crédito anterior">‹</button>
             <div class="chips-credito">${chips}</div>

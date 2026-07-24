@@ -39,6 +39,16 @@
     por intercambios (dice "mejor encontrado", no miente sobre optimalidad).
   - El **flujo liberado se normaliza** al horizonte del escenario base; sin eso, "sin cascada"
     parecía el mejor solo por durar más. La búsqueda optimiza esa misma métrica normalizada.
+  - **Una sola regla para la plata que se libera**: todo (la cuota liberada *y* el sobrante de
+    una última cuota) va al **primer crédito activo del orden**. Antes el sobrante se lo quedaba
+    el que iba justo detrás del que se liquidaba, mientras la cuota liberada arrancaba desde el
+    principio del orden — dos reglas para la misma plata. El síntoma era un abono que
+    "aparecía un mes y se devolvía" al siguiente, y parecía un error de cuentas sin serlo.
+    Si al repartir el sobrante ya no queda ningún crédito vivo, esa plata simplemente te queda
+    libre ese mes.
+  - **La cuota liberada le llega a quien va primero en el orden del escenario**, que casi nunca
+    es el orden de la lista de arriba (ese es "Tu orden"). Por eso la tarjeta de detalle por
+    crédito muestra la cadena del orden que está usando, con el crédito visible resaltado.
 
   - **Abonos puntuales**: lista con botón (eliges el crédito, el mes y el monto). Si repites un
     mes en el mismo crédito, el nuevo monto reemplaza al anterior.

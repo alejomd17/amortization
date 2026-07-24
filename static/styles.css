@@ -454,6 +454,7 @@ body {
     transition: all 0.15s;
 }
 .flecha-credito:hover { border-color: var(--verde); background: var(--verde-claro); }
+.paso-activo { color: var(--verde); font-weight: 500; }
 
 /* Fila que se está editando arriba, en el formulario */
 .fila-editando td { background: var(--verde-claro); }
