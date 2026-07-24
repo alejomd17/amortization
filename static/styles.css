@@ -390,6 +390,71 @@ body {
 }
 .sin-desembolsar { color: var(--negro); opacity: 0.25; }
 
+/* Tabla de condiciones desplegada bajo una fila de la lista */
+.fila-tabla td {
+    background: var(--crema);
+    padding: 18px 14px 22px;
+    border-bottom: 1px solid var(--crema-oscuro);
+}
+.fila-tabla .section-eyebrow { margin-top: 0; }
+.fila-tabla .table-scroll { margin-bottom: 12px; }
+
+/* ===== SELECTOR DE CRÉDITO (pestañas + flechas) ===== */
+.selector-credito {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 14px 0 10px;
+}
+.chips-credito {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+.toggle-tabla {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.chip-credito {
+    font-family: var(--font-body);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    padding: 7px 14px;
+    border: 1px solid var(--crema-oscuro);
+    border-radius: var(--radius-sharp);
+    background: transparent;
+    color: var(--negro);
+    opacity: 0.7;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+.chip-credito:hover { border-color: var(--verde); color: var(--verde); opacity: 1; }
+.chip-credito.activo {
+    background: var(--verde);
+    border-color: var(--verde);
+    color: var(--blanco);
+    opacity: 1;
+}
+.flecha-credito {
+    font-family: var(--font-body);
+    font-size: 18px;
+    line-height: 1;
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border: 1px solid var(--crema-oscuro);
+    border-radius: var(--radius-sharp);
+    background: transparent;
+    color: var(--verde);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.flecha-credito:hover { border-color: var(--verde); background: var(--verde-claro); }
+
 /* Fila que se está editando arriba, en el formulario */
 .fila-editando td { background: var(--verde-claro); }
 .fila-editando td:first-child { box-shadow: inset 3px 0 0 var(--verde-medio); }

@@ -48,6 +48,23 @@
     El parser entiende formato colombiano (`240.000.000`, `$ 42.739.600`, `12,5`) y separador
     `,` o `;`. El archivo **reemplaza** la lista actual (no la mezcla).
 
+  - **Tabla de amortización por crédito** (`POST /flujo/credito`). Devuelve **dos** tablas
+    del mismo crédito, y son números distintos a propósito:
+    - `solo`: las condiciones que te dio el banco — saldo, tasa y plazo. **Sin abonos** (los
+      abonos son decisiones tuyas, no condiciones del crédito) y sin cascada. Conserva
+      `mes_inicio` para que las fechas sean las reales.
+    - `en_plan`: el mismo crédito dentro del orden escogido, recibiendo sus abonos y las
+      cuotas liberadas. La **diferencia entre las dos es justo lo que gana la cascada**.
+    - Dónde vive cada una: arriba, en la lista, un botón "Ver tabla" **colapsado por defecto**
+      que solo puede mostrar `solo` (ahí todavía no hay escenario escogido) y lo dice
+      explícitamente. Abajo, en resultados, las dos con un toggle.
+    - Navegación entre créditos: **pestañas con el nombre** + flechas ‹ › + teclas ← →.
+      Se escogieron pestañas sobre solo-flechas porque con 7 créditos las flechas obligan a
+      6 clics para llegar al último y no dejan ver dónde estás.
+    - `detallar` va **apagado por defecto** en `_simular`: la búsqueda corre hasta 5.040
+      simulaciones y guardar cada fila la volvería lenta y pesada sin que nadie las lea.
+      Por eso la tabla se pide aparte en vez de viajar dentro de `/flujo`.
+    - Las dos tablas se pueden **descargar en CSV**.
   - **Crédito con desembolso futuro** (`mes_inicio`, AAAAMM, opcional). Antes de esa fecha el
     crédito **no existe**: sin saldo, sin cuota, sin intereses. Se desembolsa en ese mes y paga
     su primera cuota al mes siguiente (igual que los créditos que ya tienes, que arrancan en la

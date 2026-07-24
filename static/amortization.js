@@ -62,6 +62,57 @@ async function postAndRender(path, data, renderFn, cardId) {
     }
 }
 
+function descargarArchivo(nombre, contenido, tipo) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([contenido], { type: tipo }));
+    a.download = nombre;
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+
+// POST que devuelve el JSON crudo (sin render ni scroll). Lanza con el detalle del backend.
+async function postJson(path, data) {
+    const response = await fetch(`${API_BASE}/${path.replace(/^\//, "")}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+        let detalle = "";
+        try { detalle = (await response.json()).detail || ""; } catch (e) {}
+        throw new Error(detalle || `HTTP ${response.status}`);
+    }
+    return response.json();
+}
+
+// Tabla de amortización de un crédito. Mismas columnas que el módulo de amortización.
+function tablaAmortHtml(filas, conSeguro) {
+    const cabecera = ["#", "Mes", "Interés", "Capital"]
+        .concat(conSeguro ? ["Seguro"] : [])
+        .concat(["Cuota", "Abono", "Saldo"])
+        .map((t) => `<th>${t}</th>`).join("");
+    const cuerpo = filas.map((f) => `
+        <tr class="${f.abono_capital > 0 ? "row-abono" : ""}">
+            <td>${f.num}</td><td>${fmtMesAnno(f.anno_mes)}</td>
+            <td>${fmtMoney(f.interest)}</td><td>${fmtMoney(f.capital)}</td>
+            ${conSeguro ? `<td>${fmtMoney(f.insurance)}</td>` : ""}
+            <td>${fmtMoney(f.payment)}</td>
+            <td>${f.abono_capital > 0 ? fmtMoney(f.abono_capital) : "—"}</td>
+            <td>${fmtMoney(f.balance)}</td>
+        </tr>`).join("");
+    return `<div class="table-scroll">
+        <table class="amort-table"><thead><tr>${cabecera}</tr></thead><tbody>${cuerpo}</tbody></table>
+    </div>`;
+}
+
+// La misma tabla como CSV, para descargarla
+function tablaAmortCsv(filas) {
+    const cab = ["num", "mes", "interes", "capital", "seguro", "cuota", "abono", "saldo"];
+    const cuerpo = filas.map((f) => [f.num, f.anno_mes, f.interest, f.capital,
+                                     f.insurance, f.payment, f.abono_capital, f.balance].join(","));
+    return [cab.join(","), ...cuerpo].join("\n");
+}
+
 // Muestra el equivalente E.A./M.V. en vivo bajo un campo de tasa
 function wireRateConversion(rateEl, typeEl, periodEl, outEl) {
     function update() {
@@ -753,6 +804,50 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const acciones = row.insertCell(8);
 
+            // Tabla de condiciones: colapsada, se despliega bajo la fila solo si la piden.
+            // Aquí todavía no hay escenario escogido, así que solo puede mostrar el
+            // crédito aislado — se rotula explícitamente para no chocar con los resultados.
+            const ver = document.createElement("button");
+            ver.className = "btn-remove-abono";
+            ver.textContent = "Ver tabla";
+            ver.addEventListener("click", async () => {
+                const sig = row.nextElementSibling;
+                if (sig && sig.classList.contains("fila-tabla")) { sig.remove(); return; }
+                tbody.querySelectorAll(".fila-tabla").forEach((el) => el.remove());
+                ver.textContent = "Cargando…";
+                try {
+                    const d = await postJson("/flujo/credito", {
+                        creditos: flujoCreditos,
+                        indice: i,
+                        fecha_inicio: document.getElementById("fjFechaInicio").value,
+                    });
+                    // sectionRowIndex (no rowIndex): insertRow indexa dentro del tbody
+                    const panel = tbody.insertRow(row.sectionRowIndex + 1);
+                    panel.className = "fila-tabla";
+                    const celda = panel.insertCell(0);
+                    celda.colSpan = 9;
+                    celda.innerHTML = `
+                        <p class="section-eyebrow">${d.nombre} — condiciones del crédito</p>
+                        <p class="hint">Cuota <strong>${fmtMoney(d.solo.cuota)}</strong> ·
+                            termina en <strong>${fmtMesAnno(d.solo.anno_mes_fin)}</strong> ·
+                            intereses <strong>${fmtMoney(d.solo.total_intereses)}</strong>.
+                            Esta es la tabla del crédito <strong>solo</strong>, sin abonos y sin
+                            la cascada. Dentro de tu plan termina antes: eso lo ves en los resultados.</p>
+                        ${tablaAmortHtml(d.solo.tabla, d.seguro > 0)}`;
+                    const csv = document.createElement("button");
+                    csv.className = "btn-remove-abono";
+                    csv.textContent = "Descargar CSV";
+                    csv.addEventListener("click", () => descargarArchivo(
+                        `${d.nombre}-condiciones.csv`, tablaAmortCsv(d.solo.tabla), "text/csv"));
+                    celda.appendChild(csv);
+                } catch (e) {
+                    alert("No se pudo armar la tabla: " + e.message);
+                } finally {
+                    ver.textContent = "Ver tabla";
+                }
+            });
+            acciones.appendChild(ver);
+
             const edit = document.createElement("button");
             edit.className = "btn-remove-abono";
             edit.textContent = "Editar";
@@ -916,14 +1011,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 abonos_puntuales: parsePuntualesCampo(get("abonos_puntuales")),
             };
         });
-    }
-
-    function descargarArchivo(nombre, contenido, tipo) {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(new Blob([contenido], { type: tipo }));
-        a.download = nombre;
-        a.click();
-        URL.revokeObjectURL(a.href);
     }
 
     document.getElementById("fjExportBtn").addEventListener("click", () => {
@@ -1472,9 +1559,109 @@ function displayFlujo(r) {
             ${esc.map((e) => `<option value="${e.clave}"${e.clave === "sugerencia" ? " selected" : ""}>${e.nombre}</option>`).join("")}
         </select>`;
 
-    document.getElementById("fjEscenarioSel")
-        .addEventListener("change", (ev) => renderFlujoDetalle(r, ev.target.value));
+    document.getElementById("fjEscenarioSel").addEventListener("change", (ev) => {
+        renderFlujoDetalle(r, ev.target.value);
+        cargarTablaCredito(r, ev.target.value, fjCreditoVisible, fjModoTabla);
+    });
     renderFlujoDetalle(r, "sugerencia");
+    fjCreditoVisible = 0;
+    cargarTablaCredito(r, "sugerencia", 0, fjModoTabla);
+}
+
+
+// ── Render: tabla de amortización de un crédito dentro del plan ───────────────
+let fjCreditoVisible = 0;            // índice del crédito que se está mostrando
+let fjModoTabla = "en_plan";         // "solo" | "en_plan"
+let fjUltimoResultado = null;        // para que las flechas del teclado sepan qué mover
+let fjUltimaClave = null;
+
+// ← → mueven entre créditos, pero no si estás escribiendo en un campo
+document.addEventListener("keydown", (ev) => {
+    if (ev.key !== "ArrowLeft" && ev.key !== "ArrowRight") return;
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(ev.target.tagName)) return;
+    const card = document.getElementById("flujoCreditoCard");
+    if (!card || card.classList.contains("hidden")) return;
+    ev.preventDefault();
+    const n = fjUltimoResultado ? fjUltimoResultado.creditos.length : 0;
+    if (n < 2) return;
+    const salto = ev.key === "ArrowLeft" ? -1 : 1;
+    cargarTablaCredito(fjUltimoResultado, fjUltimaClave,
+                       (fjCreditoVisible + salto + n) % n, fjModoTabla);
+});
+
+async function cargarTablaCredito(r, clave, indice, modo) {
+    const card = document.getElementById("flujoCreditoCard");
+    const esc = r.escenarios.find((e) => e.clave === clave);
+    if (!esc || !r.creditos.length) { card.classList.add("hidden"); return; }
+
+    fjCreditoVisible = Math.min(Math.max(indice, 0), r.creditos.length - 1);
+    fjModoTabla = modo;
+    fjUltimoResultado = r;
+    fjUltimaClave = clave;
+    card.classList.remove("hidden");
+
+    let d;
+    try {
+        d = await postJson("/flujo/credito", {
+            creditos: r.creditos_entrada,
+            indice: fjCreditoVisible,
+            fecha_inicio: r.fecha_inicio,
+            pct_reinversion: r.pct_reinversion,
+            orden: esc.orden,
+        });
+    } catch (e) {
+        card.innerHTML = `<p class="section-eyebrow">Detalle por crédito</p>
+            <p class="hint">No se pudo armar la tabla: ${e.message}</p>`;
+        return;
+    }
+
+    const vista = d[modo] || d.solo;
+    const solo = d.solo, plan = d.en_plan;
+    // La comparación explícita evita que las dos tablas se lean como contradictorias
+    const comparacion = (plan && solo.anno_mes_fin && plan.anno_mes_fin)
+        ? `Solo el crédito termina en <strong>${fmtMesAnno(solo.anno_mes_fin)}</strong>
+           con <strong>${fmtMoney(solo.total_intereses)}</strong> de intereses.
+           Dentro de tu plan termina en <strong>${fmtMesAnno(plan.anno_mes_fin)}</strong>
+           con <strong>${fmtMoney(plan.total_intereses)}</strong> — recibe
+           <strong>${fmtMoney(plan.total_abonos)}</strong> en abonos y se ahorra
+           <strong>${fmtMoney(solo.total_intereses - plan.total_intereses)}</strong>.`
+        : "";
+
+    const chips = r.creditos.map((c, i) =>
+        `<button type="button" class="chip-credito${i === fjCreditoVisible ? " activo" : ""}"
+                 data-i="${i}">${c.nombre}</button>`).join("");
+
+    card.innerHTML = `
+        <p class="section-eyebrow">Detalle por crédito — ${esc.nombre}</p>
+        <div class="selector-credito">
+            <button type="button" class="flecha-credito" id="fjCredPrev" aria-label="Crédito anterior">‹</button>
+            <div class="chips-credito">${chips}</div>
+            <button type="button" class="flecha-credito" id="fjCredNext" aria-label="Crédito siguiente">›</button>
+        </div>
+        <div class="toggle-tabla">
+            <button type="button" class="chip-credito${modo === "solo" ? " activo" : ""}" data-modo="solo">Solo este crédito</button>
+            <button type="button" class="chip-credito${modo === "en_plan" ? " activo" : ""}" data-modo="en_plan">Dentro de mi plan</button>
+        </div>
+        <p class="hint">${comparacion}</p>
+        <div class="kpi-grid">
+            ${kpiHtml("Cuota", fmtMoney(vista.cuota))}
+            ${kpiHtml("Termina", vista.anno_mes_fin ? fmtMesAnno(vista.anno_mes_fin) : "—", `${vista.meses} cuotas`)}
+            ${kpiHtml("Intereses", fmtMoney(vista.total_intereses))}
+            ${kpiHtml("Abonos recibidos", fmtMoney(vista.total_abonos), modo === "solo" ? "sin cascada" : "de la cascada")}
+        </div>
+        ${tablaAmortHtml(vista.tabla, d.seguro > 0)}
+        <button type="button" class="btn btn-outline" id="fjCredCsv">Descargar CSV</button>`;
+
+    const ir = (i) => cargarTablaCredito(r, clave, (i + r.creditos.length) % r.creditos.length, fjModoTabla);
+    card.querySelectorAll(".chip-credito[data-i]").forEach((b) =>
+        b.addEventListener("click", () => ir(Number(b.dataset.i))));
+    card.querySelectorAll(".chip-credito[data-modo]").forEach((b) =>
+        b.addEventListener("click", () => cargarTablaCredito(r, clave, fjCreditoVisible, b.dataset.modo)));
+    document.getElementById("fjCredPrev").addEventListener("click", () => ir(fjCreditoVisible - 1));
+    document.getElementById("fjCredNext").addEventListener("click", () => ir(fjCreditoVisible + 1));
+    document.getElementById("fjCredCsv").addEventListener("click", () => descargarArchivo(
+        `${d.nombre}-${modo === "solo" ? "solo" : "en-mi-plan"}.csv`,
+        tablaAmortCsv(vista.tabla), "text/csv"));
 }
 
 

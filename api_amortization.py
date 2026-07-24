@@ -438,6 +438,14 @@ class FlujoRequest(BaseModel):
     vara: str = "intereses"         # intereses | tiempo | flujo
 
 
+class FlujoCreditoRequest(BaseModel):
+    creditos: List[CreditoFlujo]
+    indice: int                     # cual de los creditos se quiere ver
+    fecha_inicio: str
+    pct_reinversion: float = 100
+    orden: List[int] | None = None  # sin orden solo se devuelve la tabla "solo este credito"
+
+
 @app.post('/flujo')
 async def calcular_flujo(request: FlujoRequest):
     """Flujo de créditos con cascada: compara órdenes y proyecta mes a mes."""
@@ -459,6 +467,25 @@ async def calcular_flujo(request: FlujoRequest):
             pct_reinversion = request.pct_reinversion,
             orden_manual    = request.orden_manual,
             vara            = request.vara,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
+
+
+@app.post('/flujo/credito')
+async def tabla_de_un_credito(request: FlujoCreditoRequest):
+    """Tabla de amortizacion de un credito: sus condiciones solas y dentro del plan."""
+    try:
+        if len(request.fecha_inicio) != 6 or not request.fecha_inicio.isdigit():
+            raise ValueError("Formato de fecha inválido. Debe ser AAAAMM.")
+        return flujo.tabla_credito(
+            creditos        = [c.model_dump() for c in request.creditos],
+            indice          = request.indice,
+            fecha_inicio    = request.fecha_inicio,
+            pct_reinversion = request.pct_reinversion,
+            orden           = request.orden,
         )
     except ValueError as ve:
         raise HTTPException(status_code=422, detail=str(ve))

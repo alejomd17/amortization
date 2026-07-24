@@ -77,9 +77,14 @@ class Flujo:
 
     # ── Simulación de un orden ────────────────────────────────────────────────
     def _simular(self, preparados: list[dict], orden: list[int], pct_reinversion: float,
-                 fecha_inicio: str, con_cascada: bool = True) -> dict:
+                 fecha_inicio: str, con_cascada: bool = True, detallar: bool = False) -> dict:
         """Simula mes a mes. `orden` son índices; el pool de cuotas liberadas va al
-        primer crédito activo del orden (y el sobrante baja al siguiente)."""
+        primer crédito activo del orden (y el sobrante baja al siguiente).
+
+        `detallar` guarda la tabla de amortización de cada crédito. Va apagado por
+        defecto a propósito: la búsqueda corre hasta 5.040 simulaciones y guardar
+        cada fila la volvería lenta y pesada sin que nadie lea esas tablas.
+        """
         # Un crédito con desembolso futuro todavía no existe: sin saldo y sin cuota.
         nacidos = [c["nace"] <= 0 for c in preparados]
         saldos = [c["saldo_inicial"] if nacidos[i] else 0.0 for i, c in enumerate(preparados)]
@@ -98,6 +103,8 @@ class Flujo:
         total_pagado = 0.0
         flujo_liberado_acum = 0.0      # métrica: cuánto obligación mensual ya está muerta, mes a mes
         mes_libertad = None
+        # tabla de amortización por crédito (mismas columnas que el módulo de amortización)
+        detalle_creditos = [[] for _ in preparados] if detallar else None
 
         for mes in range(1, MAX_MESES + 1):
             anno_mes = _sumar_meses(fecha_inicio, mes)
@@ -124,13 +131,31 @@ class Flujo:
                     # última cuota: se ajusta al saldo exacto y el sobrante sigue al siguiente
                     extra = max(reduccion - saldos[idx], 0.0)
                     pago = saldos[idx] + interes
+                    # el abono no puede pasarse del saldo; lo que quede lo cubre la cuota
+                    abono_aplicado = min(dirigido + aporte_extra, saldos[idx])
+                    capital_cuota = saldos[idx] - abono_aplicado
+                    cuota_pagada = capital_cuota + interes
                     saldos[idx] = 0.0
                     pool += c["cuota"] * pct
                 else:
                     saldos[idx] -= reduccion
                     pago = c["cuota"] + dirigido + aporte_extra
+                    abono_aplicado = dirigido + aporte_extra
+                    capital_cuota = capital
+                    cuota_pagada = c["cuota"]
 
                 pago_mes += pago + c["seguro"]
+
+                if detallar:
+                    detalle_creditos[idx].append({
+                        "num": mes, "anno_mes": anno_mes,
+                        "interest": round(interes, 2),
+                        "capital": round(capital_cuota, 2),
+                        "insurance": round(c["seguro"], 2),
+                        "payment": round(cuota_pagada, 2),
+                        "abono_capital": round(abono_aplicado, 2),
+                        "balance": round(saldos[idx], 2),
+                    })
 
             # obligación mensual ya liberada (cuota+seguro de los créditos muertos).
             # Un crédito que aún no nace no cuenta: nunca fue una obligación.
@@ -168,6 +193,7 @@ class Flujo:
             "anno_mes_libertad": filas[-1]["anno_mes"] if mes_libertad else None,
             "flujo_liberado_acum": round(flujo_liberado_acum, 2),
             "flujo_mensual_liberado": round(obligacion_total, 2),
+            "detalle_creditos": detalle_creditos,
         }
 
     # ── Órdenes y búsqueda ────────────────────────────────────────────────────
@@ -237,7 +263,8 @@ class Flujo:
                  vara: str = "intereses",
                  ) -> dict:
         """Corre los escenarios y devuelve la comparación + el detalle mes a mes."""
-        p = self._preparar([c for c in creditos if float(c.get("saldo", 0) or 0) > 0], fecha_inicio)
+        validos = [c for c in creditos if float(c.get("saldo", 0) or 0) > 0]
+        p = self._preparar(validos, fecha_inicio)
         if not p:
             raise ValueError("Agrega al menos un crédito con saldo mayor a 0.")
 
@@ -287,9 +314,69 @@ class Flujo:
                 "tasa_ea": c["tasa_ea"], "plazo_meses": c["plazo_meses"],
                 "mes_inicio": c["mes_inicio"],
             } for c in p],
+            # se devuelven los créditos tal como entraron (ya filtrados, para que los
+            # índices coincidan) porque /flujo/credito necesita re-simular con ellos
+            "creditos_entrada": validos,
             "fecha_inicio": fecha_inicio,
             "pct_reinversion": pct_reinversion,
             "vara": vara,
-            "escenarios": [{k: v for k, v in e.items() if k != "filas"} for e in escenarios],
+            "escenarios": [{k: v for k, v in e.items()
+                            if k not in ("filas", "detalle_creditos")} for e in escenarios],
             "detalle": {e["clave"]: e["filas"] for e in escenarios},
         }
+
+    # ── Tabla de amortización de un solo crédito ──────────────────────────────
+    @staticmethod
+    def _resumir_tabla(filas: list[dict], cuota: float) -> dict:
+        return {
+            "tabla": filas,
+            "cuota": round(cuota, 2),
+            "meses": len(filas),
+            "anno_mes_fin": filas[-1]["anno_mes"] if filas else None,
+            "total_intereses": round(sum(f["interest"] for f in filas), 2),
+            "total_abonos": round(sum(f["abono_capital"] for f in filas), 2),
+            "total_pagado": round(sum(f["payment"] + f["abono_capital"] + f["insurance"]
+                                      for f in filas), 2),
+        }
+
+    def tabla_credito(self,
+                      creditos: list[dict],
+                      indice: int,
+                      fecha_inicio: str = "202601",
+                      pct_reinversion: float = 100,
+                      orden: list[int] | None = None,
+                      ) -> dict:
+        """Tabla de amortización de un crédito, en dos versiones:
+
+        - `solo`:    las condiciones que te dio el banco. Sin abonos y sin cascada.
+        - `en_plan`: el mismo crédito dentro del orden dado, recibiendo sus abonos y
+                     las cuotas liberadas de los que ya se pagaron. Solo si llega `orden`.
+
+        Son números distintos a propósito: la diferencia entre las dos es justo lo que
+        gana la estrategia de cascada.
+        """
+        validos = [c for c in creditos if float(c.get("saldo", 0) or 0) > 0]
+        p = self._preparar(validos, fecha_inicio)
+        if not p:
+            raise ValueError("Agrega al menos un crédito con saldo mayor a 0.")
+        if not 0 <= indice < len(p):
+            raise ValueError("El crédito seleccionado no existe.")
+
+        # Se conserva mes_inicio para que las fechas de la tabla sean las reales,
+        # pero se le quitan los abonos: son decisiones tuyas, no condiciones del crédito.
+        desnudo = dict(validos[indice], abono_fijo=0, abonos_puntuales={})
+        p_solo = self._preparar([desnudo], fecha_inicio)
+        res_solo = self._simular(p_solo, [0], 0, fecha_inicio, con_cascada=False, detallar=True)
+
+        out = {
+            "nombre": p[indice]["nombre"],
+            "mes_inicio": p[indice]["mes_inicio"],
+            "seguro": round(p[indice]["seguro"], 2),
+            "solo": self._resumir_tabla(res_solo["detalle_creditos"][0], p_solo[0]["cuota"]),
+        }
+
+        if orden and sorted(orden) == list(range(len(p))):
+            res_plan = self._simular(p, list(orden), pct_reinversion, fecha_inicio, detallar=True)
+            out["en_plan"] = self._resumir_tabla(
+                res_plan["detalle_creditos"][indice], p[indice]["cuota"])
+        return out
