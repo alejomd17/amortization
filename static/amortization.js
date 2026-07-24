@@ -1765,18 +1765,23 @@ function displayAbonarInvertir(r) {
     card.innerHTML = `
         <h2>¿Abonar o <em>invertir</em>?</h2>
         <p class="resumen-narrativa">
-            Te conviene <strong>${ganador}</strong>. Si abonas, tu crédito termina
-            <strong>${r.meses_ahorrados} meses antes</strong> y la cuota que se libera, invertida,
-            te deja <strong>${fmtMoney(r.valor_abonar)}</strong>. Invertir el extra en el CDT te
-            deja <strong>${fmtMoney(r.valor_invertir)}</strong> — diferencia de
+            Con los mismos <strong>${fmtMoney(r.monto_extra)}</strong> te conviene
+            <strong>${ganador}</strong>. Si los abonas, tu crédito termina
+            <strong>${r.meses_ahorrados} meses antes</strong> y esas
+            <strong>${r.meses_ahorrados} cuotas de ${fmtMoney(r.cuota)}</strong> que dejas de pagar,
+            puestas en el CDT, te dejan <strong>${fmtMoney(r.valor_abonar)}</strong>.
+            Si en vez de eso los metes al CDT desde ya, te dejan
+            <strong>${fmtMoney(r.valor_invertir)}</strong> — diferencia de
             <strong>${fmtMoney(r.diferencia)}</strong> al final del plazo.
         </p>
         <div class="kpi-grid">
-            ${kpiHtml("Si abonas", fmtMoney(r.valor_abonar), "cuota liberada invertida", r.conviene_abonar ? "good" : "")}
-            ${kpiHtml("Si inviertes", fmtMoney(r.valor_invertir), "el extra en el CDT", r.conviene_abonar ? "" : "good")}
+            ${kpiHtml("Si abonas", fmtMoney(r.valor_abonar), `las ${r.meses_ahorrados} cuotas liberadas, en el CDT`, r.conviene_abonar ? "good" : "")}
+            ${kpiHtml("Si inviertes", fmtMoney(r.valor_invertir), `esos ${fmtMoney(r.monto_extra)} en el CDT`, r.conviene_abonar ? "" : "good")}
             ${kpiHtml("Terminas antes", `${r.meses_ahorrados} meses`, `pagas ${r.nuevo_plazo_meses} en vez de ${r.plazo_restante_meses}`, r.conviene_abonar ? "good" : "")}
-            ${kpiHtml("Interés que ahorras", fmtMoney(r.interes_ahorrado))}
+            ${kpiHtml("Interés que ahorras", fmtMoney(r.interes_ahorrado), "cuotas liberadas − lo que pusiste")}
             ${kpiHtml("Tasa crédito", fmtPct(r.tasa_credito_ea), "E.A.")}
             ${kpiHtml("CDT neto", fmtPct(r.cdt_neto_ea), "E.A.")}
-        </div>`;
+        </div>
+        <p class="hint">Sale lo mismo de tu bolsillo en los dos casos
+            (${fmtMoney(r.monto_extra)} + ${r.plazo_restante_meses} cuotas), por eso son comparables.</p>`;
 }

@@ -12,6 +12,11 @@
   restante + costos del cambio); se ordena por costo total. Confirmado así por ahora.
 - **Costo real**: TIR del flujo (recibes monto − costos, pagas cuota + seguro), sobre el
   cronograma sin abonos; solo se muestra cuando hay costos.
+- **Abonar vs. invertir — el campo NO es plata adicional**. Se llamaba "Monto extra a abonar"
+  y confundía: sonaba a plata que aparece de algún lado y que además ya estaba decidido abonar.
+  Es **la misma plata en los dos escenarios**; la pregunta es dónde la pones. Renombrado a
+  "Plata que tienes disponible" y los textos ya no dicen "el extra". La comparación es justa
+  porque de tu bolsillo sale lo mismo en ambos casos: monto + las cuotas del plazo restante.
 - **Abonar vs. invertir (versión fina)**: modela los flujos reales — al abonar, el crédito
   termina antes y la cuota liberada se invierte hasta el fin del plazo original; compara el
   patrimonio final de las dos estrategias. Toggle "desde el crédito original" (deduce el saldo con
