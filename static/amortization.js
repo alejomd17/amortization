@@ -1606,7 +1606,7 @@ function displayFlujo(r) {
     const claveInicial = esc.some((e) => e.clave === "manual") ? "manual" : "sugerencia";
 
     const filas = esc.map((e) => `
-        <tr class="${e.clave === "sugerencia" ? "row-abono" : ""}">
+        <tr class="fila-esc${e.clave === claveInicial ? " row-abono" : ""}" data-clave="${e.clave}">
             <td>${e.nombre}${e.metodo ? ` <span class="hint">(${e.metodo})</span>` : ""}</td>
             <td>${e.anno_mes_libertad ? fmtMesAnno(e.anno_mes_libertad) : "—"}</td>
             <td>${e.meses} meses</td>
@@ -1642,8 +1642,8 @@ function displayFlujo(r) {
             </table>
         </div>
 
-        <h3>Orden sugerido</h3>
-        <p class="resumen-narrativa">${sug.orden_nombres.join(" &rarr; ")}</p>
+        <h3>Orden de la estrategia</h3>
+        <p class="resumen-narrativa" id="fjOrdenChain"></p>
 
         <h3>Ver el mes a mes de</h3>
         <div class="chips-credito" id="fjEscenarioSel">
@@ -1651,12 +1651,22 @@ function displayFlujo(r) {
                 data-clave="${e.clave}">${e.nombre}</button>`).join("")}
         </div>`;
 
+    // Resalta la fila del escenario y muestra su orden: sigue al chip seleccionado
+    function marcarEscenario(clave) {
+        card.querySelectorAll(".fila-esc").forEach((tr) =>
+            tr.classList.toggle("row-abono", tr.dataset.clave === clave));
+        const e = esc.find((x) => x.clave === clave);
+        if (e) document.getElementById("fjOrdenChain").innerHTML = e.orden_nombres.join(" &rarr; ");
+    }
+
     const chipsEsc = card.querySelectorAll("#fjEscenarioSel .chip-credito");
     chipsEsc.forEach((b) => b.addEventListener("click", () => {
         chipsEsc.forEach((x) => x.classList.toggle("activo", x === b));
+        marcarEscenario(b.dataset.clave);
         renderFlujoDetalle(r, b.dataset.clave);
         cargarTablaCredito(r, b.dataset.clave, fjCreditoVisible, fjModoTabla);   // conserva el crédito visible
     }));
+    marcarEscenario(claveInicial);
     renderFlujoDetalle(r, claveInicial);
     cargarTablaCredito(r, claveInicial, null, fjModoTabla);   // null = el primero de la cascada
 }
