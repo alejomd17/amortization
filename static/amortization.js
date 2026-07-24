@@ -1566,14 +1566,17 @@ function displayFlujo(r) {
         <p class="resumen-narrativa">${sug.orden_nombres.join(" &rarr; ")}</p>
 
         <h3>Ver el mes a mes de</h3>
-        <select id="fjEscenarioSel">
-            ${esc.map((e) => `<option value="${e.clave}"${e.clave === "sugerencia" ? " selected" : ""}>${e.nombre}</option>`).join("")}
-        </select>`;
+        <div class="chips-credito" id="fjEscenarioSel">
+            ${esc.map((e) => `<button type="button" class="chip-credito${e.clave === "sugerencia" ? " activo" : ""}"
+                data-clave="${e.clave}">${e.nombre}</button>`).join("")}
+        </div>`;
 
-    document.getElementById("fjEscenarioSel").addEventListener("change", (ev) => {
-        renderFlujoDetalle(r, ev.target.value);
-        cargarTablaCredito(r, ev.target.value, fjCreditoVisible, fjModoTabla);
-    });
+    const chipsEsc = card.querySelectorAll("#fjEscenarioSel .chip-credito");
+    chipsEsc.forEach((b) => b.addEventListener("click", () => {
+        chipsEsc.forEach((x) => x.classList.toggle("activo", x === b));
+        renderFlujoDetalle(r, b.dataset.clave);
+        cargarTablaCredito(r, b.dataset.clave, fjCreditoVisible, fjModoTabla);   // conserva el crédito visible
+    }));
     renderFlujoDetalle(r, "sugerencia");
     cargarTablaCredito(r, "sugerencia", null, fjModoTabla);   // null = el primero de la cascada
 }
