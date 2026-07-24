@@ -112,7 +112,7 @@ body {
 .field-grid:last-child { margin-bottom: 0; }
 .field { display: flex; flex-direction: column; min-width: 0; }
 .field-wide { grid-column: span 2; }
-.field-btn { justify-content: flex-end; }
+.field-btn { justify-content: flex-end; gap: 8px; }
 
 .field label {
     font-size: 12px;
@@ -296,6 +296,12 @@ body {
     color: var(--verde);
     opacity: 1;
 }
+
+.abonos-table td button + button { margin-left: 6px; }
+
+/* Fila que se está editando arriba, en el formulario */
+.fila-editando td { background: var(--verde-claro); }
+.fila-editando td:first-child { box-shadow: inset 3px 0 0 var(--verde-medio); }
 
 /* ===== REORDENAR ARRASTRANDO ===== */
 .fila-arrastrable {

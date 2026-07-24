@@ -48,6 +48,12 @@
     El parser entiende formato colombiano (`240.000.000`, `$ 42.739.600`, `12,5`) y separador
     `,` o `;`. El archivo **reemplaza** la lista actual (no la mezcla).
 
+  - **Editar un crédito ya agregado**: el botón "Editar" carga el crédito en el mismo
+    formulario de arriba (el botón pasa a "Guardar cambios" + aparece "Cancelar", y la fila
+    se resalta). Al guardar **se queda en el mismo puesto del orden** y **conserva sus abonos
+    puntuales** (esos se administran en su propia tabla). Internamente se guarda la
+    *referencia* al crédito, no el índice, para que arrastrar o borrar otra fila no deje la
+    edición apuntando al crédito equivocado.
   - **Reordenar arrastrando** (drag & drop nativo del navegador, sin librerías). Los botones
     ▲▼ siguen en el código pero la columna se **oculta en escritorio** (`min-width: 761px`):
     el drag & drop de HTML5 **no dispara eventos en pantallas táctiles**, así que sin ese

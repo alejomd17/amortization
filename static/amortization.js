@@ -566,6 +566,39 @@ document.addEventListener("DOMContentLoaded", () => {
     const FLUJO_STORE = "amortizacion.flujo.v1";
     let flujoCreditos = [];
     let fjArrastrando = null;   // índice de la fila que se está arrastrando
+    // Se guarda la referencia al objeto, no el índice: así arrastrar o eliminar otra
+    // fila no deja la edición apuntando al crédito equivocado.
+    let fjEditando = null;      // crédito en edición (null = agregando uno nuevo)
+
+    const FJ_CAMPOS = ["fjNombre", "fjSaldo", "fjPlazo", "fjTasa", "fjSeguro", "fjAbonoFijo"];
+
+    function fjSalirEdicion() {
+        fjEditando = null;
+        FJ_CAMPOS.forEach((id) => { document.getElementById(id).value = ""; });
+        document.getElementById("fjTasa").value = "0";
+        document.getElementById("fjPlazoUnit").value = "months";
+        document.getElementById("fjTipoTasa").value = "Efectiva";
+        document.getElementById("fjPeriodoTasa").value = "Anual";
+        document.getElementById("fjAddBtn").textContent = "Agregar crédito";
+        document.getElementById("fjCancelEditBtn").hidden = true;
+    }
+
+    function fjEntrarEdicion(c) {
+        if (!c) return;
+        fjEditando = c;
+        document.getElementById("fjNombre").value = c.nombre || "";
+        document.getElementById("fjSaldo").value = c.saldo;
+        document.getElementById("fjPlazo").value = c.plazo_meses;
+        document.getElementById("fjPlazoUnit").value = "months";   // el crédito se guarda en meses
+        document.getElementById("fjTasa").value = c.tasa || 0;
+        document.getElementById("fjTipoTasa").value = c.tipo_tasa || "Efectiva";
+        document.getElementById("fjPeriodoTasa").value = c.periodo_tasa || "Anual";
+        document.getElementById("fjSeguro").value = c.seguro || "";
+        document.getElementById("fjAbonoFijo").value = c.abono_fijo || "";
+        document.getElementById("fjAddBtn").textContent = "Guardar cambios";
+        document.getElementById("fjCancelEditBtn").hidden = false;
+        document.getElementById("fjNombre").scrollIntoView({ behavior: "smooth", block: "center" });
+    }
 
     function guardarFlujo() {
         try {
@@ -707,11 +740,25 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             celdaOrden.appendChild(grupoBtns);
 
+            const acciones = row.insertCell(8);
+
+            const edit = document.createElement("button");
+            edit.className = "btn-remove-abono";
+            edit.textContent = "Editar";
+            edit.addEventListener("click", () => { fjEntrarEdicion(c); displayFlujoCreditos(); });
+            acciones.appendChild(edit);
+
             const del = document.createElement("button");
             del.className = "btn-remove-abono";
             del.textContent = "Eliminar";
-            del.addEventListener("click", () => { flujoCreditos.splice(i, 1); refrescarFlujoUI(); });
-            row.insertCell(8).appendChild(del);
+            del.addEventListener("click", () => {
+                if (fjEditando === c) fjSalirEdicion();
+                flujoCreditos.splice(i, 1);
+                refrescarFlujoUI();
+            });
+            acciones.appendChild(del);
+
+            if (fjEditando === c) row.classList.add("fila-editando");
         });
 
         if (flujoCreditos.length) {
@@ -731,8 +778,11 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         const plazo = gv("fjPlazoUnit") === "years" ? plazoRaw * 12 : plazoRaw;
-        flujoCreditos.push({
-            nombre: document.getElementById("fjNombre").value.trim() || `Crédito ${flujoCreditos.length + 1}`,
+        const idx = fjEditando ? flujoCreditos.indexOf(fjEditando) : -1;
+        const editando = idx >= 0;
+        const credito = {
+            nombre: document.getElementById("fjNombre").value.trim()
+                || (editando ? fjEditando.nombre : `Crédito ${flujoCreditos.length + 1}`),
             saldo,
             tasa: g("fjTasa") || 0,
             tipo_tasa: gv("fjTipoTasa"),
@@ -740,13 +790,19 @@ document.addEventListener("DOMContentLoaded", () => {
             plazo_meses: Math.round(plazo),
             seguro: g("fjSeguro") || 0,
             abono_fijo: g("fjAbonoFijo") || 0,
-            abonos_puntuales: {},
-        });
-        ["fjNombre", "fjSaldo", "fjPlazo", "fjSeguro", "fjAbonoFijo"]
-            .forEach((id) => { document.getElementById(id).value = ""; });
-        document.getElementById("fjTasa").value = "0";
+            // al editar se conservan los abonos puntuales: se administran en su propia tabla
+            abonos_puntuales: editando ? (fjEditando.abonos_puntuales || {}) : {},
+        };
+        if (editando) {
+            flujoCreditos[idx] = credito;   // se queda en el mismo puesto del orden
+        } else {
+            flujoCreditos.push(credito);
+        }
+        fjSalirEdicion();
         refrescarFlujoUI();
     });
+
+    document.getElementById("fjCancelEditBtn").addEventListener("click", fjSalirEdicion);
 
     // Abonos puntuales: se agregan a un crédito ya creado
     document.getElementById("fjPuntAddBtn").addEventListener("click", () => {
@@ -774,6 +830,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("fjLimpiarBtn").addEventListener("click", () => {
         if (!confirm("¿Borrar todos los créditos guardados en este navegador?")) return;
+        fjSalirEdicion();
         flujoCreditos = [];
         try { localStorage.removeItem(FLUJO_STORE); } catch (e) {}
         refrescarFlujoUI();
@@ -896,6 +953,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     .filter((c) => c.saldo > 0 && c.plazo_meses > 0);
                 if (!validos.length) throw new Error("no se encontró ningún crédito válido");
                 const descartados = cargados.length - validos.length;
+                fjSalirEdicion();     // el archivo reemplaza la lista: la edición ya no aplica
                 flujoCreditos = validos;
                 refrescarFlujoUI();
                 alert(`Se cargaron ${validos.length} créditos.` +
