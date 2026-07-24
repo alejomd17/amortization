@@ -1659,16 +1659,19 @@ function displayFlujo(r) {
         if (e) document.getElementById("fjOrdenChain").innerHTML = e.orden_nombres.join(" &rarr; ");
     }
 
+    // Un solo punto de entrada: lo llaman tanto los chips como las filas de la tabla
     const chipsEsc = card.querySelectorAll("#fjEscenarioSel .chip-credito");
-    chipsEsc.forEach((b) => b.addEventListener("click", () => {
-        chipsEsc.forEach((x) => x.classList.toggle("activo", x === b));
-        marcarEscenario(b.dataset.clave);
-        renderFlujoDetalle(r, b.dataset.clave);
-        cargarTablaCredito(r, b.dataset.clave, fjCreditoVisible, fjModoTabla);   // conserva el crédito visible
-    }));
-    marcarEscenario(claveInicial);
-    renderFlujoDetalle(r, claveInicial);
-    cargarTablaCredito(r, claveInicial, null, fjModoTabla);   // null = el primero de la cascada
+    function seleccionarEscenario(clave, indiceCredito) {
+        chipsEsc.forEach((x) => x.classList.toggle("activo", x.dataset.clave === clave));
+        marcarEscenario(clave);
+        renderFlujoDetalle(r, clave);
+        cargarTablaCredito(r, clave, indiceCredito, fjModoTabla);
+    }
+    chipsEsc.forEach((b) =>
+        b.addEventListener("click", () => seleccionarEscenario(b.dataset.clave, fjCreditoVisible)));
+    card.querySelectorAll(".fila-esc").forEach((tr) =>
+        tr.addEventListener("click", () => seleccionarEscenario(tr.dataset.clave, fjCreditoVisible)));
+    seleccionarEscenario(claveInicial, null);   // inicial: arranca por el 1º de la cascada
 }
 
 

@@ -663,6 +663,8 @@ body {
 .comparador-table td:first-child { color: var(--negro); opacity: 0.6; }
 .comparador-table .col-mejor { background: var(--verde-claro); }
 .comparador-table th.col-mejor { color: var(--verde); opacity: 1; }
+/* Filas de escenario: se puede hacer clic para elegir la estrategia */
+.fila-esc { cursor: pointer; }
 
 .hidden { display: none; }
 
