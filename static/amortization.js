@@ -333,11 +333,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ── PESTAÑAS: Crédito / Inmobiliaria / Ahorro ────────────────────────────
+    // ── PESTAÑAS: Crédito / Ahorro / Inmobiliaria ────────────────────────────
     const TABS = [
         { key: "credito", tab: "tabCredito", panel: "panelCredito" },
-        { key: "inmobiliaria", tab: "tabInmobiliaria", panel: "panelInmobiliaria" },
         { key: "ahorro", tab: "tabAhorro", panel: "panelAhorro" },
+        { key: "inmobiliaria", tab: "tabInmobiliaria", panel: "panelInmobiliaria" },
     ].map((t) => ({ ...t, tabEl: document.getElementById(t.tab), panelEl: document.getElementById(t.panel) }));
     function setTab(key) {
         TABS.forEach((t) => {

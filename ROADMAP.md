@@ -72,8 +72,10 @@ Ideas acordadas para ir construyendo. Marca lo hecho a medida que avanzamos.
 
 ## Estructura de pestañas objetivo
 ```
-Crédito          Inmobiliaria           Ahorro         ¿Qué me conviene?
-├ Amortización   ├ Capacidad            ├ CDT ✅        ├ Abonar vs. invertir
-└ Comparador     ├ Cuota inicial        ├ Programado    ├ Arrendar vs. comprar
-  (+ refinanciar)└ Rentabilidad arriendo└ Meta          └ (cuota inicial, plazo, …)
+Crédito              Ahorro         Inmobiliaria           ¿Qué me conviene?
+├ Amortización       ├ CDT ✅        ├ Capacidad            ├ Abonar vs. invertir
+├ Comparador         ├ Programado    ├ Cuota inicial        ├ Arrendar vs. comprar
+│ (+ refinanciar)    └ Meta          └ Rentabilidad arriendo└ (cuota inicial, plazo, …)
+├ Abonar vs. invertir
+└ Flujo de créditos
 ```
