@@ -190,7 +190,8 @@ class Flujo:
                         "interest": round(interes, 2),
                         "capital": round(capital_cuota, 2),
                         "insurance": round(c["seguro"], 2),
-                        "payment": round(cuota_pagada, 2),
+                        # lo que pagas ese mes = cuota + seguro (igual que el módulo de amortización)
+                        "payment": round(cuota_pagada + c["seguro"], 2),
                         "abono_capital": round(abono_aplicado, 2),
                         "balance": round(saldos[idx], 2),
                     }
@@ -396,8 +397,8 @@ class Flujo:
             "anno_mes_fin": filas[-1]["anno_mes"] if filas else None,
             "total_intereses": round(sum(f["interest"] for f in filas), 2),
             "total_abonos": round(sum(f["abono_capital"] for f in filas), 2),
-            "total_pagado": round(sum(f["payment"] + f["abono_capital"] + f["insurance"]
-                                      for f in filas), 2),
+            # payment ya incluye el seguro; solo se suma el abono aparte para no contarlo doble
+            "total_pagado": round(sum(f["payment"] + f["abono_capital"] for f in filas), 2),
         }
 
     def tabla_credito(self,

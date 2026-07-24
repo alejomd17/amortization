@@ -99,6 +99,10 @@
     - **Pendiente / duda abierta**: la plata que liberas *entre* que se acaban tus créditos
       actuales y llega el desembolso nuevo hoy simplemente queda libre mes a mes; no se acumula
       como ahorro para entrar de cuota inicial al crédito nuevo. ¿Vale la pena modelarlo?
+  - **La columna "Cuota" de la tabla por crédito incluye el seguro**, igual que el módulo de
+    amortización (donde `payment = cuota + seguro`). El seguro no es parte de la cuota francesa
+    (interés+capital), pero lo que pagas cada mes es cuota + seguro, y así se muestra. La
+    columna "Seguro" lo sigue desglosando aparte. `total_pagado` no lo cuenta doble.
   - **Cuota fija (opcional)**: si la dejas vacía se calcula por sistema francés con el plazo;
     si la escribes, manda esa y el **plazo se deriva de ella** (lo que muestra la lista y las
     tablas, no el que digitaste). Sirve para créditos donde conoces la cuota real y no cuadra
