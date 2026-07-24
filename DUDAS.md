@@ -47,8 +47,11 @@
     Si al repartir el sobrante ya no queda ningún crédito vivo, esa plata simplemente te queda
     libre ese mes.
   - **La cuota liberada le llega a quien va primero en el orden del escenario**, que casi nunca
-    es el orden de la lista de arriba (ese es "Tu orden"). Por eso la tarjeta de detalle por
-    crédito muestra la cadena del orden que está usando, con el crédito visible resaltado.
+    es el orden de la lista de arriba (ese es "Tu orden"). Para que eso se vea sin explicarlo,
+    **las columnas del mes a mes y las pestañas del detalle se ordenan según el escenario**
+    (numeradas 1, 2, 3…), no según la lista de entrada: leyendo de izquierda a derecha se ve
+    quién le pasa la cuota liberada a quién. Las flechas ‹ › y las teclas ← → también recorren
+    ese orden. En "Sin cascada" no se numeran ni se habla de orden, porque ahí no hay cascada.
 
   - **Abonos puntuales**: lista con botón (eliges el crédito, el mes y el monto). Si repites un
     mes en el mismo crédito, el nuevo monto reemplaza al anterior.

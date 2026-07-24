@@ -454,7 +454,16 @@ body {
     transition: all 0.15s;
 }
 .flecha-credito:hover { border-color: var(--verde); background: var(--verde-claro); }
-.paso-activo { color: var(--verde); font-weight: 500; }
+/* Posición dentro de la cascada, en cabeceras y pestañas */
+.orden-pos {
+    display: inline-block;
+    min-width: 15px;
+    margin-right: 3px;
+    text-align: center;
+    font-size: 0.85em;
+    opacity: 0.5;
+}
+.chip-credito.activo .orden-pos { opacity: 0.75; }
 
 /* Fila que se está editando arriba, en el formulario */
 .fila-editando td { background: var(--verde-claro); }

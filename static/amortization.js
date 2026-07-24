@@ -1564,8 +1564,7 @@ function displayFlujo(r) {
         cargarTablaCredito(r, ev.target.value, fjCreditoVisible, fjModoTabla);
     });
     renderFlujoDetalle(r, "sugerencia");
-    fjCreditoVisible = 0;
-    cargarTablaCredito(r, "sugerencia", 0, fjModoTabla);
+    cargarTablaCredito(r, "sugerencia", null, fjModoTabla);   // null = el primero de la cascada
 }
 
 
@@ -1574,19 +1573,21 @@ let fjCreditoVisible = 0;            // índice del crédito que se está mostra
 let fjModoTabla = "en_plan";         // "solo" | "en_plan"
 let fjUltimoResultado = null;        // para que las flechas del teclado sepan qué mover
 let fjUltimaClave = null;
+let fjOrdenActual = [];              // orden de la cascada del escenario visible
 
-// ← → mueven entre créditos, pero no si estás escribiendo en un campo
+// ← → mueven entre créditos siguiendo la cascada, pero no si estás escribiendo en un campo
 document.addEventListener("keydown", (ev) => {
     if (ev.key !== "ArrowLeft" && ev.key !== "ArrowRight") return;
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(ev.target.tagName)) return;
     const card = document.getElementById("flujoCreditoCard");
     if (!card || card.classList.contains("hidden")) return;
-    ev.preventDefault();
-    const n = fjUltimoResultado ? fjUltimoResultado.creditos.length : 0;
+    const n = fjOrdenActual.length;
     if (n < 2) return;
+    ev.preventDefault();
     const salto = ev.key === "ArrowLeft" ? -1 : 1;
+    const pos = fjOrdenActual.indexOf(fjCreditoVisible);
     cargarTablaCredito(fjUltimoResultado, fjUltimaClave,
-                       (fjCreditoVisible + salto + n) % n, fjModoTabla);
+                       fjOrdenActual[(pos + salto + n) % n], fjModoTabla);
 });
 
 async function cargarTablaCredito(r, clave, indice, modo) {
@@ -1594,10 +1595,14 @@ async function cargarTablaCredito(r, clave, indice, modo) {
     const esc = r.escenarios.find((e) => e.clave === clave);
     if (!esc || !r.creditos.length) { card.classList.add("hidden"); return; }
 
-    fjCreditoVisible = Math.min(Math.max(indice, 0), r.creditos.length - 1);
+    // sin índice se arranca por el primero de la cascada, no por el primero de la lista
+    fjCreditoVisible = (indice === null || indice === undefined || !esc.orden.includes(indice))
+        ? esc.orden[0]
+        : indice;
     fjModoTabla = modo;
     fjUltimoResultado = r;
     fjUltimaClave = clave;
+    fjOrdenActual = esc.orden;
     card.classList.remove("hidden");
 
     let d;
@@ -1627,20 +1632,15 @@ async function cargarTablaCredito(r, clave, indice, modo) {
            <strong>${fmtMoney(solo.total_intereses - plan.total_intereses)}</strong>.`
         : "";
 
-    const chips = r.creditos.map((c, i) =>
-        `<button type="button" class="chip-credito${i === fjCreditoVisible ? " activo" : ""}"
-                 data-i="${i}">${c.nombre}</button>`).join("");
-
-    // El orden a la vista: sin esto no se entiende por qué la cuota liberada de un
-    // crédito le llega a otro y no al que estás mirando.
-    const cadena = esc.orden_nombres.map((n, k) =>
-        `<span class="${k === esc.orden.indexOf(fjCreditoVisible) ? "paso-activo" : ""}">${n}</span>`)
-        .join(" &rarr; ");
+    const chips = esc.orden.map((idx, pos) =>
+        `<button type="button" class="chip-credito${idx === fjCreditoVisible ? " activo" : ""}"
+                 data-i="${idx}"><span class="orden-pos">${pos + 1}</span> ${r.creditos[idx].nombre}</button>`)
+        .join("");
 
     card.innerHTML = `
         <p class="section-eyebrow">Detalle por crédito — ${esc.nombre}</p>
-        <p class="hint">La cascada paga en este orden: ${cadena}.
-            Lo que se libera va siempre al primero que siga vivo.</p>
+        <p class="hint">Las pestañas van <strong>en el orden de la cascada</strong>: lo que se libera
+            de un crédito pasa al primero que siga vivo a su derecha.</p>
         <div class="selector-credito">
             <button type="button" class="flecha-credito" id="fjCredPrev" aria-label="Crédito anterior">‹</button>
             <div class="chips-credito">${chips}</div>
@@ -1661,13 +1661,16 @@ async function cargarTablaCredito(r, clave, indice, modo) {
         ${tablaAmortHtml(vista.tabla, d.seguro > 0)}
         <button type="button" class="btn btn-outline" id="fjCredCsv">Descargar CSV</button>`;
 
-    const ir = (i) => cargarTablaCredito(r, clave, (i + r.creditos.length) % r.creditos.length, fjModoTabla);
+    // Las flechas se mueven por el orden de la cascada, no por el de la lista
+    const n = esc.orden.length;
+    const pos = esc.orden.indexOf(fjCreditoVisible);
+    const irPos = (p) => cargarTablaCredito(r, clave, esc.orden[(p + n) % n], fjModoTabla);
     card.querySelectorAll(".chip-credito[data-i]").forEach((b) =>
-        b.addEventListener("click", () => ir(Number(b.dataset.i))));
+        b.addEventListener("click", () => cargarTablaCredito(r, clave, Number(b.dataset.i), fjModoTabla)));
     card.querySelectorAll(".chip-credito[data-modo]").forEach((b) =>
         b.addEventListener("click", () => cargarTablaCredito(r, clave, fjCreditoVisible, b.dataset.modo)));
-    document.getElementById("fjCredPrev").addEventListener("click", () => ir(fjCreditoVisible - 1));
-    document.getElementById("fjCredNext").addEventListener("click", () => ir(fjCreditoVisible + 1));
+    document.getElementById("fjCredPrev").addEventListener("click", () => irPos(pos - 1));
+    document.getElementById("fjCredNext").addEventListener("click", () => irPos(pos + 1));
     document.getElementById("fjCredCsv").addEventListener("click", () => descargarArchivo(
         `${d.nombre}-${modo === "solo" ? "solo" : "en-mi-plan"}.csv`,
         tablaAmortCsv(vista.tabla), "text/csv"));
@@ -1680,22 +1683,33 @@ function renderFlujoDetalle(r, clave) {
     const filas = r.detalle[clave] || [];
     const esc = r.escenarios.find((e) => e.clave === clave);
 
-    const cols = r.creditos.map((c) => c.mes_inicio
-        ? `<th>${c.nombre}<span class="badge-futuro">desde ${fmtMesAnno(c.mes_inicio)}</span></th>`
-        : `<th>${c.nombre}</th>`).join("");
+    // Las columnas van en el ORDEN DE LA CASCADA, no en el de la lista de arriba: así se
+    // lee de izquierda a derecha quién le pasa la cuota liberada a quién.
+    const orden = esc ? esc.orden : r.creditos.map((_, i) => i);
+    const hayCascada = clave !== "base";   // en "Sin cascada" no hay orden que numerar
+    const cols = orden.map((idx, pos) => {
+        const c = r.creditos[idx];
+        return `<th>${hayCascada ? `<span class="orden-pos">${pos + 1}</span> ` : ""}${c.nombre}${
+            c.mes_inicio ? `<span class="badge-futuro">desde ${fmtMesAnno(c.mes_inicio)}</span>` : ""}</th>`;
+    }).join("");
     const head = `<th>#</th><th>Mes</th>${cols}<th>Pago total</th><th>Liberado</th>`;
     // null = todavía no se desembolsa · 0 = ya se pagó. Son cosas distintas.
     const body = filas.map((f) => `
         <tr class="${f.liberado > 0 ? "row-abono" : ""}">
             <td>${f.num}</td><td>${f.anno_mes}</td>
-            ${f.saldos.map((s) => s === null
+            ${orden.map((idx) => f.saldos[idx] === null
                 ? `<td class="sin-desembolsar" title="Aún no se ha desembolsado">·</td>`
-                : `<td>${s > 0 ? fmtMoney(s) : "—"}</td>`).join("")}
+                : `<td>${f.saldos[idx] > 0 ? fmtMoney(f.saldos[idx]) : "—"}</td>`).join("")}
             <td>${fmtMoney(f.pago_total)}</td><td>${fmtMoney(f.liberado)}</td>
         </tr>`).join("");
 
     card.innerHTML = `
         <p class="section-eyebrow">Mes a mes — ${esc ? esc.nombre : clave}</p>
+        <p class="hint">${hayCascada
+            ? `Las columnas van <strong>en el orden en que la cascada paga</strong>, no en el de tu lista.
+               Lo que se libera de una pasa siempre a la primera que siga viva a su derecha.`
+            : `Acá cada crédito va por su cuenta: nadie le pasa nada a nadie. Es el escenario contra
+               el que se comparan los demás.`}</p>
         <div class="table-scroll">
             <table class="amort-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
         </div>`;
