@@ -26,5 +26,26 @@
   - Predial, administración y mantenimiento suben con inflación año a año (igual que el arriendo);
     la cuota del crédito no (es fija).
 
+- **Flujo de créditos (cascada)** — ver `docs/plan-flujo-de-creditos.md` para el spec completo.
+  - La cuota **se deriva** (saldo + tasa + plazo restante); el usuario no la escribe.
+  - Se soportan créditos **sin interés** (tasa 0) y sin seguro.
+  - Abonos dirigidos por crédito: fijo mensual + puntuales.
+  - Búsqueda: fuerza bruta hasta 7 créditos (óptimo exacto); de 8 en adelante búsqueda local
+    por intercambios (dice "mejor encontrado", no miente sobre optimalidad).
+  - El **flujo liberado se normaliza** al horizonte del escenario base; sin eso, "sin cascada"
+    parecía el mejor solo por durar más. La búsqueda optimiza esa misma métrica normalizada.
+
 ## Abiertas
-- (ninguna)
+- **Reordenar es con botones ▲▼**, no arrastrando. Es más simple y funciona en móvil.
+  ¿Te sirve así o quieres arrastre real (drag & drop)?
+- **Abonos puntuales se escriben como texto** `AAAAMM:monto, AAAAMM:monto`. ¿Suficiente,
+  o prefieres una lista con botón "agregar abono" como en la amortización?
+
+## Hallazgo importante (flujo de créditos)
+Con presupuesto mensual constante (cascada al 100%), probando los 5.040 órdenes del caso real:
+- **La fecha de libertad NO cambia con el orden** — los 5.040 terminan en el mismo mes.
+- Los **intereses** varían poco: 2,3% de rango.
+- El **flujo liberado** varía mucho: **26% de rango**.
+
+O sea: el orden no decide *cuándo* sales de deudas, decide *cuánta plata liberas en el camino*.
+Por eso la vara "liberar flujo" es la que de verdad discrimina.

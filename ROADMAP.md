@@ -18,6 +18,10 @@ Ideas acordadas para ir construyendo. Marca lo hecho a medida que avanzamos.
       restante + campo "costos del cambio"). Reúso casi total del amortizador.
 - [x] **Abonar a capital vs. invertir** — vive en Crédito por ahora; se mueve a
       "Decisiones" cuando esa sección exista.
+- [x] **Flujo de créditos (cascada)** ⭐ — varios créditos a la vez; cuando uno se paga, su
+      cuota se reinyecta al siguiente. Compara 5 estrategias (sin cascada, avalancha, bola de
+      nieve, sugerencia con vara seleccionable, orden manual) y proyecta mes a mes.
+      Spec en `docs/plan-flujo-de-creditos.md`.
 
 ### Ahorro
 - [x] **Ahorro programado** — aportes mensuales fijos → cuánto acumulas (interés compuesto
