@@ -465,6 +465,10 @@ body {
 }
 .chip-credito.activo .orden-pos { opacity: 0.75; }
 
+/* Tasa E.A. / M.V. en la lista de créditos del flujo */
+.tasa-mv { color: var(--negro); opacity: 0.55; }
+.tasa-sub { font-size: 0.82em; opacity: 0.6; letter-spacing: 0.02em; }
+
 /* Fila que se está editando arriba, en el formulario */
 .fila-editando td { background: var(--verde-claro); }
 .fila-editando td:first-child { box-shadow: inset 3px 0 0 var(--verde-medio); }

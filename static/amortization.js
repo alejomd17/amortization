@@ -745,7 +745,18 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             row.insertCell(2).textContent = fmtMoney(c.saldo);
-            row.insertCell(3).textContent = c.tasa > 0 ? fmtPct(c.tasa) : "sin interés";
+
+            const celdaTasa = row.insertCell(3);
+            if (c.tasa > 0) {
+                // se muestran las dos tasas ya convertidas, sin importar cómo la digitó
+                const ea = convertirTasa(c.tasa, c.tipo_tasa, c.periodo_tasa, "Anual");
+                const mv = convertirTasa(c.tasa, c.tipo_tasa, c.periodo_tasa, "Mensual");
+                celdaTasa.innerHTML = `${fmtPct(ea)} <span class="tasa-sub">E.A.</span>`
+                    + `<br><span class="tasa-mv">${fmtPct(mv)} <span class="tasa-sub">M.V.</span></span>`;
+            } else {
+                celdaTasa.textContent = "sin interés";
+            }
+
             row.insertCell(4).textContent = `${c.plazo_meses} m`;
             row.insertCell(5).textContent = fmtMoney(cuotaEstimada(c));
 
