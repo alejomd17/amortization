@@ -666,38 +666,6 @@ body {
 /* Filas de escenario: se puede hacer clic para elegir la estrategia */
 .fila-esc { cursor: pointer; }
 
-/* Encabezado de la comparación: título + selector de objetivo de la Sugerencia */
-.comparacion-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-.optimiza-label {
-    font-size: 12px;
-    letter-spacing: 0.02em;
-    color: var(--negro);
-    opacity: 0.7;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.optimiza-label select {
-    padding: 8px 12px;
-    background: var(--blanco);
-    border: 1px solid var(--crema-oscuro);
-    border-radius: var(--radius-sharp);
-    font-family: var(--font-body);
-    font-size: 13px;
-    color: var(--verde);
-    cursor: pointer;
-}
-.optimiza-label select:focus {
-    outline: none;
-    border-color: var(--verde-medio);
-    box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.15);
-}
 
 .hidden { display: none; }
 

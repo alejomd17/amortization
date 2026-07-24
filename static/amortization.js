@@ -676,7 +676,6 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.setItem(FLUJO_STORE, JSON.stringify({
                 creditos: flujoCreditos,
                 fecha_inicio: document.getElementById("fjFechaInicio").value,
-                pct: document.getElementById("fjPctReinversion").value,
                 vara: fjVaraActual,
             }));
         } catch (e) { /* modo privado o sin espacio: seguimos sin persistir */ }
@@ -688,8 +687,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!d) return;
             flujoCreditos = Array.isArray(d.creditos) ? d.creditos : [];
             if (d.fecha_inicio) document.getElementById("fjFechaInicio").value = d.fecha_inicio;
-            if (d.pct) document.getElementById("fjPctReinversion").value = d.pct;
             if (d.vara) fjVaraActual = d.vara;
+            document.getElementById("fjVara").value = fjVaraActual;
         } catch (e) { flujoCreditos = []; }
     }
 
@@ -1080,7 +1079,6 @@ document.addEventListener("DOMContentLoaded", () => {
         descargarArchivo("mis-creditos.json", JSON.stringify({
             creditos: flujoCreditos,
             fecha_inicio: document.getElementById("fjFechaInicio").value,
-            pct: document.getElementById("fjPctReinversion").value,
             vara: fjVaraActual,
         }, null, 2), "application/json");
     });
@@ -1108,8 +1106,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     cargados = Array.isArray(d) ? d : d.creditos;
                     if (!Array.isArray(cargados)) throw new Error("el JSON no trae una lista de créditos");
                     if (d.fecha_inicio) document.getElementById("fjFechaInicio").value = d.fecha_inicio;
-                    if (d.pct) document.getElementById("fjPctReinversion").value = d.pct;
-                    if (d.vara) fjVaraActual = d.vara;
+                    if (d.vara) { fjVaraActual = d.vara; document.getElementById("fjVara").value = fjVaraActual; }
                 } else {
                     cargados = parseCSV(txt);
                 }
@@ -1148,14 +1145,10 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("fjFechaInicio").value =
             `${hoy.getFullYear()}${String(hoy.getMonth() + 1).padStart(2, "0")}`;
     }
-    ["fjFechaInicio", "fjPctReinversion"].forEach((id) =>
-        document.getElementById(id).addEventListener("change", guardarFlujo));
+    document.getElementById("fjFechaInicio").addEventListener("change", guardarFlujo);
     refrescarFlujoUI();
 
-    // Recalcula el flujo. `nuevaVara` (opcional) viene del selector de objetivo en los
-    // resultados; se expone en fjRecalcular para que displayFlujo pueda llamarlo.
-    function calcularFlujo(nuevaVara) {
-        if (nuevaVara) { fjVaraActual = nuevaVara; guardarFlujo(); }
+    function calcularFlujo() {
         if (!flujoCreditos.length) {
             alert("Agrega al menos un crédito.");
             return;
@@ -1168,13 +1161,21 @@ document.addEventListener("DOMContentLoaded", () => {
         postAndRender("/flujo", {
             creditos: flujoCreditos,
             fecha_inicio: fecha,
-            pct_reinversion: g("fjPctReinversion") || 100,
+            pct_reinversion: 100,                            // siempre se reinvierte todo
             orden_manual: flujoCreditos.map((_, i) => i),   // el orden de la lista
             vara: fjVaraActual,
         }, displayFlujo, "flujoResultCard");
     }
-    fjRecalcular = calcularFlujo;
-    document.getElementById("calcularFlujoBtn").addEventListener("click", () => calcularFlujo());
+    document.getElementById("calcularFlujoBtn").addEventListener("click", calcularFlujo);
+
+    // Cambiar el objetivo lo guarda y, si ya hay resultados a la vista, recalcula al instante
+    document.getElementById("fjVara").addEventListener("change", (e) => {
+        fjVaraActual = e.target.value;
+        guardarFlujo();
+        if (!document.getElementById("flujoResultCard").classList.contains("hidden")) {
+            calcularFlujo();
+        }
+    });
 
     // ── Sub-modo Crédito: Amortización / Comparador ──────────────────────────
     const CREDITO_MODOS = [
@@ -1602,8 +1603,6 @@ function plazoEstimado(c) {
 
 
 // ── Render: flujo de créditos ─────────────────────────────────────────────────
-let fjRecalcular = null;   // lo asigna el DOMContentLoaded; recalcula con una vara nueva
-
 function displayFlujo(r) {
     const card = document.getElementById("flujoResultCard");
     card.classList.remove("hidden");
@@ -1639,16 +1638,7 @@ function displayFlujo(r) {
             ${kpiHtml("Meses que ahorras", `${sug.meses_ahorrados}`, "vs. sin cascada")}
         </div>
 
-        <div class="comparacion-head">
-            <h3>Comparación de estrategias</h3>
-            <label class="optimiza-label">La Sugerencia optimiza
-                <select id="fjVara">
-                    <option value="intereses"${r.vara === "intereses" ? " selected" : ""}>Menos intereses</option>
-                    <option value="flujo"${r.vara === "flujo" ? " selected" : ""}>Liberar flujo más rápido</option>
-                    <option value="tiempo"${r.vara === "tiempo" ? " selected" : ""}>Salir de deudas antes</option>
-                </select>
-            </label>
-        </div>
+        <h3>Comparación de estrategias</h3>
         <div class="table-scroll">
             <table class="amort-table comparador-table">
                 <thead><tr>
@@ -1667,12 +1657,6 @@ function displayFlujo(r) {
             ${esc.map((e) => `<button type="button" class="chip-credito${e.clave === claveInicial ? " activo" : ""}"
                 data-clave="${e.clave}">${e.nombre}</button>`).join("")}
         </div>`;
-
-    // Cambiar el objetivo recalcula la sugerencia al instante
-    const selVara = document.getElementById("fjVara");
-    if (selVara && fjRecalcular) {
-        selVara.addEventListener("change", () => fjRecalcular(selVara.value));
-    }
 
     // Resalta la fila del escenario y muestra su orden: sigue al chip seleccionado
     function marcarEscenario(clave) {
