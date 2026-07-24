@@ -297,6 +297,43 @@ body {
     opacity: 1;
 }
 
+/* ===== REORDENAR ARRASTRANDO ===== */
+.fila-arrastrable {
+    cursor: grab;
+}
+.fila-arrastrable:active {
+    cursor: grabbing;
+}
+.fila-arrastrable td:first-child::before {
+    content: "⠿";
+    color: var(--verde);
+    opacity: 0.3;
+    margin-right: 8px;
+    transition: opacity 0.15s;
+}
+.fila-arrastrable:hover td:first-child::before {
+    opacity: 0.85;
+}
+.fila-arrastrable.arrastrando {
+    opacity: 0.4;
+}
+.fila-arrastrable.sobre td {
+    background: var(--verde-claro);
+    border-top: 2px solid var(--verde-medio);
+}
+/* En escritorio se reordena arrastrando; los ▲▼ solo sobreviven en pantalla
+   táctil, donde el drag & drop nativo del navegador no dispara eventos. */
+@media (min-width: 761px) {
+    #fjTable th:nth-child(8),
+    #fjTable td:nth-child(8) {
+        display: none;
+    }
+}
+@media (max-width: 760px) {
+    .fila-arrastrable { cursor: default; }
+    .fila-arrastrable td:first-child::before { content: none; }
+}
+
 /* ===== RESUMEN ===== */
 .resumen-card h2 {
     font-family: var(--font-body);

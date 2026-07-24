@@ -565,6 +565,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Se guarda en este navegador para no volver a escribir todo cada vez.
     const FLUJO_STORE = "amortizacion.flujo.v1";
     let flujoCreditos = [];
+    let fjArrastrando = null;   // índice de la fila que se está arrastrando
 
     function guardarFlujo() {
         try {
@@ -656,7 +657,42 @@ document.addEventListener("DOMContentLoaded", () => {
             const nAbonos = Object.keys(c.abonos_puntuales || {}).length;
             row.insertCell(6).textContent = nAbonos ? `${nAbonos}` : "—";
 
+            // Reordenar arrastrando (los ▲▼ quedan solo como respaldo táctil)
+            row.draggable = true;
+            row.classList.add("fila-arrastrable");
+            row.addEventListener("dragstart", (e) => {
+                fjArrastrando = i;
+                row.classList.add("arrastrando");
+                e.dataTransfer.effectAllowed = "move";
+                e.dataTransfer.setData("text/plain", String(i));   // Firefox lo exige
+            });
+            row.addEventListener("dragend", () => {
+                fjArrastrando = null;
+                document.querySelectorAll("#fjTable tbody tr")
+                    .forEach((r) => r.classList.remove("arrastrando", "sobre"));
+            });
+            row.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                if (fjArrastrando !== null && fjArrastrando !== i) row.classList.add("sobre");
+            });
+            row.addEventListener("dragleave", () => row.classList.remove("sobre"));
+            row.addEventListener("drop", (e) => {
+                e.preventDefault();
+                row.classList.remove("sobre");
+                const desde = fjArrastrando !== null
+                    ? fjArrastrando
+                    : Number.parseInt(e.dataTransfer.getData("text/plain"), 10);
+                if (Number.isNaN(desde) || desde === i) return;
+                const [movido] = flujoCreditos.splice(desde, 1);
+                flujoCreditos.splice(i, 0, movido);
+                fjArrastrando = null;
+                refrescarFlujoUI();
+            });
+
             const celdaOrden = row.insertCell(7);
+            const grupoBtns = document.createElement("span");
+            grupoBtns.className = "orden-btns";
             [["▲", -1], ["▼", 1]].forEach(([txt, delta]) => {
                 const b = document.createElement("button");
                 b.className = "btn-remove-abono";
@@ -667,8 +703,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     [flujoCreditos[i], flujoCreditos[j]] = [flujoCreditos[j], flujoCreditos[i]];
                     refrescarFlujoUI();
                 });
-                celdaOrden.appendChild(b);
+                grupoBtns.appendChild(b);
             });
+            celdaOrden.appendChild(grupoBtns);
 
             const del = document.createElement("button");
             del.className = "btn-remove-abono";

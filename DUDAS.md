@@ -48,9 +48,14 @@
     El parser entiende formato colombiano (`240.000.000`, `$ 42.739.600`, `12,5`) y separador
     `,` o `;`. El archivo **reemplaza** la lista actual (no la mezcla).
 
+  - **Reordenar arrastrando** (drag & drop nativo del navegador, sin librerías). Los botones
+    ▲▼ siguen en el código pero la columna se **oculta en escritorio** (`min-width: 761px`):
+    el drag & drop de HTML5 **no dispara eventos en pantallas táctiles**, así que sin ese
+    respaldo el orden manual quedaría imposible de cambiar en el celular. Hacer arrastre
+    táctil de verdad exigiría manejar `touchstart/touchmove` a mano (~80 líneas) o una
+    librería JS; no valía la pena para una columna de respaldo.
+
 ## Abiertas
-- **Reordenar es con botones ▲▼**, no arrastrando. Es más simple y funciona en móvil.
-  ¿Te sirve así o quieres arrastre real (drag & drop)?
 - ¿La persistencia debería extenderse a las otras calculadoras, o solo al flujo (que es la de
   más digitación)?
 
