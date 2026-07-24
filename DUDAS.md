@@ -100,6 +100,9 @@
     - El **flujo liberado no cuenta** la cuota de un crédito que aún no nace — nunca fue una
       obligación, contarla infla la métrica.
     - En la tabla mes a mes: `·` = todavía no se desembolsa · `—` = ya se pagó. Son distintos.
+    - **Se muestra en su turno sugerido, inline** (no forzado al final). Antes se movía al final
+      de las columnas porque hoy no influye; el usuario prefirió verlo en la posición que la
+      herramienta le sugiere, con `·` en los meses previos a nacer.
     - Un `mes_inicio` en el pasado se trata como "ya lo tienes hoy" (nace en 0).
     - El "Total" de la lista **sí suma los créditos futuros** (saldo y cuota); la etiqueta avisa
       cuántos están por desembolsar para que no se lea como "lo que pago hoy".

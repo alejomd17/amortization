@@ -1770,18 +1770,13 @@ async function cargarTablaCredito(r, clave, indice, modo) {
 }
 
 
-// Orden en que se MUESTRAN los créditos: el de la cascada, pero los que todavía no se
-// desembolsan van al final — no influyen en el flujo hasta que existan y solo dejarían
-// una columna vacía en la mitad. El número que se pinta sigue siendo su turno real en
-// la cascada, que sí importa: apenas nacen se cuelan en esa posición.
+// Orden en que se MUESTRAN los créditos: exactamente el de la cascada del escenario,
+// incluidos los que están por desembolsar (aparecen en su turno sugerido, con "·" en
+// los meses previos a nacer). El número es la posición en ese orden.
 function ordenParaMostrar(r, orden) {
     const turno = {};
     orden.forEach((idx, p) => { turno[idx] = p + 1; });
-    return {
-        secuencia: [...orden.filter((i) => !r.creditos[i].mes_inicio),
-                    ...orden.filter((i) => r.creditos[i].mes_inicio)],
-        turno,
-    };
+    return { secuencia: orden.slice(), turno };
 }
 
 
@@ -1826,8 +1821,8 @@ function renderFlujoDetalle(r, clave) {
            el que se comparan los demás.`
         : `El número es el <strong>turno en la cascada</strong>: lo que se libera de un crédito pasa
            siempre al de menor turno que siga vivo.` + (hayFuturos
-           ? ` Los que están <strong>por desembolsar van al final</strong> porque hoy no influyen en el
-               flujo — pero apenas nacen se cuelan en su turno.`
+           ? ` Un crédito <strong>por desembolsar</strong> aparece en su turno con "·" hasta que nace;
+               desde ahí cuenta en la cascada.`
            : ``);
     const notaVista = vista === "saldos"
         ? `Cada columna es el <strong>saldo que aún debes</strong> ese mes, antes de pagar: el último
