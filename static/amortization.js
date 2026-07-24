@@ -333,6 +333,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // ── Recordar en qué pantalla estabas (sobrevive a recargar) ──────────────
+    const NAV_STORE = "amortizacion.nav.v1";
+    function guardarNav(campo, key) {
+        try {
+            const n = JSON.parse(localStorage.getItem(NAV_STORE) || "{}");
+            n[campo] = key;
+            localStorage.setItem(NAV_STORE, JSON.stringify(n));
+        } catch (e) { /* modo privado o sin espacio: seguimos sin recordar */ }
+    }
+    function leerNav() {
+        try { return JSON.parse(localStorage.getItem(NAV_STORE) || "{}"); }
+        catch (e) { return {}; }
+    }
+
     // ── PESTAÑAS: Crédito / Ahorro / Inmobiliaria ────────────────────────────
     const TABS = [
         { key: "credito", tab: "tabCredito", panel: "panelCredito" },
@@ -346,7 +360,7 @@ document.addEventListener("DOMContentLoaded", () => {
             t.panelEl.classList.toggle("hidden", !activo);
         });
     }
-    TABS.forEach((t) => t.tabEl.addEventListener("click", () => setTab(t.key)));
+    TABS.forEach((t) => t.tabEl.addEventListener("click", () => { setTab(t.key); guardarNav("tab", t.key); }));
 
     // ── AHORRO / CDT ─────────────────────────────────────────────────────────
     const ahMonto = document.getElementById("ahMonto");
@@ -419,7 +433,7 @@ document.addEventListener("DOMContentLoaded", () => {
             m.panelEl.classList.toggle("hidden", !activo);
         });
     }
-    AHORRO_MODOS.forEach((m) => m.btnEl.addEventListener("click", () => setAhorroModo(m.key)));
+    AHORRO_MODOS.forEach((m) => m.btnEl.addEventListener("click", () => { setAhorroModo(m.key); guardarNav("ahorro", m.key); }));
 
     // ── AHORRO PROGRAMADO ────────────────────────────────────────────────────
     const ahPgAporte = document.getElementById("ahPgAporte");
@@ -533,7 +547,7 @@ document.addEventListener("DOMContentLoaded", () => {
             m.panelEl.classList.toggle("hidden", !activo);
         });
     }
-    INMO_MODOS.forEach((m) => m.btnEl.addEventListener("click", () => setInmoModo(m.key)));
+    INMO_MODOS.forEach((m) => m.btnEl.addEventListener("click", () => { setInmoModo(m.key); guardarNav("inmobiliaria", m.key); }));
 
     const g = (id) => Number.parseFloat(document.getElementById(id).value);
     const gv = (id) => document.getElementById(id).value;
@@ -1134,7 +1148,20 @@ document.addEventListener("DOMContentLoaded", () => {
             m.panelEl.classList.toggle("hidden", !activo);
         });
     }
-    CREDITO_MODOS.forEach((m) => m.btnEl.addEventListener("click", () => setCreditoModo(m.key)));
+    CREDITO_MODOS.forEach((m) => m.btnEl.addEventListener("click", () => { setCreditoModo(m.key); guardarNav("credito", m.key); }));
+
+    // Restaura la última pantalla vista (los 4 setters ya están definidos).
+    // Se valida la clave para no dejar la vista en blanco si el guardado quedó viejo.
+    (function restaurarNav() {
+        const n = leerNav();
+        const aplica = (grupo, setter, key) => {
+            if (key && grupo.some((m) => m.key === key)) setter(key);
+        };
+        aplica(CREDITO_MODOS, setCreditoModo, n.credito);
+        aplica(AHORRO_MODOS, setAhorroModo, n.ahorro);
+        aplica(INMO_MODOS, setInmoModo, n.inmobiliaria);
+        aplica(TABS, setTab, n.tab);   // el tab de último: deja visible el panel correcto
+    })();
 
     // ── Comparador de créditos ───────────────────────────────────────────────
     const escenarios = [];

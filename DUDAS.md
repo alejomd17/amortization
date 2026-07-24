@@ -112,9 +112,16 @@
     táctil de verdad exigiría manejar `touchstart/touchmove` a mano (~80 líneas) o una
     librería JS; no valía la pena para una columna de respaldo.
 
+- **Se recuerda en qué pantalla estabas** (clave `amortizacion.nav.v1`): la pestaña de arriba
+  (Crédito/Ahorro/Inmobiliaria) y el sub-modo activo de cada una. Al recargar (Ctrl+Shift+R)
+  vuelves a donde estabas, no al Amortización por defecto. Es solo *navegación*: los datos que
+  escribes solo se persisten en el flujo (`amortizacion.flujo.v1`); las demás calculadoras
+  siguen sin guardar sus campos. Si una clave guardada quedó vieja, se ignora (no deja la vista
+  en blanco).
+
 ## Abiertas
-- ¿La persistencia debería extenderse a las otras calculadoras, o solo al flujo (que es la de
-  más digitación)?
+- ¿La persistencia de **datos digitados** debería extenderse a las otras calculadoras, o solo al
+  flujo (que es la de más digitación)? — la de *navegación* ya quedó para todas.
 
 ## Hallazgo importante (flujo de créditos)
 Con presupuesto mensual constante (cascada al 100%), probando los 5.040 órdenes del caso real:
