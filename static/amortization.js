@@ -2008,8 +2008,10 @@ function renderFlujoDetalle(r, clave) {
     // "Cuotas" = solo las cuotas+seguros del mes; "Abonos" = lo extra (dirigidos + cascada);
     // "Total" = las dos juntas (lo que pagas ese mes). "Te queda" = ingreso − Total (si hay ingreso).
     const conIngreso = fjIngresoActual > 0;
+    // Dos lecturas del ingreso: "Caja real" = lo que de verdad te queda reinvirtiendo todo;
+    // "Disponible" = eso + lo ya liberado (plata que ya es tuya aunque la reinviertas).
     const head = `<th>#</th><th>Mes</th>${cols}<th>Cuotas</th><th>Abonos</th><th>Total</th><th>Liberado</th>`
-        + (conIngreso ? `<th>Te queda</th>` : ``);
+        + (conIngreso ? `<th>Caja real</th><th>Disponible</th>` : ``);
     // Celda de cada crédito según la vista: saldo restante o lo pagado ese mes.
     // null = todavía no se desembolsa (·). En saldos, "—" = ya se pagó;
     // en pagos, "—" = ese mes no se le pagó nada (p. ej. el mes del desembolso).
@@ -2028,10 +2030,13 @@ function renderFlujoDetalle(r, clave) {
             <td>${fmtMoney(f.liberado)}</td>
             ${conIngreso ? (() => {
                 // Del salario salen las cuotas, el abono fijo y la cascada; SOLO los abonos
-                // extras (puntuales: primas, cesantías…) vienen de otra fuente.
-                // Te queda = ingreso − (Total − abonos extras).
-                const queda = fjIngresoActual - (f.pago_total - f.abonos_extra);
-                return `<td class="${queda < 0 ? "queda-neg" : "queda-ok"}">${fmtMoney(queda)}</td>`;
+                // extras (puntuales: primas, cesantías…) vienen de otra fuente y no se restan.
+                // Caja real  = ingreso − (Total − abonos extras)  → lo que queda en el bolsillo.
+                // Disponible = caja real + lo liberado             → suma la plata que ya no debes.
+                const caja = fjIngresoActual - (f.pago_total - f.abonos_extra);
+                const disp = caja + f.liberado;
+                const celdaMonto = (v) => `<td class="${v < 0 ? "queda-neg" : "queda-ok"}">${fmtMoney(v)}</td>`;
+                return celdaMonto(caja) + celdaMonto(disp);
             })() : ``}
         </tr>`).join("");
 
@@ -2048,6 +2053,11 @@ function renderFlujoDetalle(r, clave) {
            mes con saldo es cuando terminas de pagar ese crédito.`
         : `Cada columna es <strong>lo que le pagas</strong> a cada crédito ese mes (cuota + seguro + abonos).
            El mes del desembolso muestra "—": aún no se paga.`;
+    const notaIngreso = conIngreso
+        ? ` <strong>Caja real</strong> = lo que te queda en el bolsillo reinvirtiendo todo (plano mientras pagas).
+            <strong>Disponible</strong> = eso + lo ya liberado, o sea la plata que ya no debes aunque la reinviertas
+            — crece a medida que se pagan créditos.`
+        : ``;
 
     card.innerHTML = `
         <p class="section-eyebrow">Mes a mes — ${esc ? esc.nombre : clave}</p>
@@ -2055,7 +2065,7 @@ function renderFlujoDetalle(r, clave) {
             <button type="button" class="chip-credito${vista === "saldos" ? " activo" : ""}" data-vista="saldos">Saldos</button>
             <button type="button" class="chip-credito${vista === "pagos" ? " activo" : ""}" data-vista="pagos">Pagos</button>
         </div>
-        <p class="hint">${notaVista} ${notaCascada}</p>
+        <p class="hint">${notaVista} ${notaCascada}${notaIngreso}</p>
         <div class="table-scroll">
             <table class="amort-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
         </div>`;
