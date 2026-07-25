@@ -110,10 +110,11 @@
   - **Columnas Cuotas / Abonos** (a la derecha del mes a mes): "Cuotas" = solo las cuotas+seguros
     programados de ese mes; "Abonos" = lo extra (dirigidos + cascada). Juntas = `pago_total`.
     Se muestran 3 columnas: **Cuotas · Abonos · Total** (Total = las dos juntas = `pago_total`).
-  - **Ingreso mensual + columna "Te queda"**: `Te queda = ingreso − cuotas` (NO − Total). Los
-    abonos son plata extra que entra de otra fuente (primas, cesantías, bonos) y se va al crédito:
-    entra y sale, se cancela; por eso solo se restan las cuotas y "Te queda" **crece** al liberarse
-    cuotas. Verde si alcanza, rojo si las cuotas se pasan del ingreso. Client-side (no recalcula).
+  - **Ingreso mensual + columna "Te queda"**: `Te queda = ingreso − (Total − abonos extras)`.
+    Del salario salen **las cuotas, el abono fijo y la cascada** (todo lo de la "hoja de vida" del
+    crédito); **solo los abonos extras** (los puntuales/rangos de la sección Abonos puntuales:
+    primas, cesantías, bonos) vienen de otra fuente y NO se restan del salario. El motor los separa
+    en `abonos_extra` por mes. Verde si alcanza, rojo si no. Client-side (no recalcula la cascada).
   - **Abonos "mensual fijo" como rango (grupo)**: se guardan en `abonos_recurrentes`
     (`{desde, hasta, monto}`), NO expandidos, para **quitar el rango completo** de un botón. El
     backend (`_abonos_efectivos`) los expande y **SUMA** lo que caiga en el mismo mes: cada rango

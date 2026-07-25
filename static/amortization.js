@@ -2005,9 +2005,10 @@ function renderFlujoDetalle(r, clave) {
             <td>${fmtMoney(f.pago_total)}</td>
             <td>${fmtMoney(f.liberado)}</td>
             ${conIngreso ? (() => {
-                // los abonos son plata extra (primas, cesantías…), no gasto del salario:
-                // Te queda = ingreso − cuotas (no − Total). Crece al liberarse cuotas.
-                const queda = fjIngresoActual - (f.pago_total - f.abonos_total);
+                // Del salario salen las cuotas, el abono fijo y la cascada; SOLO los abonos
+                // extras (puntuales: primas, cesantías…) vienen de otra fuente.
+                // Te queda = ingreso − (Total − abonos extras).
+                const queda = fjIngresoActual - (f.pago_total - f.abonos_extra);
                 return `<td class="${queda < 0 ? "queda-neg" : "queda-ok"}">${fmtMoney(queda)}</td>`;
             })() : ``}
         </tr>`).join("");

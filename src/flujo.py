@@ -148,7 +148,8 @@ class Flujo:
             return [round(s, 2) if nacidos[i] else None for i, s in enumerate(saldos)]
 
         filas = [{
-            "num": 0, "anno_mes": fecha_inicio, "pago_total": 0.0, "abonos_total": 0.0, "liberado": 0.0,
+            "num": 0, "anno_mes": fecha_inicio, "pago_total": 0.0, "abonos_total": 0.0,
+            "abonos_extra": 0.0, "liberado": 0.0,
             "saldos": foto_saldos(),
             "pagos": [0.0 if nacidos[i] else None for i in range(len(preparados))],
         }]
@@ -164,7 +165,9 @@ class Flujo:
             extra = pool               # el pool va al primer crédito activo del orden
             sobrante = 0.0             # lo que sobra de una última cuota; se reparte al final
             pago_mes = 0.0             # total pagado ese mes (cuotas + seguros + abonos)
-            abonos_mes = 0.0           # solo la parte de abonos (dirigidos + cascada)
+            abonos_mes = 0.0           # todos los abonos (fijo + puntuales + cascada)
+            abonos_extra_mes = 0.0     # solo los abonos "extras" (puntuales: primas, etc.),
+                                       # que salen de otra fuente y NO del salario
             filas_mes = {}             # fila de detalle de cada crédito, por si hay que corregirla
             pagos_credito = {}         # lo que se le paga a cada crédito ESTE mes (cuota+seguro+abono)
 
@@ -185,7 +188,8 @@ class Flujo:
                 interes = saldos[idx] * c["im"]
                 total_intereses += interes
 
-                dirigido = c["abono_fijo"] + c["puntuales"].get(anno_mes, 0.0)
+                puntual_mes = c["puntuales"].get(anno_mes, 0.0)   # abono "extra" (primas, etc.)
+                dirigido = c["abono_fijo"] + puntual_mes
                 # los excluidos no son destino de la cascada: el pool sigue de largo
                 if c["recibe_abono"]:
                     aporte_extra = extra
@@ -218,6 +222,9 @@ class Flujo:
 
                 pago_mes += pago + c["seguro"]
                 abonos_mes += abono_aplicado
+                # el puntual se aplica primero; si el abono total se topó (última cuota),
+                # la parte "extra" no puede superar lo que realmente se abonó
+                abonos_extra_mes += min(puntual_mes, abono_aplicado)
                 pagos_credito[idx] = pago + c["seguro"]
 
                 if detallar:
@@ -275,6 +282,7 @@ class Flujo:
                 "num": mes, "anno_mes": anno_mes,
                 "pago_total": round(pago_mes, 2),
                 "abonos_total": round(abonos_mes, 2),   # la parte de abonos; cuotas = pago_total − abonos
+                "abonos_extra": round(abonos_extra_mes, 2),   # solo los puntuales (otra fuente, no salario)
                 "liberado": round(liberado, 2),
                 # saldo que debías ESTE mes, antes de pagar (ver saldos_display arriba)
                 "saldos": saldos_display,
