@@ -34,7 +34,7 @@ body {
 
 /* ===== TÍTULO ===== */
 .container {
-    max-width: 1440px;
+    max-width: 2400px;   /* en monitores anchos el gris casi desaparece; el texto va acotado aparte */
     margin: 0 auto;
     padding: 48px 40px 64px;
 }
