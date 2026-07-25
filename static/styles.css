@@ -657,6 +657,9 @@ body {
 .amort-table tbody tr:hover { background: var(--crema); }
 .amort-table .row-abono { background: var(--verde-claro); }
 .amort-table .row-abono td { font-weight: 500; }
+/* Columna "Te queda" (ingreso − pago): verde si alcanza, rojo si el pago se pasa del ingreso */
+.amort-table td.queda-ok { color: var(--verde); font-weight: 500; }
+.amort-table td.queda-neg { color: #b03a2e; font-weight: 500; }
 
 /* Tabla del comparador: primera columna = etiqueta, demás = valores alineados a la derecha */
 .comparador-table td:not(:first-child),

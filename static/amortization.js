@@ -677,6 +677,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 creditos: flujoCreditos,
                 fecha_inicio: document.getElementById("fjFechaInicio").value,
                 vara: fjVaraActual,
+                ingreso: fjIngresoActual,
             }));
         } catch (e) { /* modo privado o sin espacio: seguimos sin persistir */ }
     }
@@ -690,6 +691,10 @@ document.addEventListener("DOMContentLoaded", () => {
             // "tiempo" ya no está en el selector (era idéntico a "intereses"): se mapea
             if (d.vara) fjVaraActual = d.vara === "tiempo" ? "intereses" : d.vara;
             document.getElementById("fjVara").value = fjVaraActual;
+            if (d.ingreso) {
+                fjIngresoActual = d.ingreso;
+                document.getElementById("fjIngreso").value = d.ingreso;
+            }
         } catch (e) { flujoCreditos = []; }
     }
 
@@ -1130,6 +1135,7 @@ document.addEventListener("DOMContentLoaded", () => {
             creditos: flujoCreditos,
             fecha_inicio: document.getElementById("fjFechaInicio").value,
             vara: fjVaraActual,
+            ingreso: fjIngresoActual,
         }, null, 2), "application/json");
     });
 
@@ -1190,6 +1196,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (d.vara) {
                         fjVaraActual = d.vara === "tiempo" ? "intereses" : d.vara;
                         document.getElementById("fjVara").value = fjVaraActual;
+                    }
+                    if (d.ingreso) {
+                        fjIngresoActual = d.ingreso;
+                        document.getElementById("fjIngreso").value = d.ingreso;
                     }
                 } else {
                     cargados = parseCSV(txt);
@@ -1258,6 +1268,15 @@ document.addEventListener("DOMContentLoaded", () => {
         guardarFlujo();
         if (!document.getElementById("flujoResultCard").classList.contains("hidden")) {
             calcularFlujo();
+        }
+    });
+
+    // El ingreso solo afecta la columna "Te queda": no recalcula la cascada, solo re-dibuja
+    document.getElementById("fjIngreso").addEventListener("input", () => {
+        fjIngresoActual = g("fjIngreso") || 0;
+        guardarFlujo();
+        if (fjUltimoResultado && !document.getElementById("flujoDetalleCard").classList.contains("hidden")) {
+            renderFlujoDetalle(fjUltimoResultado, fjUltimaClave);
         }
     });
 
@@ -1890,6 +1909,7 @@ function ordenParaMostrar(r, orden) {
 
 
 let fjVistaMesAMes = "saldos";   // "saldos" | "pagos" — qué muestran las columnas por crédito
+let fjIngresoActual = 0;         // ingreso mensual para la columna "Te queda" (ingreso − pago)
 
 function renderFlujoDetalle(r, clave) {
     const card = document.getElementById("flujoDetalleCard");
@@ -1911,8 +1931,10 @@ function renderFlujoDetalle(r, clave) {
         return `<th>${hayCascada ? `<span class="orden-pos">${turno[idx]}</span> ` : ""}${c.nombre}</th>`;
     }).join("");
     // "Cuotas" = solo las cuotas+seguros del mes; "Abonos" = lo extra (dirigidos + cascada);
-    // "Total" = las dos juntas (lo que pagas ese mes).
-    const head = `<th>#</th><th>Mes</th>${cols}<th>Cuotas</th><th>Abonos</th><th>Total</th><th>Liberado</th>`;
+    // "Total" = las dos juntas (lo que pagas ese mes). "Te queda" = ingreso − Total (si hay ingreso).
+    const conIngreso = fjIngresoActual > 0;
+    const head = `<th>#</th><th>Mes</th>${cols}<th>Cuotas</th><th>Abonos</th><th>Total</th><th>Liberado</th>`
+        + (conIngreso ? `<th>Te queda</th>` : ``);
     // Celda de cada crédito según la vista: saldo restante o lo pagado ese mes.
     // null = todavía no se desembolsa (·). En saldos, "—" = ya se pagó;
     // en pagos, "—" = ese mes no se le pagó nada (p. ej. el mes del desembolso).
@@ -1929,6 +1951,7 @@ function renderFlujoDetalle(r, clave) {
             <td>${f.abonos_total > 0 ? fmtMoney(f.abonos_total) : "—"}</td>
             <td>${fmtMoney(f.pago_total)}</td>
             <td>${fmtMoney(f.liberado)}</td>
+            ${conIngreso ? `<td class="${fjIngresoActual - f.pago_total < 0 ? "queda-neg" : "queda-ok"}">${fmtMoney(fjIngresoActual - f.pago_total)}</td>` : ``}
         </tr>`).join("");
 
     const notaCascada = !hayCascada
