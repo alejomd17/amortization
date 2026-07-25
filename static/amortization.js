@@ -720,23 +720,38 @@ document.addEventListener("DOMContentLoaded", () => {
         tfoot.innerHTML = "";
         let total = 0, cuantos = 0;
 
+        const filaBorrar = (nombre, mesTxt, monto, onDelete) => {
+            const row = tbody.insertRow();
+            row.insertCell(0).textContent = nombre;
+            row.insertCell(1).textContent = mesTxt;
+            row.insertCell(2).textContent = monto;
+            const b = document.createElement("button");
+            b.className = "btn-remove-abono";
+            b.textContent = "Eliminar";
+            b.addEventListener("click", onDelete);
+            row.insertCell(3).appendChild(b);
+        };
+
         flujoCreditos.forEach((c, i) => {
+            // Rangos "mensual fijo": una fila por rango, se quita completo
+            (c.abonos_recurrentes || []).forEach((r, j) => {
+                const meses = mesesEnRango(r.desde, r.hasta).length;
+                total += r.monto * meses; cuantos += 1;
+                filaBorrar(c.nombre, `${fmtMesAnno(r.desde)} → ${fmtMesAnno(r.hasta)}`,
+                    `${fmtMoney(r.monto)}/mes · ${meses}m`, () => {
+                        flujoCreditos[i].abonos_recurrentes.splice(j, 1);
+                        refrescarFlujoUI();
+                    });
+            });
+            // Puntuales sueltos ("único")
             Object.entries(c.abonos_puntuales || {})
                 .sort((a, b) => a[0].localeCompare(b[0]))
                 .forEach(([fecha, monto]) => {
                     total += monto; cuantos += 1;
-                    const row = tbody.insertRow();
-                    row.insertCell(0).textContent = c.nombre;
-                    row.insertCell(1).textContent = fmtMesAnno(fecha);
-                    row.insertCell(2).textContent = fmtMoney(monto);
-                    const b = document.createElement("button");
-                    b.className = "btn-remove-abono";
-                    b.textContent = "Eliminar";
-                    b.addEventListener("click", () => {
+                    filaBorrar(c.nombre, fmtMesAnno(fecha), fmtMoney(monto), () => {
                         delete flujoCreditos[i].abonos_puntuales[fecha];
                         refrescarFlujoUI();
                     });
-                    row.insertCell(3).appendChild(b);
                 });
         });
 
@@ -810,7 +825,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 celdaCuota.appendChild(marca);
             }
 
-            const nAbonos = Object.keys(c.abonos_puntuales || {}).length;
+            const nAbonos = Object.keys(c.abonos_puntuales || {}).length
+                + (c.abonos_recurrentes || []).length;
             row.insertCell(6).textContent = nAbonos ? `${nAbonos}` : "—";
 
             // Reordenar arrastrando (los ▲▼ quedan solo como respaldo táctil)
@@ -970,8 +986,9 @@ document.addEventListener("DOMContentLoaded", () => {
             abono_fijo: g("fjAbonoFijo") || 0,
             mes_inicio: mesInicio || null,   // null = ya lo tienes hoy
             recibe_abono: document.getElementById("fjRecibeAbono").checked,
-            // al editar se conservan los abonos puntuales: se administran en su propia tabla
+            // al editar se conservan los abonos (puntuales y rangos): se administran en su tabla
             abonos_puntuales: editando ? (fjEditando.abonos_puntuales || {}) : {},
+            abonos_recurrentes: editando ? (fjEditando.abonos_recurrentes || []) : [],
         };
         // con cuota fija, el plazo se deriva; si no cubre el interés no se pagaría nunca
         if (credito.cuota > 0 && plazoEstimado(credito) === null) {
@@ -1055,8 +1072,9 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Ingresa un monto mensual mayor a 0.");
             return;
         }
-        c.abonos_puntuales = c.abonos_puntuales || {};
-        mesesEnRango(desde, hasta).forEach((m) => { c.abonos_puntuales[m] = monto; });
+        // Se guarda el rango como grupo (no se expande) para poder quitarlo completo después
+        c.abonos_recurrentes = c.abonos_recurrentes || [];
+        c.abonos_recurrentes.push({ desde, hasta, monto });
         document.getElementById("fjPuntRecDesde").value = "";
         document.getElementById("fjPuntRecHasta").value = "";
         document.getElementById("fjPuntRecMonto").value = "";
@@ -1151,6 +1169,16 @@ document.addEventListener("DOMContentLoaded", () => {
             .sort((a, b) => a[0].localeCompare(b[0]))
             .map(([f, m]) => `${f}:${Math.round(m)}`).join("|");
     }
+    // Abonos efectivos de un crédito: expande los rangos y superpone los puntuales.
+    // El CSV los guarda expandidos (mismo criterio que el backend); el JSON conserva los rangos.
+    function abonosEfectivos(c) {
+        const out = {};
+        (c.abonos_recurrentes || []).forEach((r) => {
+            if (r.monto > 0) mesesEnRango(r.desde, r.hasta).forEach((m) => { out[m] = r.monto; });
+        });
+        Object.entries(c.abonos_puntuales || {}).forEach(([k, v]) => { out[k] = v; });
+        return out;
+    }
     function creditoACsvRow(c) {
         const campos = {
             nombre: String(c.nombre || "").replace(/[,\n;]/g, " ").trim(),   // sin separadores: romperían el CSV
@@ -1164,7 +1192,7 @@ document.addEventListener("DOMContentLoaded", () => {
             abono_fijo: c.abono_fijo > 0 ? c.abono_fijo : "",
             mes_inicio: c.mes_inicio || "",
             recibe_abono: c.recibe_abono === false ? "no" : "",
-            abonos_puntuales: serializarPuntuales(c.abonos_puntuales),
+            abonos_puntuales: serializarPuntuales(abonosEfectivos(c)),
         };
         return CSV_COLS.map((col) => campos[col]).join(",");
     }
@@ -1217,9 +1245,13 @@ document.addEventListener("DOMContentLoaded", () => {
                         tipo_tasa: c.tipo_tasa || "Efectiva",
                         periodo_tasa: c.periodo_tasa || "Anual",
                         plazo_meses: Math.round(Number(c.plazo_meses) || 0),
+                        cuota: Number(c.cuota) || 0,
                         seguro: Number(c.seguro) || 0,
                         abono_fijo: Number(c.abono_fijo) || 0,
+                        mes_inicio: c.mes_inicio || null,
+                        recibe_abono: c.recibe_abono !== false,
                         abonos_puntuales: c.abonos_puntuales || {},
+                        abonos_recurrentes: Array.isArray(c.abonos_recurrentes) ? c.abonos_recurrentes : [],
                     }))
                     .filter((c) => c.saldo > 0 && c.plazo_meses > 0);
                 if (!validos.length) throw new Error("no se encontró ningún crédito válido");
@@ -1956,7 +1988,12 @@ function renderFlujoDetalle(r, clave) {
             <td>${f.abonos_total > 0 ? fmtMoney(f.abonos_total) : "—"}</td>
             <td>${fmtMoney(f.pago_total)}</td>
             <td>${fmtMoney(f.liberado)}</td>
-            ${conIngreso ? `<td class="${fjIngresoActual - f.pago_total < 0 ? "queda-neg" : "queda-ok"}">${fmtMoney(fjIngresoActual - f.pago_total)}</td>` : ``}
+            ${conIngreso ? (() => {
+                // los abonos son plata extra (primas, cesantías…), no gasto del salario:
+                // Te queda = ingreso − cuotas (no − Total). Crece al liberarse cuotas.
+                const queda = fjIngresoActual - (f.pago_total - f.abonos_total);
+                return `<td class="${queda < 0 ? "queda-neg" : "queda-ok"}">${fmtMoney(queda)}</td>`;
+            })() : ``}
         </tr>`).join("");
 
     const notaCascada = !hayCascada

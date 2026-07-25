@@ -109,7 +109,16 @@
     con la misma convención que `saldos` (None = aún no nace).
   - **Columnas Cuotas / Abonos** (a la derecha del mes a mes): "Cuotas" = solo las cuotas+seguros
     programados de ese mes; "Abonos" = lo extra (dirigidos + cascada). Juntas = `pago_total`.
-    Se muestran 3 columnas: **Cuotas · Abonos · Total** (Total = las dos juntas = `pago_total`). (`mes_inicio`, AAAAMM, opcional). Antes de esa fecha el
+    Se muestran 3 columnas: **Cuotas · Abonos · Total** (Total = las dos juntas = `pago_total`).
+  - **Ingreso mensual + columna "Te queda"**: `Te queda = ingreso − cuotas` (NO − Total). Los
+    abonos son plata extra que entra de otra fuente (primas, cesantías, bonos) y se va al crédito:
+    entra y sale, se cancela; por eso solo se restan las cuotas y "Te queda" **crece** al liberarse
+    cuotas. Verde si alcanza, rojo si las cuotas se pasan del ingreso. Client-side (no recalcula).
+  - **Abonos "mensual fijo" como rango (grupo)**: se guardan en `abonos_recurrentes`
+    (`{desde, hasta, monto}`), NO expandidos, para **quitar el rango completo** de un botón. El
+    backend (`_abonos_efectivos`) los expande y superpone los puntuales sueltos (el puntual pisa
+    el rango). El **CSV los expande**; el **JSON conserva el grupo**. La importación también
+    recupera cuota/mes_inicio/recibe_abono, que antes se perdían (bug preexistente). (`mes_inicio`, AAAAMM, opcional). Antes de esa fecha el
     crédito **no existe**: sin saldo, sin cuota, sin intereses. Se desembolsa en ese mes y paga
     su primera cuota al mes siguiente (igual que los créditos que ya tienes, que arrancan en la
     fila 0 y pagan en la 1). Decisiones tomadas:

@@ -28,6 +28,25 @@ def _diff_meses(desde: str, hasta: str) -> int:
     return b - a
 
 
+def _abonos_efectivos(c: dict) -> dict:
+    """Une los abonos: primero expande los rangos 'mensual fijo' (desde-hasta), luego
+    superpone los puntuales sueltos (un abono explícito de un mes gana sobre el rango)."""
+    out = {}
+    for r in (c.get("abonos_recurrentes") or []):
+        desde, hasta = str(r.get("desde", "")), str(r.get("hasta", ""))
+        monto = float(r.get("monto", 0) or 0)
+        if not (len(desde) == 6 and desde.isdigit() and len(hasta) == 6
+                and hasta.isdigit() and monto > 0 and desde <= hasta):
+            continue
+        m = desde
+        while m <= hasta:
+            out[m] = monto
+            m = _sumar_meses(m, 1)
+    for k, v in (c.get("abonos_puntuales") or {}).items():
+        out[str(k)] = float(v)
+    return out
+
+
 def _cuota_francesa(saldo: float, im: float, n: int) -> float:
     if n <= 0:
         return saldo
@@ -101,7 +120,7 @@ class Flujo:
                 "cuota_fija": cuota_manual > 0,
                 "seguro": float(c.get("seguro", 0) or 0),
                 "abono_fijo": float(c.get("abono_fijo", 0) or 0),
-                "puntuales": {str(k): float(v) for k, v in (c.get("abonos_puntuales") or {}).items()},
+                "puntuales": _abonos_efectivos(c),
                 # por defecto recibe abonos de la cascada; el usuario puede excluirlo
                 "recibe_abono": c.get("recibe_abono", True) is not False,
             })

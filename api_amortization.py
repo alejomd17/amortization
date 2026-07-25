@@ -417,6 +417,12 @@ async def calcular_abonar_vs_invertir(request: AbonarVsInvertirRequest):
         raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
 
 
+class RangoAbono(BaseModel):
+    desde: str                       # AAAAMM
+    hasta: str                       # AAAAMM
+    monto: float
+
+
 class CreditoFlujo(BaseModel):
     nombre: str = ""
     saldo: float
@@ -428,6 +434,7 @@ class CreditoFlujo(BaseModel):
     seguro: float = 0
     abono_fijo: float = 0
     abonos_puntuales: Dict[str, float] = {}
+    abonos_recurrentes: List[RangoAbono] = []   # rangos "mensual fijo" (desde-hasta-monto)
     mes_inicio: str | None = None   # AAAAMM del desembolso; vacío = ya lo tienes hoy
     recibe_abono: bool = True        # False = la cascada no le mete abonos
 
