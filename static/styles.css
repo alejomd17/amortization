@@ -661,6 +661,26 @@ body {
 .amort-table td.queda-ok { color: var(--verde); font-weight: 500; }
 .amort-table td.queda-neg { color: #b03a2e; font-weight: 500; }
 
+/* Colapsador del mes a mes (la tabla larga) */
+.mes-a-mes-collapse summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: fit-content;
+    cursor: pointer;
+    list-style: none;
+}
+.mes-a-mes-collapse summary::-webkit-details-marker { display: none; }
+.mes-a-mes-collapse summary::before {
+    content: "▸";
+    color: var(--verde);
+    opacity: 0.6;
+    transition: transform 0.15s;
+}
+.mes-a-mes-collapse[open] summary::before { transform: rotate(90deg); }
+.mes-a-mes-collapse summary .section-eyebrow { margin: 0; }
+.mes-a-mes-collapse .collapse-meta { font-size: 12px; color: var(--negro); opacity: 0.5; }
+
 /* Tabla del comparador: primera columna = etiqueta, demás = valores alineados a la derecha */
 .comparador-table td:not(:first-child),
 .comparador-table th:not(:first-child) { text-align: right; }
