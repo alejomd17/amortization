@@ -746,6 +746,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 r.insertCell(k).textContent = t;
             });
         }
+        // El colapsador solo aparece si hay abonos; muestra cuántos y el total en el summary
+        const collapse = document.getElementById("fjPuntCollapse");
+        collapse.hidden = cuantos === 0;
+        document.getElementById("fjPuntResumen").textContent =
+            cuantos ? `(${cuantos} · ${fmtMoney(total)})` : "";
     }
 
     function displayFlujoCreditos() {
@@ -1910,7 +1915,6 @@ function ordenParaMostrar(r, orden) {
 
 let fjVistaMesAMes = "saldos";   // "saldos" | "pagos" — qué muestran las columnas por crédito
 let fjIngresoActual = 0;         // ingreso mensual para la columna "Te queda" (ingreso − pago)
-let fjDetalleAbierto = true;     // si el mes a mes (colapsable) está desplegado
 
 function renderFlujoDetalle(r, clave) {
     const card = document.getElementById("flujoDetalleCard");
@@ -1969,23 +1973,17 @@ function renderFlujoDetalle(r, clave) {
         : `Cada columna es <strong>lo que le pagas</strong> a cada crédito ese mes (cuota + seguro + abonos).
            El mes del desembolso muestra "—": aún no se paga.`;
 
-    const meses = filas.length - 1;   // fila 0 es el arranque, no un mes de pago
     card.innerHTML = `
-        <details class="mes-a-mes-collapse"${fjDetalleAbierto ? " open" : ""}>
-            <summary><span class="section-eyebrow">Mes a mes — ${esc ? esc.nombre : clave}</span>
-                <span class="collapse-meta">${meses} meses</span></summary>
-            <div class="toggle-tabla">
-                <button type="button" class="chip-credito${vista === "saldos" ? " activo" : ""}" data-vista="saldos">Saldos</button>
-                <button type="button" class="chip-credito${vista === "pagos" ? " activo" : ""}" data-vista="pagos">Pagos</button>
-            </div>
-            <p class="hint">${notaVista} ${notaCascada}</p>
-            <div class="table-scroll">
-                <table class="amort-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
-            </div>
-        </details>`;
+        <p class="section-eyebrow">Mes a mes — ${esc ? esc.nombre : clave}</p>
+        <div class="toggle-tabla">
+            <button type="button" class="chip-credito${vista === "saldos" ? " activo" : ""}" data-vista="saldos">Saldos</button>
+            <button type="button" class="chip-credito${vista === "pagos" ? " activo" : ""}" data-vista="pagos">Pagos</button>
+        </div>
+        <p class="hint">${notaVista} ${notaCascada}</p>
+        <div class="table-scroll">
+            <table class="amort-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
+        </div>`;
 
-    card.querySelector(".mes-a-mes-collapse")
-        .addEventListener("toggle", (e) => { fjDetalleAbierto = e.target.open; });
     card.querySelectorAll("[data-vista]").forEach((b) => b.addEventListener("click", () => {
         fjVistaMesAMes = b.dataset.vista;
         renderFlujoDetalle(r, clave);   // re-render conservando el escenario
