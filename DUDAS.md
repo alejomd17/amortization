@@ -116,9 +116,11 @@
     cuotas. Verde si alcanza, rojo si las cuotas se pasan del ingreso. Client-side (no recalcula).
   - **Abonos "mensual fijo" como rango (grupo)**: se guardan en `abonos_recurrentes`
     (`{desde, hasta, monto}`), NO expandidos, para **quitar el rango completo** de un botón. El
-    backend (`_abonos_efectivos`) los expande y superpone los puntuales sueltos (el puntual pisa
-    el rango). El **CSV los expande**; el **JSON conserva el grupo**. La importación también
-    recupera cuota/mes_inicio/recibe_abono, que antes se perdían (bug preexistente). (`mes_inicio`, AAAAMM, opcional). Antes de esa fecha el
+    backend (`_abonos_efectivos`) los expande y **SUMA** lo que caiga en el mismo mes: cada rango
+    y cada puntual es una inyección real, así que si coinciden se suman (no se pisan) — vale para
+    rango+puntual y rango+rango. El **CSV los expande**; el **JSON conserva el grupo**. La
+    importación también recupera cuota/mes_inicio/recibe_abono, que antes se perdían (bug
+    preexistente). Hay también un botón **"quitar todos los abonos del crédito elegido"**. (`mes_inicio`, AAAAMM, opcional). Antes de esa fecha el
     crédito **no existe**: sin saldo, sin cuota, sin intereses. Se desembolsa en ese mes y paga
     su primera cuota al mes siguiente (igual que los créditos que ya tienes, que arrancan en la
     fila 0 y pagan en la 1). Decisiones tomadas:

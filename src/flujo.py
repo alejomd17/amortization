@@ -29,8 +29,9 @@ def _diff_meses(desde: str, hasta: str) -> int:
 
 
 def _abonos_efectivos(c: dict) -> dict:
-    """Une los abonos: primero expande los rangos 'mensual fijo' (desde-hasta), luego
-    superpone los puntuales sueltos (un abono explícito de un mes gana sobre el rango)."""
+    """Une los abonos de un crédito, SUMANDO lo que caiga en el mismo mes: cada rango
+    'mensual fijo' y cada puntual suelto es una inyección real, así que si coinciden en un
+    mes se suman (no se pisan)."""
     out = {}
     for r in (c.get("abonos_recurrentes") or []):
         desde, hasta = str(r.get("desde", "")), str(r.get("hasta", ""))
@@ -40,10 +41,10 @@ def _abonos_efectivos(c: dict) -> dict:
             continue
         m = desde
         while m <= hasta:
-            out[m] = monto
+            out[m] = out.get(m, 0.0) + monto
             m = _sumar_meses(m, 1)
     for k, v in (c.get("abonos_puntuales") or {}).items():
-        out[str(k)] = float(v)
+        out[str(k)] = out.get(str(k), 0.0) + float(v)
     return out
 
 

@@ -1188,11 +1188,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // Abonos efectivos de un crédito: expande los rangos y superpone los puntuales.
     // El CSV los guarda expandidos (mismo criterio que el backend); el JSON conserva los rangos.
     function abonosEfectivos(c) {
-        const out = {};
+        const out = {};   // se SUMAN los que coincidan en el mismo mes (igual que el backend)
         (c.abonos_recurrentes || []).forEach((r) => {
-            if (r.monto > 0) mesesEnRango(r.desde, r.hasta).forEach((m) => { out[m] = r.monto; });
+            if (r.monto > 0) mesesEnRango(r.desde, r.hasta).forEach((m) => { out[m] = (out[m] || 0) + r.monto; });
         });
-        Object.entries(c.abonos_puntuales || {}).forEach(([k, v]) => { out[k] = v; });
+        Object.entries(c.abonos_puntuales || {}).forEach(([k, v]) => { out[k] = (out[k] || 0) + v; });
         return out;
     }
     function creditoACsvRow(c) {
