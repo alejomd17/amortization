@@ -1930,6 +1930,17 @@ function renderFlujoDetalle(r, clave) {
             <td>${fmtMoney(f.liberado)}</td>
         </tr>`).join("");
 
+    // Fila de totales de toda la vida. En "Pagos" suma lo pagado a cada crédito; en "Saldos"
+    // no se suman saldos (no tiene sentido), pero Cuotas y Abonos sí se totalizan siempre.
+    const totCredito = secuencia.map((idx) => filas.reduce((a, f) => a + (f.pagos[idx] || 0), 0));
+    const totCuotas = filas.reduce((a, f) => a + (f.pago_total - f.abonos_total), 0);
+    const totAbonos = filas.reduce((a, f) => a + f.abonos_total, 0);
+    const foot = `<tr class="fila-total">
+        <td></td><td>Total</td>
+        ${secuencia.map((_, p) => `<td>${vista === "pagos" ? fmtMoney(totCredito[p]) : ""}</td>`).join("")}
+        <td>${fmtMoney(totCuotas)}</td><td>${fmtMoney(totAbonos)}</td><td></td>
+    </tr>`;
+
     const notaCascada = !hayCascada
         ? `Acá cada crédito va por su cuenta: nadie le pasa nada a nadie. Es el escenario contra
            el que se comparan los demás.`
@@ -1952,7 +1963,8 @@ function renderFlujoDetalle(r, clave) {
         </div>
         <p class="hint">${notaVista} ${notaCascada}</p>
         <div class="table-scroll">
-            <table class="amort-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
+            <table class="amort-table"><thead><tr>${head}</tr></thead>
+                <tbody>${body}</tbody><tfoot>${foot}</tfoot></table>
         </div>`;
 
     card.querySelectorAll("[data-vista]").forEach((b) => b.addEventListener("click", () => {

@@ -109,7 +109,9 @@
     con la misma convención que `saldos` (None = aún no nace).
   - **Columnas Cuotas / Abonos** (a la derecha del mes a mes): "Cuotas" = solo las cuotas+seguros
     programados de ese mes; "Abonos" = lo extra (dirigidos + cascada). Juntas = `pago_total`.
-    Se separó para que "la total" muestre solo cuotas, con los abonos aparte. (`mes_inicio`, AAAAMM, opcional). Antes de esa fecha el
+    Se separó para que "la total" muestre solo cuotas, con los abonos aparte.
+  - **Fila de totales** al final del mes a mes: totaliza Cuotas y Abonos siempre; en la vista
+    "Pagos" también suma lo pagado a cada crédito (los saldos no se suman, no tiene sentido). (`mes_inicio`, AAAAMM, opcional). Antes de esa fecha el
     crédito **no existe**: sin saldo, sin cuota, sin intereses. Se desembolsa en ese mes y paga
     su primera cuota al mes siguiente (igual que los créditos que ya tienes, que arrancan en la
     fila 0 y pagan en la 1). Decisiones tomadas:
