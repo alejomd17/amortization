@@ -657,13 +657,6 @@ body {
 .amort-table tbody tr:hover { background: var(--crema); }
 .amort-table .row-abono { background: var(--verde-claro); }
 .amort-table .row-abono td { font-weight: 500; }
-.amort-table tfoot .fila-total td {
-    font-weight: 500;
-    color: var(--negro);
-    border-top: 1.5px solid var(--verde-medio);
-    border-bottom: none;
-    background: var(--crema);
-}
 
 /* Tabla del comparador: primera columna = etiqueta, demás = valores alineados a la derecha */
 .comparador-table td:not(:first-child),

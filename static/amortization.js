@@ -1910,9 +1910,9 @@ function renderFlujoDetalle(r, clave) {
         // nota de arriba ya avisan que el crédito aún no se ha desembolsado.
         return `<th>${hayCascada ? `<span class="orden-pos">${turno[idx]}</span> ` : ""}${c.nombre}</th>`;
     }).join("");
-    // "Cuotas" = solo las cuotas+seguros del mes; "Abonos" = lo extra (dirigidos + cascada).
-    // Juntas suman lo que pagas ese mes (pago_total).
-    const head = `<th>#</th><th>Mes</th>${cols}<th>Cuotas</th><th>Abonos</th><th>Liberado</th>`;
+    // "Cuotas" = solo las cuotas+seguros del mes; "Abonos" = lo extra (dirigidos + cascada);
+    // "Total" = las dos juntas (lo que pagas ese mes).
+    const head = `<th>#</th><th>Mes</th>${cols}<th>Cuotas</th><th>Abonos</th><th>Total</th><th>Liberado</th>`;
     // Celda de cada crédito según la vista: saldo restante o lo pagado ese mes.
     // null = todavía no se desembolsa (·). En saldos, "—" = ya se pagó;
     // en pagos, "—" = ese mes no se le pagó nada (p. ej. el mes del desembolso).
@@ -1927,19 +1927,9 @@ function renderFlujoDetalle(r, clave) {
             ${secuencia.map((idx) => celda(f, idx)).join("")}
             <td>${fmtMoney(f.pago_total - f.abonos_total)}</td>
             <td>${f.abonos_total > 0 ? fmtMoney(f.abonos_total) : "—"}</td>
+            <td>${fmtMoney(f.pago_total)}</td>
             <td>${fmtMoney(f.liberado)}</td>
         </tr>`).join("");
-
-    // Fila de totales de toda la vida. En "Pagos" suma lo pagado a cada crédito; en "Saldos"
-    // no se suman saldos (no tiene sentido), pero Cuotas y Abonos sí se totalizan siempre.
-    const totCredito = secuencia.map((idx) => filas.reduce((a, f) => a + (f.pagos[idx] || 0), 0));
-    const totCuotas = filas.reduce((a, f) => a + (f.pago_total - f.abonos_total), 0);
-    const totAbonos = filas.reduce((a, f) => a + f.abonos_total, 0);
-    const foot = `<tr class="fila-total">
-        <td></td><td>Total</td>
-        ${secuencia.map((_, p) => `<td>${vista === "pagos" ? fmtMoney(totCredito[p]) : ""}</td>`).join("")}
-        <td>${fmtMoney(totCuotas)}</td><td>${fmtMoney(totAbonos)}</td><td></td>
-    </tr>`;
 
     const notaCascada = !hayCascada
         ? `Acá cada crédito va por su cuenta: nadie le pasa nada a nadie. Es el escenario contra
@@ -1963,8 +1953,7 @@ function renderFlujoDetalle(r, clave) {
         </div>
         <p class="hint">${notaVista} ${notaCascada}</p>
         <div class="table-scroll">
-            <table class="amort-table"><thead><tr>${head}</tr></thead>
-                <tbody>${body}</tbody><tfoot>${foot}</tfoot></table>
+            <table class="amort-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
         </div>`;
 
     card.querySelectorAll("[data-vista]").forEach((b) => b.addEventListener("click", () => {
