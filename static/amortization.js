@@ -761,9 +761,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 r.insertCell(k).textContent = t;
             });
         }
-        // El colapsador solo aparece si hay abonos; muestra cuántos y el total en el summary
+        // El colapsador y el "quitar todos" solo aparecen si hay abonos en algún crédito
         const collapse = document.getElementById("fjPuntCollapse");
         collapse.hidden = cuantos === 0;
+        document.getElementById("fjPuntClearBtn").hidden = cuantos === 0;
         document.getElementById("fjPuntResumen").textContent =
             cuantos ? `(${cuantos} · ${fmtMoney(total)})` : "";
     }
@@ -1078,6 +1079,21 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("fjPuntRecDesde").value = "";
         document.getElementById("fjPuntRecHasta").value = "";
         document.getElementById("fjPuntRecMonto").value = "";
+        refrescarFlujoUI();
+    });
+
+    // Quitar de un golpe todos los abonos (puntuales y rangos) del crédito elegido
+    document.getElementById("fjPuntClearBtn").addEventListener("click", () => {
+        const c = fjCreditoDelSelector();
+        if (!c) return;
+        const tiene = Object.keys(c.abonos_puntuales || {}).length + (c.abonos_recurrentes || []).length;
+        if (!tiene) {
+            alert(`"${c.nombre}" no tiene abonos.`);
+            return;
+        }
+        if (!confirm(`¿Quitar los ${tiene} abonos de "${c.nombre}"?`)) return;
+        c.abonos_puntuales = {};
+        c.abonos_recurrentes = [];
         refrescarFlujoUI();
     });
 
