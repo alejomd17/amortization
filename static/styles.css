@@ -509,6 +509,24 @@ body {
 .tasa-mv { color: var(--negro); opacity: 0.55; }
 .tasa-sub { font-size: 0.82em; opacity: 0.6; letter-spacing: 0.02em; }
 
+/* Casilla activar/desactivar el crédito */
+.check-activo {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    color: var(--negro);
+    opacity: 0.7;
+    cursor: pointer;
+    margin-right: 6px;
+    white-space: nowrap;
+}
+.check-activo input { accent-color: var(--verde); cursor: pointer; }
+/* Crédito desactivado: se atenúan los datos, pero NO la celda de acciones (última),
+   para que la casilla y los botones sigan a plena vista y se pueda reactivar. */
+.credito-inactivo td:not(:last-child) { opacity: 0.4; }
+
 /* Fila que se está editando arriba, en el formulario */
 .fila-editando td { background: var(--verde-claro); }
 .fila-editando td:first-child { box-shadow: inset 3px 0 0 var(--verde-medio); }

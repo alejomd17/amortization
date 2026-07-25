@@ -154,6 +154,11 @@
     créditos 0% donde abonar no ahorra interés: excluirlos deja que la cascada ataque los caros
     (comprobado: en un caso salió libre un mes antes). Su `abono_fijo`/puntuales, si los pones,
     siguen aplicando (son elección explícita por crédito, aparte de la cascada).
+  - **Activar/desactivar un crédito** (casilla "Activo" en cada fila): el crédito se queda en la
+    lista pero **no entra al cálculo** cuando está inactivo — sirve para probar escenarios sin
+    borrar. La fila se atenúa (menos la casilla/botones). El "Total" suma solo activos y avisa
+    cuántos hay inactivos. El front manda al backend solo los activos (el motor no sabe de
+    `activo`). Persiste en localStorage/JSON; en CSV es la columna `activo` ("no" = inactivo).
   - **Editar un crédito ya agregado**: el botón "Editar" carga el crédito en el mismo
     formulario de arriba (el botón pasa a "Guardar cambios" + aparece "Cancelar", y la fila
     se resalta). Al guardar **se queda en el mismo puesto del orden** y **conserva sus abonos

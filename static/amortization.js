@@ -777,6 +777,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         flujoCreditos.forEach((c, i) => {
             const row = tbody.insertRow();
+            if (c.activo === false) row.classList.add("credito-inactivo");   // desactivado: no entra al cálculo
             row.insertCell(0).textContent = i + 1;
 
             const celdaNombre = row.insertCell(1);
@@ -882,6 +883,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const acciones = row.insertCell(8);
 
+            // Casilla activar/desactivar: el crédito se queda en la lista pero entra o no al cálculo
+            const lblActivo = document.createElement("label");
+            lblActivo.className = "check-activo";
+            lblActivo.title = "Activar o desactivar este crédito en el cálculo";
+            const chkActivo = document.createElement("input");
+            chkActivo.type = "checkbox";
+            chkActivo.checked = c.activo !== false;
+            chkActivo.addEventListener("change", () => { c.activo = chkActivo.checked; refrescarFlujoUI(); });
+            lblActivo.appendChild(chkActivo);
+            lblActivo.appendChild(document.createTextNode(" Activo"));
+            acciones.appendChild(lblActivo);
+
             // Tabla de condiciones: colapsada, se despliega bajo la fila solo si la piden.
             // Aquí todavía no hay escenario escogido, así que solo puede mostrar el
             // crédito aislado — se rotula explícitamente para no chocar con los resultados.
@@ -946,13 +959,16 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         if (flujoCreditos.length) {
-            const saldoTot = flujoCreditos.reduce((a, c) => a + c.saldo, 0);
-            const cuotaTot = flujoCreditos.reduce((a, c) => a + cuotaEstimada(c) + (c.seguro || 0), 0);
-            // el total incluye los créditos futuros: se avisa para que no se lea como "lo que pago hoy"
-            const futuros = flujoCreditos.filter((c) => c.mes_inicio).length;
-            const etiqueta = futuros
-                ? `Total (${flujoCreditos.length}, ${futuros} por desembolsar)`
-                : `Total (${flujoCreditos.length})`;
+            // el total suma solo los créditos ACTIVOS (los inactivos no entran al cálculo)
+            const activos = flujoCreditos.filter((c) => c.activo !== false);
+            const saldoTot = activos.reduce((a, c) => a + c.saldo, 0);
+            const cuotaTot = activos.reduce((a, c) => a + cuotaEstimada(c) + (c.seguro || 0), 0);
+            const futuros = activos.filter((c) => c.mes_inicio).length;
+            const inactivos = flujoCreditos.length - activos.length;
+            const partes = [`${activos.length} activos`];
+            if (futuros) partes.push(`${futuros} por desembolsar`);
+            if (inactivos) partes.push(`${inactivos} inactivos`);
+            const etiqueta = `Total (${partes.join(", ")})`;
             const r = tfoot.insertRow();
             ["", etiqueta, fmtMoney(saldoTot), "", "", fmtMoney(cuotaTot), "", "", ""]
                 .forEach((t, k) => { r.insertCell(k).textContent = t; });
@@ -990,6 +1006,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // al editar se conservan los abonos (puntuales y rangos): se administran en su tabla
             abonos_puntuales: editando ? (fjEditando.abonos_puntuales || {}) : {},
             abonos_recurrentes: editando ? (fjEditando.abonos_recurrentes || []) : [],
+            activo: editando ? (fjEditando.activo !== false) : true,   // al editar conserva su estado
         };
         // con cuota fija, el plazo se deriva; si no cubre el interés no se pagaría nunca
         if (credito.cuota > 0 && plazoEstimado(credito) === null) {
@@ -1107,7 +1124,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ── Carga / descarga de archivo ──────────────────────────────────────────
     const CSV_COLS = ["nombre", "saldo", "tasa", "tipo_tasa", "periodo_tasa", "plazo_meses",
-                      "cuota", "seguro", "abono_fijo", "mes_inicio", "recibe_abono", "abonos_puntuales"];
+                      "cuota", "seguro", "abono_fijo", "mes_inicio", "recibe_abono", "activo", "abonos_puntuales"];
 
     // Acepta formatos colombianos: "240.000.000" -> 240000000 · "12,5" -> 12.5
     function parseNumeroCsv(txt) {
@@ -1163,6 +1180,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 mes_inicio: /^\d{6}$/.test(get("mes_inicio")) ? get("mes_inicio") : null,
                 // "no"/"false"/"0" -> no recibe; vacío o cualquier otra cosa -> sí (default)
                 recibe_abono: !/^(no|false|0)$/i.test(get("recibe_abono").trim()),
+                activo: !/^(no|false|0)$/i.test(get("activo").trim()),
                 abonos_puntuales: parsePuntualesCampo(get("abonos_puntuales")),
             };
         });
@@ -1208,6 +1226,7 @@ document.addEventListener("DOMContentLoaded", () => {
             abono_fijo: c.abono_fijo > 0 ? c.abono_fijo : "",
             mes_inicio: c.mes_inicio || "",
             recibe_abono: c.recibe_abono === false ? "no" : "",
+            activo: c.activo === false ? "no" : "",
             abonos_puntuales: serializarPuntuales(abonosEfectivos(c)),
         };
         return CSV_COLS.map((col) => campos[col]).join(",");
@@ -1219,10 +1238,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const filas = flujoCreditos.length
             ? flujoCreditos.map(creditoACsvRow)
             : [
-                "Faro,240000000,12,Efectiva,Anual,240,,0,0,,,",
-                "Terrabonga,42739600,0,Efectiva,Anual,18,,0,0,,,202701:35000000|202803:50000000",
-                "Casa nueva,50000000,11,Efectiva,Anual,24,,0,0,202801,,",
-                "Sierra,32800000,0,Efectiva,Anual,17,1400000,0,0,,no,",
+                "Faro,240000000,12,Efectiva,Anual,240,,0,0,,,,",
+                "Terrabonga,42739600,0,Efectiva,Anual,18,,0,0,,,,202701:35000000|202803:50000000",
+                "Casa nueva,50000000,11,Efectiva,Anual,24,,0,0,202801,,,",
+                "Sierra,32800000,0,Efectiva,Anual,17,1400000,0,0,,no,,",
             ];
         descargarArchivo(
             flujoCreditos.length ? "mis-creditos.csv" : "plantilla-creditos.csv",
@@ -1266,6 +1285,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         abono_fijo: Number(c.abono_fijo) || 0,
                         mes_inicio: c.mes_inicio || null,
                         recibe_abono: c.recibe_abono !== false,
+                        activo: c.activo !== false,
                         abonos_puntuales: c.abonos_puntuales || {},
                         abonos_recurrentes: Array.isArray(c.abonos_recurrentes) ? c.abonos_recurrentes : [],
                     }))
@@ -1296,8 +1316,10 @@ document.addEventListener("DOMContentLoaded", () => {
     refrescarFlujoUI();
 
     function calcularFlujo() {
-        if (!flujoCreditos.length) {
-            alert("Agrega al menos un crédito.");
+        // solo los créditos ACTIVOS entran al cálculo (los inactivos quedan guardados en la lista)
+        const activos = flujoCreditos.filter((c) => c.activo !== false);
+        if (!activos.length) {
+            alert("Activa al menos un crédito para calcular.");
             return;
         }
         const fecha = document.getElementById("fjFechaInicio").value.trim();
@@ -1306,10 +1328,10 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         postAndRender("/flujo", {
-            creditos: flujoCreditos,
+            creditos: activos,
             fecha_inicio: fecha,
-            pct_reinversion: 100,                            // siempre se reinvierte todo
-            orden_manual: flujoCreditos.map((_, i) => i),   // el orden de la lista
+            pct_reinversion: 100,                    // siempre se reinvierte todo
+            orden_manual: activos.map((_, i) => i),  // el orden de la lista (solo activos)
             vara: fjVaraActual,
         }, displayFlujo, "flujoResultCard");
     }
