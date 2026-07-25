@@ -2015,13 +2015,17 @@ function renderFlujoDetalle(r, clave) {
     // Celda de cada crédito según la vista: saldo restante o lo pagado ese mes.
     // null = todavía no se desembolsa (·). En saldos, "—" = ya se pagó;
     // en pagos, "—" = ese mes no se le pagó nada (p. ej. el mes del desembolso).
+    // La celda del crédito que recibe la cascada ese mes se resalta, para ver el abono
+    // "moviéndose" de un crédito al siguiente en vez de pintar toda la fila.
     const celda = (f, idx) => {
         const v = f[vista][idx];
         if (v === null) return `<td class="sin-desembolsar" title="Aún no se ha desembolsado">·</td>`;
-        return `<td>${v > 0 ? fmtMoney(v) : "—"}</td>`;
+        const recibe = (f.cascada && f.cascada[idx] > 0) ? "recibe-cascada" : "";
+        const titulo = recibe ? ` title="Aquí entra la cascada: +${fmtMoney(f.cascada[idx])}"` : "";
+        return `<td class="${recibe}"${titulo}>${v > 0 ? fmtMoney(v) : "—"}</td>`;
     };
     const body = filas.map((f) => `
-        <tr class="${f.liberado > 0 ? "row-abono" : ""}">
+        <tr>
             <td>${f.num}</td><td>${f.anno_mes}</td>
             ${secuencia.map((idx) => celda(f, idx)).join("")}
             <td>${fmtMoney(f.pago_total - f.abonos_total)}</td>
@@ -2052,7 +2056,8 @@ function renderFlujoDetalle(r, clave) {
         ? `Cada columna es el <strong>saldo que aún debes</strong> ese mes, antes de pagar: el último
            mes con saldo es cuando terminas de pagar ese crédito.`
         : `Cada columna es <strong>lo que le pagas</strong> a cada crédito ese mes (cuota + seguro + abonos).
-           El mes del desembolso muestra "—": aún no se paga.`;
+           El mes del desembolso muestra "—": aún no se paga. La <strong>celda resaltada</strong> es a la que
+           le entra la cascada ese mes — así ves el abono moviéndose de un crédito al siguiente.`;
     const notaIngreso = conIngreso
         ? ` <strong>Caja real</strong> = lo que te queda en el bolsillo reinvirtiendo todo (plano mientras pagas).
             <strong>Disponible</strong> = eso + lo ya liberado, o sea la plata que ya no debes aunque la reinviertas

@@ -152,6 +152,7 @@ class Flujo:
             "abonos_extra": 0.0, "liberado": 0.0,
             "saldos": foto_saldos(),
             "pagos": [0.0 if nacidos[i] else None for i in range(len(preparados))],
+            "cascada": [0.0 for _ in preparados],
         }]
         total_intereses = 0.0
         total_pagado = 0.0
@@ -170,6 +171,7 @@ class Flujo:
                                        # que salen de otra fuente y NO del salario
             filas_mes = {}             # fila de detalle de cada crédito, por si hay que corregirla
             pagos_credito = {}         # lo que se le paga a cada crédito ESTE mes (cuota+seguro+abono)
+            cascada_credito = {}       # cuánto de la CASCADA (pool liberado) recibió cada crédito
 
             # Saldo que AÚN DEBES este mes (antes de pagar): es lo que se muestra en la vista
             # Saldos, para que el último mes con saldo sea el de la última cuota. Un crédito que
@@ -196,6 +198,8 @@ class Flujo:
                     extra = 0.0
                 else:
                     aporte_extra = 0.0
+                if aporte_extra > 0.005:
+                    cascada_credito[idx] = cascada_credito.get(idx, 0.0) + aporte_extra
 
                 capital = c["cuota"] - interes
                 reduccion = capital + dirigido + aporte_extra
@@ -255,6 +259,7 @@ class Flujo:
                 pago_mes += aplicado
                 abonos_mes += aplicado
                 pagos_credito[objetivo] = pagos_credito.get(objetivo, 0.0) + aplicado
+                cascada_credito[objetivo] = cascada_credito.get(objetivo, 0.0) + aplicado
                 if saldos[objetivo] <= 0.005:
                     saldos[objetivo] = 0.0
                     o = preparados[objetivo]
@@ -290,6 +295,8 @@ class Flujo:
                 # (justo el mes del desembolso), >0 si pagó. Suma = pago_total.
                 "pagos": [round(pagos_credito.get(i, 0.0), 2) if nacidos[i] else None
                           for i in range(len(preparados))],
+                # a qué crédito le entró la CASCADA este mes (para resaltar la celda que la recibe)
+                "cascada": [round(cascada_credito.get(i, 0.0), 2) for i in range(len(preparados))],
             })
 
             # No hay libertad mientras falte desembolsar un crédito que ya está planeado

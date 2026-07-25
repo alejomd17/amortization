@@ -678,6 +678,13 @@ body {
 /* Columna "Te queda" (ingreso − pago): verde si alcanza, rojo si el pago se pasa del ingreso */
 .amort-table td.queda-ok { color: var(--verde); font-weight: 500; }
 .amort-table td.queda-neg { color: #b03a2e; font-weight: 500; }
+/* Celda del crédito al que le entra la cascada ese mes: se ve el abono "moviéndose" */
+.amort-table td.recibe-cascada {
+    background: var(--verde-claro);
+    color: var(--verde);
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 var(--verde-medio);
+}
 
 /* Colapsador de la tabla de abonos puntuales (se alarga con el "mensual fijo") */
 .abonos-collapse summary {

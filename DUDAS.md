@@ -110,6 +110,10 @@
   - **Columnas Cuotas / Abonos** (a la derecha del mes a mes): "Cuotas" = solo las cuotas+seguros
     programados de ese mes; "Abonos" = lo extra (dirigidos + cascada). Juntas = `pago_total`.
     Se muestran 3 columnas: **Cuotas · Abonos · Total** (Total = las dos juntas = `pago_total`).
+  - **Resaltado de la celda que recibe la cascada**: en vez de pintar toda la fila cuando hay
+    liberación (parecía que el abono le entraba a todos a la vez), se resalta **solo la celda del
+    crédito al que le entra la cascada** ese mes (`cascada` por crédito en cada fila). Así se ve
+    el abono moverse de un crédito al siguiente. Vale en las dos vistas (Saldos y Pagos).
   - **Ingreso mensual + dos columnas (Caja real / Disponible)**. Del salario salen **cuotas,
     abono fijo y cascada** (la "hoja de vida" del crédito); **solo los abonos extras** (puntuales
     /rangos de la sección Abonos puntuales: primas, cesantías, bonos) vienen de otra fuente y NO
