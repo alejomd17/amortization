@@ -27,38 +27,66 @@ class Ahorro:
             period: str = "Anual",
             plazo_meses: float = 12,
             retencion_pct: float = 4.0,
+            modo: str = "reinvierte",
             ) -> dict:
-        """Calcula un CDT: interes compuesto a vencimiento, con retencion en la fuente.
+        """Calcula una inversion a tasa fija (CDT o similar), con retencion en la fuente.
 
         La retencion se aplica sobre los rendimientos (interes bruto). Para CDT y
         titulos de renta fija la tarifa tipica es 4%.
+
+        modo="reinvierte": interes compuesto a vencimiento (capitaliza).
+        modo="retiro": cada mes recibes el interes; el capital queda fijo.
         """
         tasa_mensual = self._tasa_mensual_efectiva(interest_rate, type_rate, period)
-
-        valor_final_bruto = monto * (1 + tasa_mensual) ** plazo_meses
-        interes_bruto = valor_final_bruto - monto
-        retencion = interes_bruto * (retencion_pct / 100)
-        interes_neto = interes_bruto - retencion
-        valor_final_neto = monto + interes_neto
+        n = int(plazo_meses)
 
         # Tasas para mostrar (redondeadas)
         tasa_ea = interest_rates.calculate_interest_rate(interest_rate, type_rate, period, 'Anual')
         tasa_mv = round(tasa_mensual * 100, 4)
 
-        return {
+        base = {
             "monto": round(float(monto), 2),
-            "plazo_meses": int(plazo_meses),
+            "plazo_meses": n,
             "tasa_ea": tasa_ea,
             "tasa_mv": tasa_mv,
-            "interes_bruto": round(interes_bruto, 2),
             "retencion_pct": round(float(retencion_pct), 2),
+            "modo": modo,
+        }
+
+        if modo == "retiro":
+            renta_bruta = monto * tasa_mensual
+            retencion_mes = renta_bruta * (retencion_pct / 100)
+            renta_neta = renta_bruta - retencion_mes
+            total_bruto = renta_bruta * n
+            total_neto = renta_neta * n
+            base.update({
+                "renta_mensual_bruta": round(renta_bruta, 2),
+                "renta_mensual_neta": round(renta_neta, 2),
+                "total_bruto": round(total_bruto, 2),
+                "retencion": round(total_bruto - total_neto, 2),
+                "total_neto": round(total_neto, 2),
+                # al final recuperas el capital y ya recibiste las rentas
+                "valor_final_neto": round(monto + total_neto, 2),
+                "rendimiento_neto_pct": round(total_neto / monto * 100, 2) if monto else 0.0,
+            })
+            return base
+
+        valor_final_bruto = monto * (1 + tasa_mensual) ** n
+        interes_bruto = valor_final_bruto - monto
+        retencion = interes_bruto * (retencion_pct / 100)
+        interes_neto = interes_bruto - retencion
+        valor_final_neto = monto + interes_neto
+
+        base.update({
+            "interes_bruto": round(interes_bruto, 2),
             "retencion": round(retencion, 2),
             "interes_neto": round(interes_neto, 2),
             "valor_final_bruto": round(valor_final_bruto, 2),
             "valor_final_neto": round(valor_final_neto, 2),
             # rendimiento neto sobre el capital, en todo el plazo
             "rendimiento_neto_pct": round(interes_neto / monto * 100, 2) if monto else 0.0,
-        }
+        })
+        return base
 
     def programado(self,
                    aporte_mensual: float = 500000,

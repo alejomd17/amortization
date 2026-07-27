@@ -187,9 +187,44 @@
   siguen sin guardar sus campos. Si una clave guardada quedó vieja, se ignora (no deja la vista
   en blanco).
 
+- **Ahorro → "Ahorro e inversión"** (pestaña renombrada). Dos grupos de sub-modos:
+  - **Invertir**: Tasa fija · Derechos · Negocio · Comparar (responden "tengo capital, ¿qué rinde?").
+  - **Ahorrar**: Programado · Meta (responden "¿cómo junto la plata?").
+  - El CDT pasó a llamarse **Tasa fija** (generaliza: CDT, bono, "me prometen X% garantizado").
+    Clave de nav `cdt` conservada por compatibilidad con lo guardado.
+
+- **Tasa fija — toggle retiro/reinvierte** (default **reinvierte**):
+  - *Reinvierte*: interés compuesto a vencimiento (comportamiento anterior del CDT).
+  - *Retiro*: capital fijo, cada mes recibes `capital × tasa_mensual` neto; al final recuperas el capital.
+
+- **Derechos fiduciarios** — participación en patrimonio autónomo, **nada garantizado** (son los
+  supuestos del usuario). Dos flujos separados:
+  - *Reparto de caja*: pro rata según periodicidad (Mensual/Trimestral/Semestral/Anual). Se calcula
+    **sobre el aporte inicial y es plano** (no crece con la valorización) — simplificación; un
+    "crecimiento del reparto" queda como mejora futura. Se **retira** (no se reinvierte).
+  - *Valorización*: capitaliza sobre el aporte (`aporte × (1+val)^(años)`); **solo se materializa al
+    salir**. La retención (default 7%, editable, 0 si ya lo dan neto) aplica solo al reparto de caja.
+  - Campo opcional "valor del patrimonio" solo para mostrar el % de participación.
+
+- **Negocio** — activo que produce (carro, hostal, local): inversión + flujo neto mensual +
+  valor de salida (puede ser **menor** = deprecia, o mayor = valoriza) + horizonte. El flujo puede
+  crecer un % anual (ingreso crece; el costo mensual opcional queda fijo). Flujo "ya neto"; el costo
+  mensual es opcional para quien quiera detallarlo aparte.
+
+- **Comparar inversiones** — pone Tasa fija / Derechos / Negocio lado a lado sobre el **mismo
+  horizonte** y ordena por **rentabilidad E.A. real (TIR)**, no por el mensual. La TIR es lo justo:
+  mete el flujo mensual, lo que recuperas al final y el tiempo en un solo número — así un carro que
+  da mucho al mes pero se deprecia queda por debajo de un CDT que devuelve capital. TIR por bisección
+  en `src/inversion.py` (devuelve None si el flujo no cambia de signo). Cada vehículo puede tener su
+  propio aporte (la TIR normaliza escala); se muestra también la ganancia total (que sí depende de escala).
+
 ## Abiertas
 - ¿La persistencia de **datos digitados** debería extenderse a las otras calculadoras, o solo al
   flujo (que es la de más digitación)? — la de *navegación* ya quedó para todas.
+- **Derechos/Negocio**: el reparto de caja de derechos es plano sobre el aporte. ¿Vale la pena un
+  "crecimiento anual del reparto" como en Negocio? Pendiente de que el usuario lo pida.
+- **Comparar**: por ahora los tres vehículos se digitan en el propio comparador. Falta un
+  "traer datos de la pestaña X" para no re-digitar. Mejora futura.
 
 ## Hallazgo importante (flujo de créditos)
 Con presupuesto mensual constante (cascada al 100%), probando los 5.040 órdenes del caso real:

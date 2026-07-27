@@ -14,7 +14,7 @@
     <main class="container">
         <div class="tabs">
             <button type="button" class="tab active" id="tabCredito">Crédito</button>
-            <button type="button" class="tab" id="tabAhorro">Ahorro</button>
+            <button type="button" class="tab" id="tabAhorro">Ahorro e inversión</button>
             <button type="button" class="tab" id="tabInmobiliaria">Inmobiliaria</button>
         </div>
 
@@ -837,17 +837,35 @@
 
         <!-- ============ PESTAÑA AHORRO ============ -->
         <section id="panelAhorro" class="tab-panel hidden">
-            <h1 class="page-title">Simula tu <em>ahorro</em></h1>
+            <h1 class="page-title">Ahorra e <em>invierte</em></h1>
 
-            <div class="abono-mode-toggle" role="tablist">
-                <button type="button" id="ahModeCdt" class="mode-btn active" role="tab" aria-selected="true">CDT</button>
-                <button type="button" id="ahModeProgramado" class="mode-btn" role="tab" aria-selected="false">Programado</button>
-                <button type="button" id="ahModeMeta" class="mode-btn" role="tab" aria-selected="false">Meta</button>
+            <div class="modo-grupos">
+                <div class="modo-grupo">
+                    <span class="modo-grupo-label">Invertir</span>
+                    <div class="abono-mode-toggle" role="tablist">
+                        <button type="button" id="ahModeCdt" class="mode-btn active" role="tab" aria-selected="true">Tasa fija</button>
+                        <button type="button" id="ahModeDerechos" class="mode-btn" role="tab" aria-selected="false">Derechos</button>
+                        <button type="button" id="ahModeNegocio" class="mode-btn" role="tab" aria-selected="false">Negocio</button>
+                        <button type="button" id="ahModeComparar" class="mode-btn" role="tab" aria-selected="false">Comparar</button>
+                    </div>
+                </div>
+                <div class="modo-grupo">
+                    <span class="modo-grupo-label">Ahorrar</span>
+                    <div class="abono-mode-toggle" role="tablist">
+                        <button type="button" id="ahModeProgramado" class="mode-btn" role="tab" aria-selected="false">Programado</button>
+                        <button type="button" id="ahModeMeta" class="mode-btn" role="tab" aria-selected="false">Meta</button>
+                    </div>
+                </div>
             </div>
 
             <div id="ahPanelCdt" class="ahorro-submodo">
             <section class="card">
-                <p class="section-eyebrow">Datos del CDT</p>
+                <p class="section-eyebrow">Inversión a tasa fija</p>
+                <p class="hint" style="margin-top:0;margin-bottom:14px">Un CDT o cualquier cosa que te promete un porcentaje fijo. <strong>Reinvierte</strong>: los intereses capitalizan. <strong>Retiro</strong>: cada mes te cae el interés y el capital queda quieto.</p>
+                <div class="abono-mode-toggle" role="tablist" style="margin-bottom:16px">
+                    <button type="button" id="tfModeReinvierte" class="mode-btn active" role="tab" aria-selected="true">Reinvierte</button>
+                    <button type="button" id="tfModeRetiro" class="mode-btn" role="tab" aria-selected="false">Retiro mensual</button>
+                </div>
                 <div class="field-grid">
                     <div class="field">
                         <label for="ahMonto">Monto a invertir</label>
@@ -898,6 +916,243 @@
 
             <div id="ahorroResultCard" class="card resumen-card hidden"></div>
             </div><!-- /ahPanelCdt -->
+
+            <!-- Sub-modo: Derechos fiduciarios -->
+            <div id="ahPanelDerechos" class="ahorro-submodo hidden">
+                <section class="card">
+                    <p class="section-eyebrow">Derecho fiduciario</p>
+                    <p class="hint" style="margin-top:0;margin-bottom:14px">
+                        Compras un pedazo de un patrimonio (un edificio, un proyecto). Te reparten caja
+                        (arriendos/utilidad) según tu parte, y el activo se valoriza — pero eso solo lo cobras
+                        al salir. Nada garantizado: aquí van <em>tus supuestos</em>.
+                    </p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="dfAporte">Tu aporte</label>
+                            <input type="number" id="dfAporte" placeholder="Ej. 100.000.000" required>
+                        </div>
+                        <div class="field">
+                            <label for="dfCaja">Rendimiento de caja anual (%)</label>
+                            <input type="number" id="dfCaja" placeholder="Ej. 8" step="any" value="8">
+                            <p class="hint">Lo que reparten al año (arriendos/utilidad), sobre tu aporte</p>
+                        </div>
+                        <div class="field">
+                            <label for="dfPeriodicidad">Cada cuánto reparten</label>
+                            <select id="dfPeriodicidad">
+                                <option value="Mensual" selected>Mensual</option>
+                                <option value="Trimestral">Trimestral</option>
+                                <option value="Semestral">Semestral</option>
+                                <option value="Anual">Anual</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="dfValorizacion">Valorización anual (%)</label>
+                            <input type="number" id="dfValorizacion" placeholder="Ej. 5" step="any" value="5">
+                            <p class="hint">Cuánto sube el avalúo al año (la cobras al salir)</p>
+                        </div>
+                        <div class="field">
+                            <label for="dfHorizonte">Horizonte</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="dfHorizonte" placeholder="Ej. 5" required>
+                                <select id="dfHorizonteUnit" aria-label="Unidad del horizonte">
+                                    <option value="years" selected>Años</option>
+                                    <option value="months">Meses</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="dfRetencion">Retención en la fuente (%)</label>
+                            <input type="number" id="dfRetencion" value="7" step="any">
+                            <p class="hint">Sobre el reparto de caja · pon 0 si ya te lo dan neto</p>
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="dfPatrimonio">Valor total del patrimonio (opcional)</label>
+                            <input type="number" id="dfPatrimonio" placeholder="Ej. 5.000.000.000">
+                            <p class="hint">Solo para mostrarte qué % del fondo tienes</p>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="calcular-wrap">
+                    <button id="calcularDerechosBtn" class="btn btn-primary">Calcular flujo</button>
+                </div>
+
+                <div id="derechosResultCard" class="card resumen-card hidden"></div>
+                <div id="derechosFlujoCard" class="card hidden"></div>
+            </div><!-- /ahPanelDerechos -->
+
+            <!-- Sub-modo: Negocio -->
+            <div id="ahPanelNegocio" class="ahorro-submodo hidden">
+                <section class="card">
+                    <p class="section-eyebrow">Negocio o activo que produce</p>
+                    <p class="hint" style="margin-top:0;margin-bottom:14px">
+                        Compras algo que te deja plata cada mes — un carro, un hostal, un local.
+                        Metes la inversión, entra un flujo mensual, y al final lo vendes o traspasas.
+                        Ese valor de salida puede ser <em>mayor</em> (se valoriza) o <em>menor</em> (se deprecia).
+                    </p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="ngInversion">Inversión inicial</label>
+                            <input type="number" id="ngInversion" placeholder="Ej. 200.000.000" required>
+                        </div>
+                        <div class="field">
+                            <label for="ngFlujo">Flujo mensual (lo que te deja)</label>
+                            <input type="number" id="ngFlujo" placeholder="Ej. 3.000.000" required>
+                            <p class="hint">Ya neto. Si prefieres, detalla gastos aparte abajo</p>
+                        </div>
+                        <div class="field">
+                            <label for="ngCrecimiento">Crecimiento anual del flujo (%)</label>
+                            <input type="number" id="ngCrecimiento" placeholder="Ej. 0" step="any" value="0">
+                            <p class="hint">Sube tarifas cada año (ej. un hostal). 0 si es plano</p>
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="ngValorSalida">Valor de salida</label>
+                            <input type="number" id="ngValorSalida" placeholder="Ej. 200.000.000">
+                            <p class="hint">En cuánto lo vendes/traspasas al final (0 si no queda nada)</p>
+                        </div>
+                        <div class="field">
+                            <label for="ngHorizonte">Horizonte</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="ngHorizonte" placeholder="Ej. 5" required>
+                                <select id="ngHorizonteUnit" aria-label="Unidad del horizonte">
+                                    <option value="years" selected>Años</option>
+                                    <option value="months">Meses</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="ngCosto">Costo mensual (opcional)</label>
+                            <input type="number" id="ngCosto" placeholder="Ej. 0" value="0">
+                            <p class="hint">Mantenimiento, seguro… se resta del flujo</p>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="calcular-wrap">
+                    <button id="calcularNegocioBtn" class="btn btn-primary">Calcular flujo</button>
+                </div>
+
+                <div id="negocioResultCard" class="card resumen-card hidden"></div>
+                <div id="negocioFlujoCard" class="card hidden"></div>
+            </div><!-- /ahPanelNegocio -->
+
+            <!-- Sub-modo: Comparar inversiones -->
+            <div id="ahPanelComparar" class="ahorro-submodo hidden">
+                <section class="card">
+                    <p class="section-eyebrow">Comparar inversiones</p>
+                    <p class="hint" style="margin-top:0;margin-bottom:14px">
+                        Pon lado a lado un CDT, un derecho y un negocio sobre el <strong>mismo horizonte</strong>.
+                        No te dejes engañar por el mensual: lo justo es la <strong>rentabilidad E.A. real</strong>,
+                        que mete lo que te cae mes a mes <em>y</em> lo que recuperas al final. Marca las que quieras comparar.
+                    </p>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="cmpHorizonte">Horizonte (para todas)</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="cmpHorizonte" placeholder="Ej. 5" value="5" required>
+                                <select id="cmpHorizonteUnit" aria-label="Unidad del horizonte">
+                                    <option value="years" selected>Años</option>
+                                    <option value="months">Meses</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card cmp-vehiculo">
+                    <label class="cmp-head"><input type="checkbox" id="cmpTfOn" checked> <span>Tasa fija (CDT)</span></label>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="cmpTfMonto">Monto</label>
+                            <input type="number" id="cmpTfMonto" placeholder="Ej. 100.000.000" value="100000000">
+                        </div>
+                        <div class="field">
+                            <label for="cmpTfTasa">Tasa E.A. (%)</label>
+                            <input type="number" id="cmpTfTasa" step="any" value="10">
+                        </div>
+                        <div class="field">
+                            <label for="cmpTfRet">Retención (%)</label>
+                            <input type="number" id="cmpTfRet" step="any" value="4">
+                        </div>
+                        <div class="field">
+                            <label for="cmpTfModo">Modo</label>
+                            <select id="cmpTfModo">
+                                <option value="reinvierte" selected>Reinvierte</option>
+                                <option value="retiro">Retiro mensual</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card cmp-vehiculo">
+                    <label class="cmp-head"><input type="checkbox" id="cmpDfOn" checked> <span>Derecho fiduciario</span></label>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="cmpDfAporte">Aporte</label>
+                            <input type="number" id="cmpDfAporte" placeholder="Ej. 100.000.000" value="100000000">
+                        </div>
+                        <div class="field">
+                            <label for="cmpDfCaja">Caja anual (%)</label>
+                            <input type="number" id="cmpDfCaja" step="any" value="8">
+                        </div>
+                        <div class="field">
+                            <label for="cmpDfVal">Valorización anual (%)</label>
+                            <input type="number" id="cmpDfVal" step="any" value="5">
+                        </div>
+                        <div class="field">
+                            <label for="cmpDfPer">Reparto</label>
+                            <select id="cmpDfPer">
+                                <option value="Mensual" selected>Mensual</option>
+                                <option value="Trimestral">Trimestral</option>
+                                <option value="Semestral">Semestral</option>
+                                <option value="Anual">Anual</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="cmpDfRet">Retención (%)</label>
+                            <input type="number" id="cmpDfRet" step="any" value="7">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card cmp-vehiculo">
+                    <label class="cmp-head"><input type="checkbox" id="cmpNgOn" checked> <span>Negocio</span></label>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="cmpNgInv">Inversión</label>
+                            <input type="number" id="cmpNgInv" placeholder="Ej. 80.000.000" value="80000000">
+                        </div>
+                        <div class="field">
+                            <label for="cmpNgFlujo">Flujo mensual neto</label>
+                            <input type="number" id="cmpNgFlujo" placeholder="Ej. 1.000.000" value="1000000">
+                        </div>
+                        <div class="field">
+                            <label for="cmpNgCrec">Crecimiento anual (%)</label>
+                            <input type="number" id="cmpNgCrec" step="any" value="0">
+                        </div>
+                        <div class="field">
+                            <label for="cmpNgSalida">Valor de salida</label>
+                            <input type="number" id="cmpNgSalida" placeholder="Ej. 50.000.000" value="50000000">
+                        </div>
+                        <div class="field">
+                            <label for="cmpNgCosto">Costo mensual</label>
+                            <input type="number" id="cmpNgCosto" value="0">
+                        </div>
+                    </div>
+                </section>
+
+                <div class="calcular-wrap">
+                    <button id="compararInvBtn" class="btn btn-primary">Comparar</button>
+                </div>
+
+                <div id="compararResultCard" class="card resumen-card hidden"></div>
+            </div><!-- /ahPanelComparar -->
 
             <!-- Sub-modo: Ahorro programado -->
             <div id="ahPanelProgramado" class="ahorro-submodo hidden">

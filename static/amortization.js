@@ -387,6 +387,21 @@ document.addEventListener("DOMContentLoaded", () => {
     [ahRate, ahRateType, ahRatePeriod].forEach((el) =>
         el.addEventListener("input", actualizarConversionAhorro));
 
+    // Toggle Reinvierte / Retiro mensual (tasa fija)
+    let tfModo = "reinvierte";
+    const tfBtnReinvierte = document.getElementById("tfModeReinvierte");
+    const tfBtnRetiro = document.getElementById("tfModeRetiro");
+    function setTasaFijaModo(modo) {
+        tfModo = modo;
+        [[tfBtnReinvierte, "reinvierte"], [tfBtnRetiro, "retiro"]].forEach(([b, k]) => {
+            const activo = k === modo;
+            b.classList.toggle("active", activo);
+            b.setAttribute("aria-selected", String(activo));
+        });
+    }
+    tfBtnReinvierte.addEventListener("click", () => setTasaFijaModo("reinvierte"));
+    tfBtnRetiro.addEventListener("click", () => setTasaFijaModo("retiro"));
+
     calcularAhorroBtn.addEventListener("click", async () => {
         const plazo = Number.parseFloat(ahPlazo.value);
         const plazoMeses = ahPlazoUnit.value === "years" ? plazo * 12 : plazo;
@@ -398,6 +413,7 @@ document.addEventListener("DOMContentLoaded", () => {
             period: ahRatePeriod.value,
             plazo_meses: plazoMeses,
             retencion: Number.parseFloat(ahRetencion.value) || 0,
+            modo: tfModo,
         };
 
         try {
@@ -422,18 +438,138 @@ document.addEventListener("DOMContentLoaded", () => {
     // ── Sub-modo Ahorro: CDT / Programado / Meta ─────────────────────────────
     const AHORRO_MODOS = [
         { key: "cdt", btn: "ahModeCdt", panel: "ahPanelCdt" },
+        { key: "derechos", btn: "ahModeDerechos", panel: "ahPanelDerechos" },
+        { key: "negocio", btn: "ahModeNegocio", panel: "ahPanelNegocio" },
+        { key: "comparar", btn: "ahModeComparar", panel: "ahPanelComparar" },
         { key: "programado", btn: "ahModeProgramado", panel: "ahPanelProgramado" },
         { key: "meta", btn: "ahModeMeta", panel: "ahPanelMeta" },
     ].map((m) => ({ ...m, btnEl: document.getElementById(m.btn), panelEl: document.getElementById(m.panel) }));
     function setAhorroModo(key) {
         AHORRO_MODOS.forEach((m) => {
             const activo = m.key === key;
-            m.btnEl.classList.toggle("active", activo);
-            m.btnEl.setAttribute("aria-selected", String(activo));
-            m.panelEl.classList.toggle("hidden", !activo);
+            if (m.btnEl) {
+                m.btnEl.classList.toggle("active", activo);
+                m.btnEl.setAttribute("aria-selected", String(activo));
+            }
+            if (m.panelEl) m.panelEl.classList.toggle("hidden", !activo);
         });
     }
-    AHORRO_MODOS.forEach((m) => m.btnEl.addEventListener("click", () => { setAhorroModo(m.key); guardarNav("ahorro", m.key); }));
+    AHORRO_MODOS.forEach((m) => m.btnEl && m.btnEl.addEventListener("click", () => { setAhorroModo(m.key); guardarNav("ahorro", m.key); }));
+
+    // ── DERECHOS FIDUCIARIOS ─────────────────────────────────────────────────
+    const calcularDerechosBtn = document.getElementById("calcularDerechosBtn");
+    calcularDerechosBtn.addEventListener("click", async () => {
+        const h = Number.parseFloat(document.getElementById("dfHorizonte").value);
+        const horizonteMeses = document.getElementById("dfHorizonteUnit").value === "years" ? h * 12 : h;
+        const data = {
+            aporte: Number.parseFloat(document.getElementById("dfAporte").value),
+            rendimiento_caja_anual: Number.parseFloat(document.getElementById("dfCaja").value) || 0,
+            periodicidad: document.getElementById("dfPeriodicidad").value,
+            valorizacion_anual: Number.parseFloat(document.getElementById("dfValorizacion").value) || 0,
+            horizonte_meses: horizonteMeses,
+            retencion_pct: Number.parseFloat(document.getElementById("dfRetencion").value) || 0,
+            valor_patrimonio: Number.parseFloat(document.getElementById("dfPatrimonio").value) || 0,
+        };
+        try {
+            const response = await fetch(`${API_BASE}/derechos`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data),
+            });
+            if (!response.ok) {
+                let detalle = "";
+                try { detalle = (await response.json()).detail || ""; } catch (e) {}
+                throw new Error(detalle || `HTTP ${response.status}`);
+            }
+            displayDerechos(await response.json());
+            document.getElementById("derechosResultCard").scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch (error) {
+            console.error("Error:", error);
+            alert("Hubo un problema con el cálculo: " + error.message);
+        }
+    });
+
+    // ── NEGOCIO ──────────────────────────────────────────────────────────────
+    const calcularNegocioBtn = document.getElementById("calcularNegocioBtn");
+    calcularNegocioBtn.addEventListener("click", async () => {
+        const h = Number.parseFloat(document.getElementById("ngHorizonte").value);
+        const horizonteMeses = document.getElementById("ngHorizonteUnit").value === "years" ? h * 12 : h;
+        const data = {
+            inversion: Number.parseFloat(document.getElementById("ngInversion").value),
+            flujo_mensual_neto: Number.parseFloat(document.getElementById("ngFlujo").value),
+            valor_salida: Number.parseFloat(document.getElementById("ngValorSalida").value) || 0,
+            horizonte_meses: horizonteMeses,
+            crecimiento_anual: Number.parseFloat(document.getElementById("ngCrecimiento").value) || 0,
+            costo_mensual: Number.parseFloat(document.getElementById("ngCosto").value) || 0,
+        };
+        try {
+            const response = await fetch(`${API_BASE}/negocio`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data),
+            });
+            if (!response.ok) {
+                let detalle = "";
+                try { detalle = (await response.json()).detail || ""; } catch (e) {}
+                throw new Error(detalle || `HTTP ${response.status}`);
+            }
+            displayNegocio(await response.json());
+            document.getElementById("negocioResultCard").scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch (error) {
+            console.error("Error:", error);
+            alert("Hubo un problema con el cálculo: " + error.message);
+        }
+    });
+
+    // ── COMPARAR INVERSIONES ─────────────────────────────────────────────────
+    const compararInvBtn = document.getElementById("compararInvBtn");
+    const cmpNum = (id) => Number.parseFloat(document.getElementById(id).value) || 0;
+    compararInvBtn.addEventListener("click", async () => {
+        const h = Number.parseFloat(document.getElementById("cmpHorizonte").value);
+        const horizonteMeses = document.getElementById("cmpHorizonteUnit").value === "years" ? h * 12 : h;
+        const opciones = [];
+        if (document.getElementById("cmpTfOn").checked) {
+            opciones.push({
+                tipo: "tasa_fija", nombre: "Tasa fija (CDT)", horizonte_meses: horizonteMeses,
+                monto: cmpNum("cmpTfMonto"), tasa_ea: cmpNum("cmpTfTasa"),
+                retencion_pct: cmpNum("cmpTfRet"), modo: document.getElementById("cmpTfModo").value,
+            });
+        }
+        if (document.getElementById("cmpDfOn").checked) {
+            opciones.push({
+                tipo: "derechos", nombre: "Derecho fiduciario", horizonte_meses: horizonteMeses,
+                aporte: cmpNum("cmpDfAporte"), rendimiento_caja_anual: cmpNum("cmpDfCaja"),
+                valorizacion_anual: cmpNum("cmpDfVal"), periodicidad: document.getElementById("cmpDfPer").value,
+                retencion_pct: cmpNum("cmpDfRet"),
+            });
+        }
+        if (document.getElementById("cmpNgOn").checked) {
+            opciones.push({
+                tipo: "negocio", nombre: "Negocio", horizonte_meses: horizonteMeses,
+                inversion: cmpNum("cmpNgInv"), flujo_mensual_neto: cmpNum("cmpNgFlujo"),
+                crecimiento_anual: cmpNum("cmpNgCrec"), valor_salida: cmpNum("cmpNgSalida"),
+                costo_mensual: cmpNum("cmpNgCosto"),
+            });
+        }
+        if (!opciones.length) { alert("Marca al menos una opción para comparar."); return; }
+        try {
+            const response = await fetch(`${API_BASE}/inversion/comparar`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ opciones }),
+            });
+            if (!response.ok) {
+                let detalle = "";
+                try { detalle = (await response.json()).detail || ""; } catch (e) {}
+                throw new Error(detalle || `HTTP ${response.status}`);
+            }
+            displayComparar(await response.json());
+            document.getElementById("compararResultCard").scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch (error) {
+            console.error("Error:", error);
+            alert("Hubo un problema con el cálculo: " + error.message);
+        }
+    });
 
     // ── AHORRO PROGRAMADO ────────────────────────────────────────────────────
     const ahPgAporte = document.getElementById("ahPgAporte");
@@ -1567,11 +1703,32 @@ function displayAhorro(r) {
     const card = document.getElementById("ahorroResultCard");
     card.classList.remove("hidden");
 
+    if (r.modo === "retiro") {
+        card.innerHTML = `
+            <h2>Tu <em>inversión</em> a tasa fija</h2>
+            <p class="resumen-narrativa">
+                Inviertes <strong>${fmtMoney(r.monto)}</strong> a <strong>${fmtPct(r.tasa_ea)} E.A.</strong>
+                y cada mes te caen <strong>${fmtMoney(r.renta_mensual_neta)}</strong> netos.
+                El capital queda quieto: en <strong>${r.plazo_meses} meses</strong> recibes
+                <strong>${fmtMoney(r.total_neto)}</strong> y al final recuperas tus
+                <strong>${fmtMoney(r.monto)}</strong>.
+            </p>
+            <div class="kpi-grid">
+                ${kpiHtml("Te da al mes", fmtMoney(r.renta_mensual_neta), "neto, cada mes", "good")}
+                ${kpiHtml("Total recibido", fmtMoney(r.total_neto), `en ${r.plazo_meses} meses`, "good")}
+                ${kpiHtml("Recuperas capital", fmtMoney(r.monto), "queda intacto")}
+                ${kpiHtml("Renta mensual bruta", fmtMoney(r.renta_mensual_bruta))}
+                ${kpiHtml("Retención total", fmtMoney(r.retencion), `${fmtPct(r.retencion_pct)} en la fuente`)}
+                ${kpiHtml("Tasa M.V.", fmtPct(r.tasa_mv), "lo que rinde al mes")}
+            </div>`;
+        return;
+    }
+
     card.innerHTML = `
-        <h2>Tu <em>ahorro</em></h2>
+        <h2>Tu <em>inversión</em> a tasa fija</h2>
         <p class="resumen-narrativa">
             Inviertes <strong>${fmtMoney(r.monto)}</strong> a <strong>${fmtPct(r.tasa_ea)} E.A.</strong>
-            durante <strong>${r.plazo_meses} meses</strong>. Al vencimiento recibes
+            durante <strong>${r.plazo_meses} meses</strong>, reinvirtiendo los intereses. Al vencimiento recibes
             <strong>${fmtMoney(r.valor_final_neto)}</strong> netos.
         </p>
         <div class="kpi-grid">
@@ -1582,6 +1739,201 @@ function displayAhorro(r) {
             ${kpiHtml("Tasa E.A.", fmtPct(r.tasa_ea))}
             ${kpiHtml("Tasa M.V.", fmtPct(r.tasa_mv))}
         </div>`;
+}
+
+
+// ── Render: flujo de inversión (compartido: derechos / negocio) ───────────────
+// Estado de vista (mensual/anual) por tarjeta, para que el toggle no use globals sueltos.
+const flujoInvVista = {};
+
+function aggAnualInv(filas, sumCols, lastCols) {
+    const anios = [];
+    filas.forEach((f) => {
+        const y = Math.ceil(f.mes / 12);
+        let a = anios[y - 1];
+        if (!a) { a = { periodo: y }; sumCols.forEach((c) => (a[c] = 0)); anios[y - 1] = a; }
+        sumCols.forEach((c) => (a[c] += f[c]));
+        lastCols.forEach((c) => (a[c] = f[c]));   // valor de stock: gana el último del año
+    });
+    return anios;
+}
+
+function renderFlujoInversion(cfg) {
+    const card = document.getElementById(cfg.cardId);
+    card.classList.remove("hidden");
+    const vista = flujoInvVista[cfg.cardId] || "anual";
+    flujoInvVista[cfg.cardId] = vista;
+
+    const sumCols = cfg.columnas.filter((c) => !c.last).map((c) => c.key);
+    const lastCols = cfg.columnas.filter((c) => c.last).map((c) => c.key);
+    const filas = vista === "anual" ? aggAnualInv(cfg.filas, sumCols, lastCols) : cfg.filas;
+
+    const head = `<th>${vista === "anual" ? "Año" : "Mes"}</th>` +
+        cfg.columnas.map((c) => `<th>${c.label}</th>`).join("");
+    const body = filas.map((f) => {
+        const label = vista === "anual" ? `Año ${f.periodo}` : `Mes ${f.mes}`;
+        const celdas = cfg.columnas.map((c) => {
+            const v = f[c.key];
+            const clase = c.good && v > 0 ? ' class="col-good"' : "";
+            return `<td${clase}>${v > 0 ? fmtMoney(v) : "—"}</td>`;
+        }).join("");
+        return `<tr><td>${label}</td>${celdas}</tr>`;
+    }).join("");
+
+    card.innerHTML = `
+        <p class="section-eyebrow">${cfg.titulo || "Flujo mes a mes"}</p>
+        ${cfg.nota ? `<p class="hint" style="margin-top:0">${cfg.nota}</p>` : ""}
+        <div class="toggle-tabla">
+            <button type="button" class="chip-credito${vista === "mensual" ? " activo" : ""}" data-vistainv="mensual">Mensual</button>
+            <button type="button" class="chip-credito${vista === "anual" ? " activo" : ""}" data-vistainv="anual">Anual</button>
+        </div>
+        <div class="table-scroll">
+            <table class="amort-table inv"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
+        </div>`;
+
+    card.querySelectorAll("[data-vistainv]").forEach((b) => b.addEventListener("click", () => {
+        flujoInvVista[cfg.cardId] = b.dataset.vistainv;
+        renderFlujoInversion(cfg);
+    }));
+}
+
+
+// ── Render: derechos fiduciarios ──────────────────────────────────────────────
+function displayDerechos(r) {
+    const card = document.getElementById("derechosResultCard");
+    card.classList.remove("hidden");
+
+    const tirTxt = r.tir_ea === null || r.tir_ea === undefined ? "—" : `${fmtPct(r.tir_ea)} E.A.`;
+    const repartoTxt = r.meses_periodo > 1
+        ? `Cada ${r.periodicidad.toLowerCase()} te reparten <strong>${fmtMoney(r.reparto_neto_periodo)}</strong> netos (≈ ${fmtMoney(r.reparto_mensual_equiv)}/mes).`
+        : `Cada mes te reparten <strong>${fmtMoney(r.reparto_mensual_equiv)}</strong> netos.`;
+    const partTxt = r.participacion_pct !== null && r.participacion_pct !== undefined
+        ? `Con tu aporte tienes el <strong>${fmtPct(r.participacion_pct)}</strong> del patrimonio. ` : "";
+
+    card.innerHTML = `
+        <h2>Tu <em>derecho fiduciario</em></h2>
+        <p class="resumen-narrativa">
+            ${partTxt}Metes <strong>${fmtMoney(r.aporte)}</strong>. ${repartoTxt}
+            Al salir, tu parte vale <strong>${fmtMoney(r.valor_salida)}</strong>
+            (tu aporte + <strong>${fmtMoney(r.valorizacion)}</strong> de valorización, que solo cobras ahí).
+            En total ganas <strong>${fmtMoney(r.ganancia_total)}</strong> — rinde <strong>${tirTxt}</strong>.
+        </p>
+        <div class="kpi-grid">
+            ${kpiHtml("Te da al mes", fmtMoney(r.reparto_mensual_equiv), "reparto neto (promedio)", "good")}
+            ${kpiHtml("Rinde (E.A.)", tirTxt, "metiendo todo junto", "good")}
+            ${kpiHtml("Al salir", fmtMoney(r.valor_salida), "vale tu participación")}
+            ${kpiHtml("Valorización", fmtMoney(r.valorizacion), "solo al vender/liquidar")}
+            ${kpiHtml("Repartos totales", fmtMoney(r.total_repartos_neto), "netos, en el horizonte")}
+            ${kpiHtml("Ganancia total", fmtMoney(r.ganancia_total), "repartos + valorización", "good")}
+        </div>`;
+
+    renderFlujoInversion({
+        cardId: "derechosFlujoCard",
+        titulo: "Flujo del derecho — mes a mes",
+        nota: "El <strong>reparto neto</strong> es lo que te cae al bolsillo. <strong>Vale tu parte</strong> es tu participación valorizándose — solo la cobras al salir.",
+        filas: r.tabla,
+        columnas: [
+            { key: "reparto_bruto", label: "Reparto bruto" },
+            { key: "retencion", label: "Retención" },
+            { key: "reparto_neto", label: "Reparto neto", good: true },
+            { key: "acum_neto", label: "Acum. recibido", last: true },
+            { key: "valor_participacion", label: "Vale tu parte", last: true },
+        ],
+    });
+}
+
+
+// ── Render: comparador de inversiones ─────────────────────────────────────────
+function displayComparar(r) {
+    const card = document.getElementById("compararResultCard");
+    card.classList.remove("hidden");
+    const ops = (r.opciones || []);
+    const pct = (v) => (v === null || v === undefined) ? "—" : `${fmtPct(v)} E.A.`;
+
+    if (!ops.length) {
+        card.innerHTML = `<h2><em>Comparación</em></h2><p class="resumen-narrativa">No hay opciones para comparar.</p>`;
+        return;
+    }
+
+    const mejor = ops[0];
+    const resto = ops.slice(1);
+    const vsTxt = resto.length
+        ? " — por encima de " + resto.map((o) => `${o.nombre.toLowerCase()} (${pct(o.tir_ea)})`).join(" y ")
+        : "";
+    const veredicto = mejor.tir_ea === null || mejor.tir_ea === undefined
+        ? `Ninguna de las opciones tiene un flujo comparable.`
+        : `A tu plata le va mejor en <strong>${mejor.nombre}</strong>: rinde <strong>${pct(mejor.tir_ea)}</strong>${vsTxt}.`;
+
+    const filas = ops.map((o, i) => {
+        const mensualTxt = o.mensual > 0 ? fmtMoney(o.mensual) : `<span class="cmp-muted">reinvierte</span>`;
+        const badge = i === 0 ? ' <span class="cmp-badge">mejor</span>' : "";
+        return `<tr class="${i === 0 ? "cmp-winner" : ""}">
+            <td>${o.nombre}${badge}</td>
+            <td>${fmtMoney(o.aporte)}</td>
+            <td>${mensualTxt}</td>
+            <td>${fmtMoney(o.valor_final)}</td>
+            <td>${fmtMoney(o.ganancia)}</td>
+            <td class="cmp-ea">${pct(o.tir_ea)}</td>
+        </tr>`;
+    }).join("");
+
+    card.innerHTML = `
+        <h2><em>Comparación</em></h2>
+        <p class="resumen-narrativa">${veredicto}</p>
+        <div class="table-scroll">
+            <table class="amort-table inv cmp-table">
+                <thead><tr>
+                    <th>Opción</th><th>Metes</th><th>Te da al mes</th>
+                    <th>Recuperas al final</th><th>Ganancia</th><th>Rinde (E.A.)</th>
+                </tr></thead>
+                <tbody>${filas}</tbody>
+            </table>
+        </div>
+        <p class="hint">“Te da al mes” es lo que cae al bolsillo; “recuperas al final” es lo que te devuelven al salir
+            (capital, participación valorizada o reventa). La <strong>E.A.</strong> junta todo y es lo único comparable
+            entre un CDT que devuelve capital, un carro que se deprecia y un derecho que se valoriza.</p>`;
+}
+
+
+// ── Render: negocio ───────────────────────────────────────────────────────────
+function displayNegocio(r) {
+    const card = document.getElementById("negocioResultCard");
+    card.classList.remove("hidden");
+
+    const tirTxt = r.tir_ea === null || r.tir_ea === undefined ? "—" : `${fmtPct(r.tir_ea)} E.A.`;
+    const activoTxt = r.se_valoriza
+        ? `y al final lo vendes en <strong>${fmtMoney(r.valor_salida)}</strong> (se valoriza ${fmtMoney(r.diferencia_activo)})`
+        : `y al final lo vendes en <strong>${fmtMoney(r.valor_salida)}</strong> (se deprecia ${fmtMoney(Math.abs(r.diferencia_activo))})`;
+    const creceTxt = r.crecimiento_anual > 0 ? ` El flujo crece ${fmtPct(r.crecimiento_anual)} al año.` : "";
+
+    card.innerHTML = `
+        <h2>Tu <em>negocio</em></h2>
+        <p class="resumen-narrativa">
+            Metes <strong>${fmtMoney(r.inversion)}</strong> y te deja <strong>${fmtMoney(r.flujo_mensual_inicial)}</strong>
+            netos al mes,${creceTxt} ${activoTxt}. En total ganas
+            <strong>${fmtMoney(r.ganancia_total)}</strong> — rinde <strong>${tirTxt}</strong>.
+        </p>
+        <div class="kpi-grid">
+            ${kpiHtml("Te da al mes", fmtMoney(r.neto_mensual_equiv), r.crecimiento_anual > 0 ? "neto (promedio)" : "neto, cada mes", "good")}
+            ${kpiHtml("Rinde (E.A.)", tirTxt, "metiendo todo junto", "good")}
+            ${kpiHtml("Flujo total", fmtMoney(r.total_neto), "en el horizonte", "good")}
+            ${kpiHtml("Valor de salida", fmtMoney(r.valor_salida), r.se_valoriza ? "se valoriza" : "se deprecia")}
+            ${kpiHtml("Gana/pierde el activo", fmtMoney(r.diferencia_activo), r.se_valoriza ? "sube" : "baja")}
+            ${kpiHtml("Ganancia total", fmtMoney(r.ganancia_total), "flujo + valor de salida", "good")}
+        </div>`;
+
+    renderFlujoInversion({
+        cardId: "negocioFlujoCard",
+        titulo: "Flujo del negocio — mes a mes",
+        nota: "El <strong>neto</strong> es lo que te queda cada mes. El valor de salida entra en el último mes.",
+        filas: r.tabla,
+        columnas: [
+            { key: "ingreso", label: "Ingreso" },
+            { key: "costo", label: "Costo" },
+            { key: "neto", label: "Neto", good: true },
+            { key: "acum_neto", label: "Acum. recibido", last: true },
+        ],
+    });
 }
 
 
@@ -1983,7 +2335,7 @@ function ordenParaMostrar(r, orden) {
 }
 
 
-let fjVistaMesAMes = "saldos";   // "saldos" | "pagos" — qué muestran las columnas por crédito
+let fjVistaMesAMes = "pagos";   // "saldos" | "pagos" — qué muestran las columnas por crédito
 let fjIngresoActual = 0;         // ingreso mensual para la columna "Te queda" (ingreso − pago)
 
 function renderFlujoDetalle(r, clave) {
@@ -2067,8 +2419,8 @@ function renderFlujoDetalle(r, clave) {
     card.innerHTML = `
         <p class="section-eyebrow">Mes a mes — ${esc ? esc.nombre : clave}</p>
         <div class="toggle-tabla">
-            <button type="button" class="chip-credito${vista === "saldos" ? " activo" : ""}" data-vista="saldos">Saldos</button>
             <button type="button" class="chip-credito${vista === "pagos" ? " activo" : ""}" data-vista="pagos">Pagos</button>
+            <button type="button" class="chip-credito${vista === "saldos" ? " activo" : ""}" data-vista="saldos">Saldos</button>
         </div>
         <p class="hint">${notaVista} ${notaCascada}${notaIngreso}</p>
         <div class="table-scroll">

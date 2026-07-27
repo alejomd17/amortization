@@ -213,6 +213,28 @@ body {
     opacity: 1;
     box-shadow: 0 1px 4px rgba(15, 110, 86, 0.12);
 }
+.modo-grupos {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 22px;
+}
+.modo-grupo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+.modo-grupo .abono-mode-toggle { margin-bottom: 0; }
+.modo-grupo-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    color: var(--verde);
+    opacity: 0.7;
+    min-width: 58px;
+}
 .hint {
     font-size: 12px;
     color: var(--negro);
@@ -678,6 +700,37 @@ body {
 /* Columna "Te queda" (ingreso − pago): verde si alcanza, rojo si el pago se pasa del ingreso */
 .amort-table td.queda-ok { color: var(--verde); font-weight: 500; }
 .amort-table td.queda-neg { color: #b03a2e; font-weight: 500; }
+/* Tablas de flujo de inversión: money desde la 2ª columna */
+.amort-table.inv td:nth-child(n+2),
+.amort-table.inv th:nth-child(n+2) { text-align: right; }
+.amort-table td.col-good { color: var(--verde); font-weight: 500; }
+/* Comparador de inversiones */
+.cmp-vehiculo { margin-top: 14px; }
+.cmp-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-weight: 500;
+    color: var(--verde);
+    margin-bottom: 12px;
+    cursor: pointer;
+}
+.cmp-head input { width: 16px; height: 16px; accent-color: var(--verde); cursor: pointer; }
+.amort-table.cmp-table td { font-weight: 400; }
+.amort-table.cmp-table tr.cmp-winner { background: var(--verde-claro); }
+.amort-table.cmp-table tr.cmp-winner td { font-weight: 500; }
+.cmp-badge {
+    background: var(--verde);
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.04em;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+.amort-table.cmp-table td.cmp-ea { color: var(--verde); font-weight: 600; }
+.cmp-muted { opacity: 0.5; font-weight: 300; }
 /* Celda del crédito al que le entra la cascada ese mes: se ve el abono "moviéndose" */
 .amort-table td.recibe-cascada {
     background: var(--verde-claro);

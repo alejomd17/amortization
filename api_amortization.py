@@ -12,6 +12,7 @@ from src.inmueble import Inmueble
 from src.comparador import Comparador
 from src.decisiones import Decisiones
 from src.flujo import Flujo
+from src import inversion
 
 # Rutas absolutas: en serverless el directorio de trabajo no es la raiz del proyecto
 BASE_DIR = Path(__file__).resolve().parent
@@ -123,6 +124,7 @@ class AhorroRequest(BaseModel):
     period: str
     plazo_meses: float
     retencion: float = 4.0  # CDT / renta fija: 4% sobre rendimientos
+    modo: str = "reinvierte"  # "reinvierte" (capitaliza) o "retiro" (renta mensual)
 
     @field_validator("retencion", mode="before")
     @classmethod
@@ -149,6 +151,7 @@ async def calcular_ahorro(request: AhorroRequest):
             period        = request.period,
             plazo_meses   = request.plazo_meses,
             retencion_pct = request.retencion,
+            modo          = request.modo,
         )
     except ValueError as ve:
         raise HTTPException(status_code=422, detail=str(ve))
@@ -246,6 +249,113 @@ async def calcular_ahorro_meta(request: MetaRequest):
             period        = request.period,
             plazo_meses   = request.plazo_meses,
         )
+    except ValueError as ve:
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
+
+
+class DerechosRequest(BaseModel):
+    aporte: float
+    rendimiento_caja_anual: float = 8.0   # % E.A. de caja que reparten (arriendos/utilidad)
+    periodicidad: str = "Mensual"         # Mensual | Trimestral | Semestral | Anual
+    valorizacion_anual: float = 5.0       # % E.A. que sube el avalúo
+    horizonte_meses: float = 60
+    retencion_pct: float = 7.0
+    valor_patrimonio: float = 0.0         # opcional: para mostrar tu % de participación
+
+    @field_validator("rendimiento_caja_anual", "valorizacion_anual", "retencion_pct",
+                     "valor_patrimonio", mode="before")
+    @classmethod
+    def numero_por_defecto(cls, v, info):
+        defaults = {"rendimiento_caja_anual": 8.0, "valorizacion_anual": 5.0,
+                    "retencion_pct": 7.0, "valor_patrimonio": 0.0}
+        default = defaults.get(info.field_name, 0.0)
+        if v is None or v == "":
+            return default
+        try:
+            v = float(v)
+        except (TypeError, ValueError):
+            return default
+        return default if v != v else v
+
+
+@app.post('/derechos')
+async def calcular_derechos(request: DerechosRequest):
+    """Derecho fiduciario: reparto de caja pro rata + valorización al salir."""
+    try:
+        if request.horizonte_meses <= 0:
+            raise ValueError("El horizonte debe ser mayor a 0.")
+        if request.aporte <= 0:
+            raise ValueError("El aporte debe ser mayor a 0.")
+        return inversion.derechos(
+            aporte                 = request.aporte,
+            rendimiento_caja_anual = request.rendimiento_caja_anual,
+            periodicidad           = request.periodicidad,
+            valorizacion_anual     = request.valorizacion_anual,
+            horizonte_meses        = request.horizonte_meses,
+            retencion_pct          = request.retencion_pct,
+            valor_patrimonio       = request.valor_patrimonio,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
+
+
+class NegocioRequest(BaseModel):
+    inversion: float
+    flujo_mensual_neto: float
+    valor_salida: float = 0.0             # lo que vale al final (reventa/traspaso)
+    horizonte_meses: float = 60
+    crecimiento_anual: float = 0.0        # % que crece el flujo al año
+    costo_mensual: float = 0.0            # opcional: gastos aparte del flujo neto
+
+    @field_validator("valor_salida", "crecimiento_anual", "costo_mensual", mode="before")
+    @classmethod
+    def numero_por_defecto(cls, v):
+        if v is None or v == "":
+            return 0.0
+        try:
+            v = float(v)
+        except (TypeError, ValueError):
+            return 0.0
+        return 0.0 if v != v else v
+
+
+@app.post('/negocio')
+async def calcular_negocio(request: NegocioRequest):
+    """Negocio/activo que produce: inversión + flujo neto mensual + valor de salida."""
+    try:
+        if request.horizonte_meses <= 0:
+            raise ValueError("El horizonte debe ser mayor a 0.")
+        if request.inversion <= 0:
+            raise ValueError("La inversión debe ser mayor a 0.")
+        return inversion.negocio(
+            inversion          = request.inversion,
+            flujo_mensual_neto = request.flujo_mensual_neto,
+            valor_salida       = request.valor_salida,
+            horizonte_meses    = request.horizonte_meses,
+            crecimiento_anual  = request.crecimiento_anual,
+            costo_mensual      = request.costo_mensual,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'error interno: {str(e)}')
+
+
+class CompararInversionRequest(BaseModel):
+    opciones: List[dict]
+
+
+@app.post('/inversion/comparar')
+async def comparar_inversion(request: CompararInversionRequest):
+    """Compara varios vehículos (tasa fija / derechos / negocio) por E.A. real."""
+    try:
+        if not request.opciones:
+            raise ValueError("Agrega al menos una opción para comparar.")
+        return inversion.comparar(request.opciones)
     except ValueError as ve:
         raise HTTPException(status_code=422, detail=str(ve))
     except Exception as e:
