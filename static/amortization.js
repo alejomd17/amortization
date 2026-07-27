@@ -571,6 +571,34 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // ── Conversión de las tasas de rendimiento (mostrar su equivalente) ──────
+    // "simple": tasa anual que se reparte lineal → mensual = anual/12 (así se ve el reparto).
+    // "mv": tasa efectiva anual que capitaliza (valorización, crecimiento) → su M.V.
+    function wireRendConv(inputId, outId, mode) {
+        const inp = document.getElementById(inputId);
+        const out = document.getElementById(outId);
+        if (!inp || !out) return;
+        const upd = () => {
+            const v = Number.parseFloat(inp.value);
+            if (!Number.isFinite(v) || v === 0) { out.classList.add("hidden"); return; }
+            if (mode === "simple") {
+                out.innerHTML = `≈ <strong>${fmtPct(v / 12)}</strong> al mes`;
+            } else {
+                out.innerHTML = `≈ <strong>${fmtPct(convertirTasa(v, "Efectiva", "Anual", "Mensual"))}</strong> M.V.`;
+            }
+            out.classList.remove("hidden");
+        };
+        inp.addEventListener("input", upd);
+        upd();
+    }
+    wireRendConv("dfCaja", "dfCajaConv", "simple");
+    wireRendConv("dfValorizacion", "dfValConv", "mv");
+    wireRendConv("ngCrecimiento", "ngCrecConv", "mv");
+    wireRendConv("cmpTfTasa", "cmpTfTasaConv", "mv");
+    wireRendConv("cmpDfCaja", "cmpDfCajaConv", "simple");
+    wireRendConv("cmpDfVal", "cmpDfValConv", "mv");
+    wireRendConv("cmpNgCrec", "cmpNgCrecConv", "mv");
+
     // ── AHORRO PROGRAMADO ────────────────────────────────────────────────────
     const ahPgAporte = document.getElementById("ahPgAporte");
     const ahPgInicial = document.getElementById("ahPgInicial");

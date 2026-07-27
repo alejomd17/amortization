@@ -934,6 +934,7 @@
                         <div class="field">
                             <label for="dfCaja">Rendimiento de caja anual (%)</label>
                             <input type="number" id="dfCaja" placeholder="Ej. 8" step="any" value="8">
+                            <p id="dfCajaConv" class="rate-conversion hidden"></p>
                             <p class="hint">Lo que reparten al año (arriendos/utilidad), sobre tu aporte</p>
                         </div>
                         <div class="field">
@@ -950,6 +951,7 @@
                         <div class="field">
                             <label for="dfValorizacion">Valorización anual (%)</label>
                             <input type="number" id="dfValorizacion" placeholder="Ej. 5" step="any" value="5">
+                            <p id="dfValConv" class="rate-conversion hidden"></p>
                             <p class="hint">Cuánto sube el avalúo al año (la cobras al salir)</p>
                         </div>
                         <div class="field">
@@ -1007,6 +1009,7 @@
                         <div class="field">
                             <label for="ngCrecimiento">Crecimiento anual del flujo (%)</label>
                             <input type="number" id="ngCrecimiento" placeholder="Ej. 0" step="any" value="0">
+                            <p id="ngCrecConv" class="rate-conversion hidden"></p>
                             <p class="hint">Sube tarifas cada año (ej. un hostal). 0 si es plano</p>
                         </div>
                     </div>
@@ -1075,6 +1078,7 @@
                         <div class="field">
                             <label for="cmpTfTasa">Tasa E.A. (%)</label>
                             <input type="number" id="cmpTfTasa" step="any" value="10">
+                            <p id="cmpTfTasaConv" class="rate-conversion hidden"></p>
                         </div>
                         <div class="field">
                             <label for="cmpTfRet">Retención (%)</label>
@@ -1100,10 +1104,12 @@
                         <div class="field">
                             <label for="cmpDfCaja">Caja anual (%)</label>
                             <input type="number" id="cmpDfCaja" step="any" value="8">
+                            <p id="cmpDfCajaConv" class="rate-conversion hidden"></p>
                         </div>
                         <div class="field">
                             <label for="cmpDfVal">Valorización anual (%)</label>
                             <input type="number" id="cmpDfVal" step="any" value="5">
+                            <p id="cmpDfValConv" class="rate-conversion hidden"></p>
                         </div>
                         <div class="field">
                             <label for="cmpDfPer">Reparto</label>
@@ -1135,6 +1141,7 @@
                         <div class="field">
                             <label for="cmpNgCrec">Crecimiento anual (%)</label>
                             <input type="number" id="cmpNgCrec" step="any" value="0">
+                            <p id="cmpNgCrecConv" class="rate-conversion hidden"></p>
                         </div>
                         <div class="field">
                             <label for="cmpNgSalida">Valor de salida</label>
