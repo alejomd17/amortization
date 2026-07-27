@@ -16,7 +16,14 @@ def tir_mensual(flujos, iters: int = 200):
     Devuelve None si el flujo no cambia de signo (no hay TIR real única).
     """
     def npv(r):
-        return sum(f / (1 + r) ** i for i, f in enumerate(flujos))
+        # Horner: VPN = f0 + f1/x + f2/x^2 + ... evaluado como f0 + (1/x)(f1 + (1/x)(...)).
+        # x = 1+r nunca es 0 (r >= -0.9999), así que no hay división por cero; si x es
+        # diminuto el acumulado desborda a ±inf y el signo se conserva (no revienta).
+        x = 1 + r
+        acc = 0.0
+        for f in reversed(flujos):
+            acc = f + acc / x
+        return acc
 
     lo, hi = -0.9999, 1.0
     f_lo, f_hi = npv(lo), npv(hi)
