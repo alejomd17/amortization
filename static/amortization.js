@@ -257,7 +257,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ── Agregar abono unico ──────────────────────────────────────────────────
     addAbonoUnicoBtn.addEventListener("click", () => {
         const date = abonosCapitalDate.value.trim();
-        const amount = Number.parseFloat(abonosCapitalValue.value);
+        const amount = moneyVal(abonosCapitalValue);
         if (!esAnnoMesValido(date) || !(amount > 0)) {
             alert("Ingrese una fecha AAAAMM válida y un monto mayor a 0.");
             return;
@@ -272,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
     addAbonoRecBtn.addEventListener("click", () => {
         const desde = abonoRecDesde.value.trim();
         const hasta = abonoRecHasta.value.trim();
-        const monto = Number.parseFloat(abonoRecValor.value);
+        const monto = moneyVal(abonoRecValor);
         if (!esAnnoMesValido(desde) || !esAnnoMesValido(hasta)) {
             alert("Ingrese fechas AAAAMM válidas en 'Desde' y 'Hasta'.");
             return;
@@ -300,14 +300,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const data = {
             desembolso_date: desembolsoDate.value.trim(),
-            loan_amount: Number.parseFloat(loanAmount.value),
+            loan_amount: moneyVal(loanAmount),
             interest_rate: Number.parseFloat(InterestRate.value),
             type_rate: rateType.value,
             period: ratePeriod.value,
             loan_term_years: plazoAnios,
-            insurance: Number.parseFloat(insurance.value) || 0,  // vacio -> 0
+            insurance: moneyVal(insurance) || 0,  // vacio -> 0
             abono_capital_all: abono_capital_all,
-            costos_iniciales: Number.parseFloat(costosIniciales.value) || 0,
+            costos_iniciales: moneyVal(costosIniciales) || 0,
         };
 
         try {
@@ -362,6 +362,44 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     TABS.forEach((t) => t.tabEl.addEventListener("click", () => { setTab(t.key); guardarNav("tab", t.key); }));
 
+    // ── Formato de miles en campos de dinero (200000000 → 200.000.000) ────────
+    // Se pasan a type=text para poder mostrar los puntos; la lectura usa moneyVal,
+    // que los quita antes de parsear. SOLO campos de pesos (no tasas, %, ni plazos).
+    function moneyVal(idOrEl) {
+        const el = typeof idOrEl === "string" ? document.getElementById(idOrEl) : idOrEl;
+        if (!el) return NaN;
+        const digits = String(el.value).replace(/\D/g, "");
+        return digits === "" ? NaN : Number(digits);
+    }
+    function formatMoneyInput(el) {
+        const caret = el.selectionStart == null ? el.value.length : el.selectionStart;
+        const digitsBefore = el.value.slice(0, caret).replace(/\D/g, "").length;
+        const digits = el.value.replace(/\D/g, "");
+        el.value = digits === "" ? "" : Number(digits).toLocaleString("es-CO");
+        let pos = 0, seen = 0;
+        while (pos < el.value.length && seen < digitsBefore) {
+            const c = el.value.charCodeAt(pos);
+            if (c >= 48 && c <= 57) seen++;
+            pos++;
+        }
+        try { el.setSelectionRange(pos, pos); } catch (e) { /* ok */ }
+    }
+    const MONEY_IDS = [
+        "loanAmount", "insurance", "costosIniciales", "abonosCapitalValue", "abonoRecValor",
+        "ahMonto", "ahPgAporte", "ahPgInicial", "ahMtObjetivo", "ahMtInicial", "ahMtAporte",
+        "dfAporte", "dfPatrimonio", "ngInversion", "ngFlujo", "ngValorSalida", "ngCosto",
+        "cmpTfMonto", "cmpDfAporte", "cmpNgInv", "cmpNgFlujo", "cmpNgSalida", "cmpNgCosto",
+        "cmpMonto", "cmpCostos",
+    ];
+    MONEY_IDS.forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.type = "text";
+        el.setAttribute("inputmode", "numeric");
+        el.addEventListener("input", () => formatMoneyInput(el));
+        if (el.value) formatMoneyInput(el);
+    });
+
     // ── AHORRO / CDT ─────────────────────────────────────────────────────────
     const ahMonto = document.getElementById("ahMonto");
     const ahRate = document.getElementById("ahRate");
@@ -407,7 +445,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const plazoMeses = ahPlazoUnit.value === "years" ? plazo * 12 : plazo;
 
         const data = {
-            monto: Number.parseFloat(ahMonto.value),
+            monto: moneyVal(ahMonto),
             interest_rate: Number.parseFloat(ahRate.value),
             type_rate: ahRateType.value,
             period: ahRatePeriod.value,
@@ -462,13 +500,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const h = Number.parseFloat(document.getElementById("dfHorizonte").value);
         const horizonteMeses = document.getElementById("dfHorizonteUnit").value === "years" ? h * 12 : h;
         const data = {
-            aporte: Number.parseFloat(document.getElementById("dfAporte").value),
+            aporte: moneyVal("dfAporte"),
             rendimiento_caja_anual: Number.parseFloat(document.getElementById("dfCaja").value) || 0,
             periodicidad: document.getElementById("dfPeriodicidad").value,
             valorizacion_anual: Number.parseFloat(document.getElementById("dfValorizacion").value) || 0,
             horizonte_meses: horizonteMeses,
             retencion_pct: Number.parseFloat(document.getElementById("dfRetencion").value) || 0,
-            valor_patrimonio: Number.parseFloat(document.getElementById("dfPatrimonio").value) || 0,
+            valor_patrimonio: moneyVal("dfPatrimonio") || 0,
         };
         try {
             const response = await fetch(`${API_BASE}/derechos`, {
@@ -495,12 +533,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const h = Number.parseFloat(document.getElementById("ngHorizonte").value);
         const horizonteMeses = document.getElementById("ngHorizonteUnit").value === "years" ? h * 12 : h;
         const data = {
-            inversion: Number.parseFloat(document.getElementById("ngInversion").value),
-            flujo_mensual_neto: Number.parseFloat(document.getElementById("ngFlujo").value),
-            valor_salida: Number.parseFloat(document.getElementById("ngValorSalida").value) || 0,
+            inversion: moneyVal("ngInversion"),
+            flujo_mensual_neto: moneyVal("ngFlujo"),
+            valor_salida: moneyVal("ngValorSalida") || 0,
             horizonte_meses: horizonteMeses,
             crecimiento_anual: Number.parseFloat(document.getElementById("ngCrecimiento").value) || 0,
-            costo_mensual: Number.parseFloat(document.getElementById("ngCosto").value) || 0,
+            costo_mensual: moneyVal("ngCosto") || 0,
         };
         try {
             const response = await fetch(`${API_BASE}/negocio`, {
@@ -531,14 +569,14 @@ document.addEventListener("DOMContentLoaded", () => {
         if (document.getElementById("cmpTfOn").checked) {
             opciones.push({
                 tipo: "tasa_fija", nombre: "Tasa fija (CDT)", horizonte_meses: horizonteMeses,
-                monto: cmpNum("cmpTfMonto"), tasa_ea: cmpNum("cmpTfTasa"),
+                monto: moneyVal("cmpTfMonto") || 0, tasa_ea: cmpNum("cmpTfTasa"),
                 retencion_pct: cmpNum("cmpTfRet"), modo: document.getElementById("cmpTfModo").value,
             });
         }
         if (document.getElementById("cmpDfOn").checked) {
             opciones.push({
                 tipo: "derechos", nombre: "Derecho fiduciario", horizonte_meses: horizonteMeses,
-                aporte: cmpNum("cmpDfAporte"), rendimiento_caja_anual: cmpNum("cmpDfCaja"),
+                aporte: moneyVal("cmpDfAporte") || 0, rendimiento_caja_anual: cmpNum("cmpDfCaja"),
                 valorizacion_anual: cmpNum("cmpDfVal"), periodicidad: document.getElementById("cmpDfPer").value,
                 retencion_pct: cmpNum("cmpDfRet"),
             });
@@ -546,9 +584,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (document.getElementById("cmpNgOn").checked) {
             opciones.push({
                 tipo: "negocio", nombre: "Negocio", horizonte_meses: horizonteMeses,
-                inversion: cmpNum("cmpNgInv"), flujo_mensual_neto: cmpNum("cmpNgFlujo"),
-                crecimiento_anual: cmpNum("cmpNgCrec"), valor_salida: cmpNum("cmpNgSalida"),
-                costo_mensual: cmpNum("cmpNgCosto"),
+                inversion: moneyVal("cmpNgInv") || 0, flujo_mensual_neto: moneyVal("cmpNgFlujo") || 0,
+                crecimiento_anual: cmpNum("cmpNgCrec"), valor_salida: moneyVal("cmpNgSalida") || 0,
+                costo_mensual: moneyVal("cmpNgCosto") || 0,
             });
         }
         if (!opciones.length) { alert("Marca al menos una opción para comparar."); return; }
@@ -618,8 +656,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const plazoMeses = ahPgPlazoUnit.value === "years" ? plazo * 12 : plazo;
 
         const data = {
-            aporte_mensual: Number.parseFloat(ahPgAporte.value),
-            monto_inicial: Number.parseFloat(ahPgInicial.value) || 0,
+            aporte_mensual: moneyVal(ahPgAporte),
+            monto_inicial: moneyVal(ahPgInicial) || 0,
             interest_rate: Number.parseFloat(ahPgRate.value),
             type_rate: ahPgRateType.value,
             period: ahPgRatePeriod.value,
@@ -681,14 +719,14 @@ document.addEventListener("DOMContentLoaded", () => {
     calcularMetaBtn.addEventListener("click", () => {
         const data = {
             modo: metaModo,
-            meta_objetivo: Number.parseFloat(ahMtObjetivo.value),
-            monto_inicial: Number.parseFloat(ahMtInicial.value) || 0,
+            meta_objetivo: moneyVal(ahMtObjetivo),
+            monto_inicial: moneyVal(ahMtInicial) || 0,
             interest_rate: Number.parseFloat(ahMtRate.value),
             type_rate: ahMtRateType.value,
             period: ahMtRatePeriod.value,
         };
         if (metaModo === "tiempo") {
-            data.aporte_mensual = Number.parseFloat(ahMtAporte.value) || 0;
+            data.aporte_mensual = moneyVal(ahMtAporte) || 0;
         } else {
             const plazo = Number.parseFloat(ahMtPlazo.value);
             data.plazo_meses = ahMtPlazoUnit.value === "years" ? plazo * 12 : plazo;
@@ -1570,7 +1608,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     document.getElementById("addEscenarioBtn").addEventListener("click", () => {
-        const monto = Number.parseFloat(document.getElementById("cmpMonto").value);
+        const monto = moneyVal("cmpMonto");
         const rate = Number.parseFloat(document.getElementById("cmpRate").value);
         const plazoRaw = Number.parseFloat(document.getElementById("cmpPlazo").value);
         if (!(monto > 0) || !(rate > 0) || !(plazoRaw > 0)) {
@@ -1585,7 +1623,7 @@ document.addEventListener("DOMContentLoaded", () => {
             type_rate: document.getElementById("cmpRateType").value,
             period: document.getElementById("cmpRatePeriod").value,
             plazo_meses: plazoMeses,
-            costos: Number.parseFloat(document.getElementById("cmpCostos").value) || 0,
+            costos: moneyVal("cmpCostos") || 0,
         });
         ["cmpNombre", "cmpMonto", "cmpRate", "cmpPlazo", "cmpCostos"].forEach((id) => {
             document.getElementById(id).value = "";
