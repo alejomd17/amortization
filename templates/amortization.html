@@ -852,7 +852,7 @@
                 <div class="modo-grupo">
                     <span class="modo-grupo-label">Ahorrar</span>
                     <div class="abono-mode-toggle" role="tablist">
-                        <button type="button" id="ahModeProgramado" class="mode-btn" role="tab" aria-selected="false">Programado</button>
+                        <button type="button" id="ahModeProgramado" class="mode-btn" role="tab" aria-selected="false">Interés compuesto</button>
                         <button type="button" id="ahModeMeta" class="mode-btn" role="tab" aria-selected="false">Meta</button>
                     </div>
                 </div>
@@ -1164,7 +1164,11 @@
             <!-- Sub-modo: Ahorro programado -->
             <div id="ahPanelProgramado" class="ahorro-submodo hidden">
                 <section class="card">
-                    <p class="section-eyebrow">Ahorro programado</p>
+                    <p class="section-eyebrow">Ahorro con interés compuesto</p>
+                    <p class="hint" style="margin-top:0;margin-bottom:14px">
+                        Ahorras un fijo cada mes y los intereses se reinvierten. Con el tiempo el interés
+                        gana interés y se dispara: mira cuánto tienes en 25 años ahorrando, por ejemplo, 1 millón al mes.
+                    </p>
                     <div class="field-grid">
                         <div class="field">
                             <label for="ahPgAporte">Aporte mensual</label>
@@ -1220,6 +1224,7 @@
                 </div>
 
                 <div id="programadoResultCard" class="card resumen-card hidden"></div>
+                <div id="programadoFlujoCard" class="card hidden"></div>
             </div><!-- /ahPanelProgramado -->
 
             <!-- Sub-modo: Meta de ahorro -->

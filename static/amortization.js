@@ -2025,23 +2025,47 @@ function displayProgramado(r) {
     const inicialTxt = r.monto_inicial > 0
         ? ` (más <strong>${fmtMoney(r.monto_inicial)}</strong> inicial)`
         : "";
+    const anos = r.plazo_meses / 12;
+    const plazoTxt = Number.isInteger(anos)
+        ? `${anos} ${anos === 1 ? "año" : "años"}`
+        : `${r.plazo_meses} meses`;
+    // El gancho del compuesto: ¿el interés terminó poniendo más que tú?
+    const gancho = r.interes_neto > r.total_aportado
+        ? `El interés compuesto puso <strong>${fmtMoney(r.interes_neto)}</strong> — más de lo que aportaste tú (${fmtMoney(r.total_aportado)}).`
+        : `De eso, <strong>${fmtMoney(r.interes_neto)}</strong> los puso el interés, sin que salieran de tu bolsillo.`;
 
     card.innerHTML = `
-        <h2>Tu <em>ahorro programado</em></h2>
+        <h2>Tu ahorro con <em>interés compuesto</em></h2>
         <p class="resumen-narrativa">
-            Aportando <strong>${fmtMoney(r.aporte_mensual)}</strong> al mes durante
-            <strong>${r.plazo_meses} meses</strong>${inicialTxt}, acumulas
-            <strong>${fmtMoney(r.valor_final_neto)}</strong>. De eso,
-            <strong>${fmtMoney(r.interes_neto)}</strong> son intereses que no pusiste tú.
+            Ahorrando <strong>${fmtMoney(r.aporte_mensual)}</strong> al mes durante
+            <strong>${plazoTxt}</strong>${inicialTxt} al ${fmtPct(r.tasa_ea)} E.A., al final tienes
+            <strong>${fmtMoney(r.valor_final_neto)}</strong>. ${gancho}
         </p>
         <div class="kpi-grid">
-            ${kpiHtml("Valor final neto", fmtMoney(r.valor_final_neto), "", "good")}
-            ${kpiHtml("Total aportado", fmtMoney(r.total_aportado), "lo que pusiste tú")}
-            ${kpiHtml("Interés neto", fmtMoney(r.interes_neto), "", "good")}
+            ${kpiHtml("Al final tienes", fmtMoney(r.valor_final_neto), `en ${plazoTxt}`, "good")}
+            ${kpiHtml("Pusiste tú", fmtMoney(r.total_aportado), "de tu bolsillo")}
+            ${kpiHtml("Lo puso el interés", fmtMoney(r.interes_neto), "compuesto", "good")}
             ${kpiHtml("Interés bruto", fmtMoney(r.interes_bruto))}
             ${kpiHtml("Retención", fmtMoney(r.retencion), `${fmtPct(r.retencion_pct)} en la fuente`)}
             ${kpiHtml("Tasa E.A.", fmtPct(r.tasa_ea))}
         </div>`;
+
+    if (r.tabla && r.tabla.length) {
+        renderFlujoInversion({
+            cardId: "programadoFlujoCard",
+            titulo: "Cómo crece tu ahorro — año a año",
+            nota: "El <strong>saldo</strong> es lo que llevas acumulado. Fíjate cómo el <strong>interés</strong> del año crece aunque tu aporte sea el mismo — eso es el interés compuesto trabajando.",
+            filas: r.tabla,
+            columnas: [
+                { key: "aporte", label: "Aporte" },
+                { key: "interes", label: "Interés", good: true },
+                { key: "aportado_acum", label: "Aportado", last: true },
+                { key: "saldo", label: "Saldo", last: true, good: true },
+            ],
+        });
+    } else {
+        document.getElementById("programadoFlujoCard").classList.add("hidden");
+    }
 }
 
 

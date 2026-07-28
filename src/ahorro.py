@@ -105,13 +105,25 @@ class Ahorro:
         im = self._tasa_mensual_efectiva(interest_rate, type_rate, period)
         n = int(plazo_meses)
 
-        fv_inicial = monto_inicial * (1 + im) ** n
-        if im == 0:
-            fv_aportes = aporte_mensual * n
-        else:
-            fv_aportes = aporte_mensual * (((1 + im) ** n - 1) / im)
+        # Recorrido mes a mes: el interes cae sobre el saldo previo y el aporte entra
+        # al final del mes (anualidad vencida, igual que la formula cerrada). El saldo
+        # final sale de aca para que la tabla y el resumen cuadren exacto.
+        saldo = float(monto_inicial)
+        aportado_acum = float(monto_inicial)
+        tabla = []
+        for m in range(1, n + 1):
+            interes_mes = saldo * im
+            saldo += interes_mes + aporte_mensual
+            aportado_acum += aporte_mensual
+            tabla.append({
+                "mes": m,
+                "aporte": round(float(aporte_mensual), 2),
+                "interes": round(interes_mes, 2),
+                "aportado_acum": round(aportado_acum, 2),
+                "saldo": round(saldo, 2),
+            })
 
-        valor_final_bruto = fv_inicial + fv_aportes
+        valor_final_bruto = saldo
         total_aportado = monto_inicial + aporte_mensual * n
         interes_bruto = valor_final_bruto - total_aportado
         retencion = interes_bruto * (retencion_pct / 100)
@@ -134,6 +146,7 @@ class Ahorro:
             "interes_neto": round(interes_neto, 2),
             "valor_final_bruto": round(valor_final_bruto, 2),
             "valor_final_neto": round(valor_final_neto, 2),
+            "tabla": tabla,
         }
 
     def meta_aporte(self,
