@@ -384,12 +384,26 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         try { el.setSelectionRange(pos, pos); } catch (e) { /* ok */ }
     }
+    // Asignar un valor de pesos a un campo y dejarlo con los puntitos (para el repoblado
+    // programático: editar un crédito del flujo, cargar desde localStorage, etc.).
+    function setMoneyValue(id, raw) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.value = (raw === undefined || raw === null || raw === "") ? "" : raw;
+        formatMoneyInput(el);
+    }
     const MONEY_IDS = [
         "loanAmount", "insurance", "costosIniciales", "abonosCapitalValue", "abonoRecValor",
         "ahMonto", "ahPgAporte", "ahPgInicial", "ahMtObjetivo", "ahMtInicial", "ahMtAporte",
         "dfAporte", "dfPatrimonio", "ngInversion", "ngFlujo", "ngValorSalida", "ngCosto",
         "cmpTfMonto", "cmpDfAporte", "cmpNgInv", "cmpNgFlujo", "cmpNgSalida", "cmpNgCosto",
         "cmpMonto", "cmpCostos",
+        // Flujo
+        "fjSaldo", "fjCuota", "fjSeguro", "fjIngreso", "fjAbonoFijo", "fjPuntMonto", "fjPuntRecMonto",
+        // Inmobiliaria: abonar vs invertir, capacidad, cuota inicial, rentabilidad, arrendar vs comprar
+        "aiMonto", "aiMontoInicial", "aiSaldo", "imCapIngreso", "imCapDeudas", "imCiPrecio",
+        "imRtPrecio", "imRtArriendo", "imRtAdmin", "imRtPredial", "imRtMantenimiento",
+        "acPrecio", "acArriendo", "acAdmin", "acPredial", "acMantenimiento",
     ];
     MONEY_IDS.forEach((id) => {
         const el = document.getElementById(id);
@@ -760,9 +774,9 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("calcularCapacidadBtn").addEventListener("click", () => {
         const plazoMeses = gv("imCapPlazoUnit") === "years" ? g("imCapPlazo") * 12 : g("imCapPlazo");
         postAndRender("/inmueble/capacidad", {
-            ingreso_mensual: g("imCapIngreso"),
+            ingreso_mensual: moneyVal("imCapIngreso"),
             porcentaje_max: g("imCapPorcentaje") || 30,
-            deudas_actuales: g("imCapDeudas") || 0,
+            deudas_actuales: moneyVal("imCapDeudas") || 0,
             interest_rate: g("imCapRate"),
             type_rate: gv("imCapRateType"),
             period: gv("imCapRatePeriod"),
@@ -776,7 +790,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("calcularCuotaInicialBtn").addEventListener("click", () => {
         const plazoMeses = gv("imCiPlazoUnit") === "years" ? g("imCiPlazo") * 12 : g("imCiPlazo");
         postAndRender("/inmueble/cuota-inicial", {
-            precio: g("imCiPrecio"),
+            precio: moneyVal("imCiPrecio"),
             porcentaje_inicial: g("imCiPorcentaje") || 30,
             interest_rate: g("imCiRate"),
             type_rate: gv("imCiRateType"),
@@ -788,14 +802,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // Rentabilidad de arriendo
     document.getElementById("calcularRentabilidadBtn").addEventListener("click", () => {
         postAndRender("/inmueble/rentabilidad", {
-            precio: g("imRtPrecio"),
+            precio: moneyVal("imRtPrecio"),
             costos_compra_pct: g("imRtCostos") || 0,
-            arriendo_mensual: g("imRtArriendo"),
+            arriendo_mensual: moneyVal("imRtArriendo"),
             vacancia_meses: g("imRtVacancia") || 0,
             comision_agencia_pct: g("imRtComision") || 0,
-            administracion_mensual: g("imRtAdmin") || 0,
-            predial_anual: g("imRtPredial") || 0,
-            mantenimiento_anual: g("imRtMantenimiento") || 0,
+            administracion_mensual: moneyVal("imRtAdmin") || 0,
+            predial_anual: moneyVal("imRtPredial") || 0,
+            mantenimiento_anual: moneyVal("imRtMantenimiento") || 0,
             inflacion_pct: g("imRtInflacion") || 0,
             valorizacion_real_pct: g("imRtValorizacion") || 0,
             cdt_ea: g("imRtCdt") || 0,
@@ -807,19 +821,19 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("calcularArrendarComprarBtn").addEventListener("click", () => {
         const plazoMeses = gv("acPlazoUnit") === "years" ? g("acPlazo") * 12 : g("acPlazo");
         postAndRender("/inmueble/arrendar-vs-comprar", {
-            precio: g("acPrecio"),
+            precio: moneyVal("acPrecio"),
             cuota_inicial_pct: g("acCuotaInicial") || 30,
             costos_compra_pct: g("acCostosCompra") || 0,
             tasa_credito: g("acTasa"),
             tc_type: gv("acTcType"),
             tc_period: gv("acTcPeriod"),
             plazo_credito_meses: plazoMeses,
-            arriendo_mensual: g("acArriendo"),
+            arriendo_mensual: moneyVal("acArriendo"),
             inflacion_pct: g("acInflacion") || 0,
             valorizacion_real_pct: g("acValorizacion") || 0,
-            predial_anual: g("acPredial") || 0,
-            administracion_mensual: g("acAdmin") || 0,
-            mantenimiento_anual: g("acMantenimiento") || 0,
+            predial_anual: moneyVal("acPredial") || 0,
+            administracion_mensual: moneyVal("acAdmin") || 0,
+            mantenimiento_anual: moneyVal("acMantenimiento") || 0,
             tasa_inversion_ea: g("acTasaInversion") || 0,
             retencion_inversion_pct: g("acRetencionInv") || 0,
             horizonte_anos: g("acHorizonte") || 10,
@@ -857,16 +871,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!c) return;
         fjEditando = c;
         document.getElementById("fjNombre").value = c.nombre || "";
-        document.getElementById("fjSaldo").value = c.saldo;
+        setMoneyValue("fjSaldo", c.saldo);
         document.getElementById("fjPlazo").value = c.plazo_meses;
         document.getElementById("fjPlazoUnit").value = "months";   // el crédito se guarda en meses
         document.getElementById("fjTasa").value = c.tasa || 0;
         document.getElementById("fjTipoTasa").value = c.tipo_tasa || "Efectiva";
         document.getElementById("fjPeriodoTasa").value = c.periodo_tasa || "Anual";
-        document.getElementById("fjSeguro").value = c.seguro || "";
-        document.getElementById("fjAbonoFijo").value = c.abono_fijo || "";
+        setMoneyValue("fjSeguro", c.seguro || "");
+        setMoneyValue("fjAbonoFijo", c.abono_fijo || "");
         document.getElementById("fjMesInicio").value = c.mes_inicio || "";
-        document.getElementById("fjCuota").value = c.cuota || "";
+        setMoneyValue("fjCuota", c.cuota || "");
         document.getElementById("fjRecibeAbono").checked = c.recibe_abono !== false;
         document.getElementById("fjAddBtn").textContent = "Guardar cambios";
         document.getElementById("fjCancelEditBtn").hidden = false;
@@ -895,7 +909,7 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("fjVara").value = fjVaraActual;
             if (d.ingreso) {
                 fjIngresoActual = d.ingreso;
-                document.getElementById("fjIngreso").value = d.ingreso;
+                setMoneyValue("fjIngreso", d.ingreso);
             }
         } catch (e) { flujoCreditos = []; }
     }
@@ -1178,7 +1192,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     document.getElementById("fjAddBtn").addEventListener("click", () => {
-        const saldo = g("fjSaldo");
+        const saldo = moneyVal("fjSaldo");
         const plazoRaw = g("fjPlazo");
         if (!(saldo > 0) || !(plazoRaw > 0)) {
             alert("Ingresa un saldo y un plazo válidos.");
@@ -1200,9 +1214,9 @@ document.addEventListener("DOMContentLoaded", () => {
             tipo_tasa: gv("fjTipoTasa"),
             periodo_tasa: gv("fjPeriodoTasa"),
             plazo_meses: Math.round(plazo),
-            cuota: g("fjCuota") || 0,        // 0 = se calcula sola
-            seguro: g("fjSeguro") || 0,
-            abono_fijo: g("fjAbonoFijo") || 0,
+            cuota: moneyVal("fjCuota") || 0,        // 0 = se calcula sola
+            seguro: moneyVal("fjSeguro") || 0,
+            abono_fijo: moneyVal("fjAbonoFijo") || 0,
             mes_inicio: mesInicio || null,   // null = ya lo tienes hoy
             recibe_abono: document.getElementById("fjRecibeAbono").checked,
             // al editar se conservan los abonos (puntuales y rangos): se administran en su tabla
@@ -1257,7 +1271,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const c = fjCreditoDelSelector();
         if (!c) return;
         const fecha = document.getElementById("fjPuntFecha").value.trim();
-        const monto = g("fjPuntMonto");
+        const monto = moneyVal("fjPuntMonto");
         if (!esAnnoMesValido(fecha)) {
             alert("El mes debe tener formato AAAAMM (ej. 202701).");
             return;
@@ -1279,7 +1293,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!c) return;
         const desde = document.getElementById("fjPuntRecDesde").value.trim();
         const hasta = document.getElementById("fjPuntRecHasta").value.trim();
-        const monto = g("fjPuntRecMonto");
+        const monto = moneyVal("fjPuntRecMonto");
         if (!esAnnoMesValido(desde) || !esAnnoMesValido(hasta)) {
             alert("Ingresa 'Desde' y 'Hasta' en formato AAAAMM (ej. 202701).");
             return;
@@ -1469,7 +1483,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                     if (d.ingreso) {
                         fjIngresoActual = d.ingreso;
-                        document.getElementById("fjIngreso").value = d.ingreso;
+                        setMoneyValue("fjIngreso", d.ingreso);
                     }
                 } else {
                     cargados = parseCSV(txt);
@@ -1550,7 +1564,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // El ingreso solo afecta la columna "Te queda": no recalcula la cascada, solo re-dibuja
     document.getElementById("fjIngreso").addEventListener("input", () => {
-        fjIngresoActual = g("fjIngreso") || 0;
+        fjIngresoActual = moneyVal("fjIngreso") || 0;
         guardarFlujo();
         if (fjUltimoResultado && !document.getElementById("flujoDetalleCard").classList.contains("hidden")) {
             renderFlujoDetalle(fjUltimoResultado, fjUltimaClave);
@@ -1663,16 +1677,16 @@ document.addEventListener("DOMContentLoaded", () => {
             tasa_credito: g("aiTasaCredito"),
             tc_type: gv("aiTcType"),
             tc_period: gv("aiTcPeriod"),
-            monto_extra: g("aiMonto"),
+            monto_extra: moneyVal("aiMonto"),
             cdt_ea: g("aiCdt") || 0,
             retencion_cdt_pct: g("aiRetencion") || 0,
         };
         if (aiModo === "original") {
-            data.monto_inicial = g("aiMontoInicial");
+            data.monto_inicial = moneyVal("aiMontoInicial");
             data.plazo_total_meses = gv("aiPlazoTotalUnit") === "years" ? g("aiPlazoTotal") * 12 : g("aiPlazoTotal");
             data.cuotas_pagadas = g("aiCuotasPagadas") || 0;
         } else {
-            data.saldo = g("aiSaldo");
+            data.saldo = moneyVal("aiSaldo");
             data.plazo_restante_meses = gv("aiPlazoUnit") === "years" ? g("aiPlazo") * 12 : g("aiPlazo");
         }
         postAndRender("/decisiones/abonar-vs-invertir", data, displayAbonarInvertir, "abonarInvertirResultCard");
