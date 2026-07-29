@@ -3283,9 +3283,36 @@ function erRenderCharts() {
         </section>`;
 }
 
+// Formato compacto para el eje: 2,5M · 500k
+function erFmtCompact(n) {
+    const a = Math.abs(n);
+    if (a >= 1e6) return (n / 1e6).toLocaleString("es-CO", { maximumFractionDigits: 1 }) + "M";
+    if (a >= 1e3) return (n / 1e3).toLocaleString("es-CO", { maximumFractionDigits: 0 }) + "k";
+    return String(Math.round(n));
+}
+// Marcas "redondas" para el eje Y entre min y max
+function erNiceTicks(min, max, count) {
+    const range = (max - min) || 1;
+    const raw = range / (count || 4);
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const norm = raw / mag;
+    const step = (norm >= 5 ? 5 : norm >= 2 ? 2 : 1) * mag;
+    const ticks = [];
+    for (let t = Math.ceil(min / step) * step; t <= max + 1e-6; t += step) ticks.push(t);
+    if (!ticks.length) ticks.push(min, max);
+    return ticks;
+}
+// Rejilla + etiquetas del eje Y
+function erSvgEjeY(sy, ticks, padL, W) {
+    return ticks.map((t) =>
+        `<line x1="${padL}" y1="${sy(t).toFixed(1)}" x2="${(W - 8).toFixed(1)}" y2="${sy(t).toFixed(1)}" stroke="#eee" stroke-width="1"></line>` +
+        `<text x="${(padL - 6).toFixed(1)}" y="${(sy(t) + 3).toFixed(1)}" text-anchor="end" class="er-chart-lbl">${erFmtCompact(t)}</text>`
+    ).join("");
+}
+
 function erChartIngEgr(datos) {
     const n = datos.length;
-    const padL = 8, padR = 8, padT = 14, padB = 28;
+    const padL = 54, padR = 8, padT = 14, padB = 28;
     const W = Math.max(560, n * 88), H = 280, innerH = H - padT - padB, innerW = W - padL - padR;
     const netos = datos.map((d) => d.neto);
     let yMax = Math.max(0, ...datos.map((d) => Math.max(d.ing, d.egr)), ...netos);
@@ -3306,7 +3333,8 @@ function erChartIngEgr(datos) {
         dots += `<circle cx="${cx.toFixed(1)}" cy="${sy(d.neto).toFixed(1)}" r="3" fill="#0a5542"><title>Neto: ${fmtMoney(d.neto)}</title></circle>`;
         labels += `<text x="${cx.toFixed(1)}" y="${(H - 9)}" text-anchor="middle" class="er-chart-lbl">${d.mes.corto}</text>`;
     });
-    const zero = `<line x1="${padL}" y1="${base.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${base.toFixed(1)}" stroke="#dcd8d0" stroke-width="1"></line>`;
+    const eje = erSvgEjeY(sy, erNiceTicks(yMin, yMax, 4), padL, W);
+    const zero = `<line x1="${padL}" y1="${base.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${base.toFixed(1)}" stroke="#cfcabf" stroke-width="1"></line>`;
     const line = `<polyline points="${pts.join(" ")}" fill="none" stroke="#0a5542" stroke-width="2"></polyline>`;
     return `
         <div class="er-chart-legend">
@@ -3314,7 +3342,7 @@ function erChartIngEgr(datos) {
             <span><i style="background:#E4735F"></i>Egresos</span>
             <span><i style="background:#0a5542"></i>Neto (I−E)</span>
         </div>
-        <div class="table-scroll"><svg viewBox="0 0 ${W} ${H}" class="er-chart" style="width:${W}px;height:${H}px">${zero}${bars}${line}${dots}${labels}</svg></div>`;
+        <div class="table-scroll"><svg viewBox="0 0 ${W} ${H}" class="er-chart" style="width:${W}px;height:${H}px">${eje}${zero}${bars}${line}${dots}${labels}</svg></div>`;
 }
 
 function erChartDesglose(meses, egresos) {
@@ -3331,12 +3359,14 @@ function erChartDesglose(meses, egresos) {
 function erSvgBudgetBars(items, opts) {
     const n = items.length;
     if (!n) return `<p class="hint">Sin datos para mostrar.</p>`;
-    const padL = 8, padR = 8, padT = 12, padB = opts.rotar ? 70 : 28;
+    const padL = 54, padR = 8, padT = 12, padB = opts.rotar ? 70 : 28;
     const W = Math.max(520, n * (opts.slot || 70)), H = opts.rotar ? 330 : 260;
     const innerH = H - padT - padB, innerW = W - padL - padR;
     const yMax = Math.max(1, ...items.map((d) => Math.max(d.actual, d.budget || 0)));
     const sh = (v) => v / yMax * innerH;
     const base = padT + innerH;
+    const eje = erSvgEjeY((v) => base - sh(v), erNiceTicks(0, yMax, 4), padL, W);
+    const COL_PAGADO = "#3A7CA5";
     const slotW = innerW / n;
     const barW = Math.min(opts.maxBar || 40, slotW * 0.6);
     let svg = "";
@@ -3344,7 +3374,7 @@ function erSvgBudgetBars(items, opts) {
         const cx = padL + slotW * i + slotW / 2, x = cx - barW / 2;
         const over = d.budget > 0 && d.actual > d.budget;
         const hDentro = sh(over ? d.budget : d.actual);
-        svg += `<rect x="${x.toFixed(1)}" y="${(base - hDentro).toFixed(1)}" width="${barW.toFixed(1)}" height="${hDentro.toFixed(1)}" fill="#1D9E75" rx="2"><title>${erEsc(d.label)}: pagado ${fmtMoney(d.actual)}${d.budget ? " · presupuesto " + fmtMoney(d.budget) : ""}</title></rect>`;
+        svg += `<rect x="${x.toFixed(1)}" y="${(base - hDentro).toFixed(1)}" width="${barW.toFixed(1)}" height="${hDentro.toFixed(1)}" fill="${COL_PAGADO}" rx="2"><title>${erEsc(d.label)}: pagado ${fmtMoney(d.actual)}${d.budget ? " · presupuesto " + fmtMoney(d.budget) : ""}</title></rect>`;
         if (over) {
             const yA = base - sh(d.actual), hEx = sh(d.actual) - sh(d.budget);
             svg += `<rect x="${x.toFixed(1)}" y="${yA.toFixed(1)}" width="${barW.toFixed(1)}" height="${hEx.toFixed(1)}" fill="#E4572E" rx="2"><title>${erEsc(d.label)}: se pasó ${fmtMoney(d.actual - d.budget)}</title></rect>`;
@@ -3361,11 +3391,11 @@ function erSvgBudgetBars(items, opts) {
         }
     });
     return `<div class="er-chart-legend">
-            <span><i style="background:#1D9E75"></i>Pagado</span>
+            <span><i style="background:${COL_PAGADO}"></i>Pagado</span>
             <span><i style="background:#E4572E"></i>Sobre presupuesto</span>
-            <span><i style="background:#0a5542;height:2px;border-radius:0"></i>Presupuesto (Neto)</span>
+            <span><i style="background:#0a5542;height:2px;border-radius:0"></i>Presupuesto</span>
         </div>
-        <div class="table-scroll"><svg viewBox="0 0 ${W} ${H}" class="er-chart" style="width:${W}px;height:${H}px">${svg}</svg></div>`;
+        <div class="table-scroll"><svg viewBox="0 0 ${W} ${H}" class="er-chart" style="width:${W}px;height:${H}px">${eje}${svg}</svg></div>`;
 }
 
 function erDesgloseFoco(mesKey, egresos, meses) {
