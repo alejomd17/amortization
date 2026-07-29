@@ -352,6 +352,7 @@ document.addEventListener("DOMContentLoaded", () => {
         { key: "credito", tab: "tabCredito", panel: "panelCredito" },
         { key: "ahorro", tab: "tabAhorro", panel: "panelAhorro" },
         { key: "inmobiliaria", tab: "tabInmobiliaria", panel: "panelInmobiliaria" },
+        { key: "er", tab: "tabER", panel: "panelER" },
     ].map((t) => ({ ...t, tabEl: document.getElementById(t.tab), panelEl: document.getElementById(t.panel) }));
     function setTab(key) {
         TABS.forEach((t) => {
@@ -1601,6 +1602,139 @@ document.addEventListener("DOMContentLoaded", () => {
         aplica(TABS, setTab, n.tab);   // el tab de último: deja visible el panel correcto
     })();
 
+    // ── ER: Estado de resultados (wiring; el estado y el render son top-level) ─
+    function erInit() {
+        erLoad();
+        erRender();
+        const panel = document.getElementById("panelER");
+        document.getElementById("erInicio").addEventListener("change", (e) => {
+            if (e.target.value) { erState.inicio = e.target.value; erSave(); erRender(); }
+        });
+        document.getElementById("erNMeses").addEventListener("change", (e) => {
+            erState.nMeses = Math.max(1, Math.min(36, Number(e.target.value) || 6));
+            e.target.value = erState.nMeses; erSave(); erRender();
+        });
+        document.getElementById("erExportBtn").addEventListener("click", erExport);
+        document.getElementById("erImportBtn").addEventListener("click", () => document.getElementById("erImportFile").click());
+        document.getElementById("erImportFile").addEventListener("change", erImport);
+
+        panel.addEventListener("input", (e) => {
+            const t = e.target;
+            if (t.classList.contains("er-money")) formatMoneyInput(t);
+            const cid = t.dataset.cid, did = t.dataset.did, aid = t.dataset.aid;
+            if (t.classList.contains("er-pago") && cid) {
+                const c = erState.conceptos.find((x) => x.id === cid);
+                if (c) { c.pagos = c.pagos || {}; c.pagos[t.dataset.mes] = erParse(t.value); erSave(); erActualizarDerivados(); }
+            } else if (t.classList.contains("er-neto") && cid) {
+                const c = erState.conceptos.find((x) => x.id === cid);
+                if (c) { c.neto = erParse(t.value); erSave(); erActualizarDerivados(); }
+            } else if (t.classList.contains("er-clasif") && cid) {
+                const c = erState.conceptos.find((x) => x.id === cid); if (c) { c.clasificacion = t.value; erSave(); }
+            } else if (t.classList.contains("er-concepto") && cid) {
+                const c = erState.conceptos.find((x) => x.id === cid); if (c) { c.concepto = t.value; erSave(); }
+            } else if (t.classList.contains("er-deuda-saldo") && did) {
+                const d = erState.deudas.find((x) => x.id === did); if (d) { d.saldo = erParse(t.value); erSave(); erActualizarDerivados(); }
+            } else if (t.classList.contains("er-deuda-tasa") && did) {
+                const d = erState.deudas.find((x) => x.id === did); if (d) { d.tasa = Number.parseFloat(t.value) || 0; erSave(); erActualizarDerivados(); }
+            } else if (t.classList.contains("er-deuda-nombre") && did) {
+                const d = erState.deudas.find((x) => x.id === did); if (d) { d.nombre = t.value; erSave(); }
+            } else if (t.classList.contains("er-ahorro-saldo") && aid) {
+                const a = erState.ahorros.find((x) => x.id === aid); if (a) { a.saldo = erParse(t.value); erSave(); erActualizarDerivados(); }
+            } else if (t.classList.contains("er-ahorro-nombre") && aid) {
+                const a = erState.ahorros.find((x) => x.id === aid); if (a) { a.nombre = t.value; erSave(); }
+            } else if (t.classList.contains("er-mov-monto") && t.dataset.mid) {
+                const mv = erState.movimientos.find((x) => x.id === t.dataset.mid); if (mv) { mv.monto = erParse(t.value); erSave(); erActualizarDerivados(); }
+            } else if (t.classList.contains("er-mov-desc") && t.dataset.mid) {
+                const mv = erState.movimientos.find((x) => x.id === t.dataset.mid); if (mv) { mv.desc = t.value; erSave(); }
+            }
+        });
+        panel.addEventListener("change", (e) => {
+            const t = e.target;
+            if (t.classList.contains("er-vinculo")) {
+                const c = erState.conceptos.find((x) => x.id === t.dataset.cid);
+                if (c) {
+                    if (!t.value) { c.vinculoTipo = null; c.vinculoId = null; }
+                    else { const p = t.value.split(":"); c.vinculoTipo = p[0]; c.vinculoId = p[1]; }
+                    erSave(); erActualizarDerivados();
+                }
+            } else if (t.classList.contains("er-activo") && t.dataset.cid) {
+                const c = erState.conceptos.find((x) => x.id === t.dataset.cid); if (c) { c.activo = t.checked; erSave(); erRender(); }
+            } else if (t.classList.contains("er-mesinicio") && t.dataset.cid) {
+                const c = erState.conceptos.find((x) => x.id === t.dataset.cid); if (c) { c.mesInicio = t.value; erSave(); erRender(); }
+            } else if (t.classList.contains("er-mov-mes") && t.dataset.mid) {
+                const mv = erState.movimientos.find((x) => x.id === t.dataset.mid); if (mv) { mv.mes = t.value; erSave(); erActualizarDerivados(); }
+            } else if ((t.classList.contains("er-mov-origen") || t.classList.contains("er-mov-destino")) && t.dataset.mid) {
+                const mv = erState.movimientos.find((x) => x.id === t.dataset.mid);
+                if (mv) {
+                    const p = t.value ? t.value.split(":") : [null, null];
+                    if (t.classList.contains("er-mov-origen")) { mv.origenTipo = p[0]; mv.origenId = p[1]; }
+                    else { mv.destinoTipo = p[0]; mv.destinoId = p[1]; }
+                    erSave(); erActualizarDerivados();
+                }
+            }
+        });
+        panel.addEventListener("click", (e) => {
+            const thSort = e.target.closest("th.er-th-sort");
+            if (thSort) { erOrdenar(thSort.dataset.tipo, thSort.dataset.sort); return; }
+            const chipD = e.target.closest(".er-desglose-chip");
+            if (chipD) { erDesgloseMes = chipD.dataset.mesdesglose === "todos" ? null : chipD.dataset.mesdesglose; erRenderCharts(); return; }
+            const add = e.target.closest(".er-add");
+            if (add) {
+                erState.conceptos.push({ id: erId(), tipo: add.dataset.tipo, clasificacion: "", concepto: "", neto: 0, tope: false, activo: true, mesInicio: "", pagos: {}, vinculoTipo: null, vinculoId: null });
+                erSave(); erRender(); return;
+            }
+            const del = e.target.closest(".er-del");
+            if (del) { erState.conceptos = erState.conceptos.filter((c) => c.id !== del.dataset.cid); erSave(); erRender(); return; }
+            const tipo = e.target.closest(".er-tipo");
+            if (tipo) { const c = erState.conceptos.find((x) => x.id === tipo.dataset.cid); if (c) { c.tope = !c.tope; erSave(); erRender(); } return; }
+            if (e.target.closest(".er-add-deuda")) { erState.deudas.push({ id: erId(), nombre: "", saldo: 0, tasa: 0 }); erSave(); erRender(); return; }
+            if (e.target.closest(".er-add-ahorro")) { erState.ahorros.push({ id: erId(), nombre: "", saldo: 0 }); erSave(); erRender(); return; }
+            const verD = e.target.closest(".er-deuda-ver");
+            if (verD) { erDeudaVer = (erDeudaVer === verD.dataset.did) ? null : verD.dataset.did; erRender(); return; }
+            const delD = e.target.closest(".er-del-deuda");
+            if (delD) { erBorrarRegistro("deuda", delD.dataset.did); return; }
+            const delA = e.target.closest(".er-del-ahorro");
+            if (delA) { erBorrarRegistro("ahorro", delA.dataset.aid); return; }
+            const delM = e.target.closest(".er-del-mov");
+            if (delM) { erState.movimientos = erState.movimientos.filter((m) => m.id !== delM.dataset.mid); erSave(); erRender(); return; }
+            if (e.target.closest(".er-add-mov")) {
+                erState.movimientos.push({ id: erId(), mes: (erMesesLista()[0] || {}).key || "", desc: "", monto: 0, origenTipo: null, origenId: null, destinoTipo: null, destinoId: null });
+                erSave(); erRender(); return;
+            }
+        });
+
+        // Reordenar filas arrastrando el grip (⠿), solo dentro del mismo grupo.
+        panel.addEventListener("dragstart", (e) => {
+            const grip = e.target.closest(".er-grip");
+            if (!grip) return;
+            const c = erState.conceptos.find((x) => x.id === grip.dataset.cid);
+            erDrag = c ? { cid: c.id, tipo: c.tipo } : null;
+            if (erDrag) { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", c.id); }
+        });
+        panel.addEventListener("dragover", (e) => {
+            if (!erDrag) return;
+            const tr = e.target.closest("tr[data-cid]");
+            if (!tr) return;
+            const c = erState.conceptos.find((x) => x.id === tr.dataset.cid);
+            if (!c || c.tipo !== erDrag.tipo) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+            panel.querySelectorAll("tr.er-sobre").forEach((r) => r.classList.remove("er-sobre"));
+            if (tr.dataset.cid !== erDrag.cid) tr.classList.add("er-sobre");
+        });
+        panel.addEventListener("drop", (e) => {
+            if (!erDrag) return;
+            const tr = e.target.closest("tr[data-cid]");
+            if (tr) { e.preventDefault(); erMoverConcepto(erDrag.cid, tr.dataset.cid); }
+            erDrag = null;
+        });
+        panel.addEventListener("dragend", () => {
+            erDrag = null;
+            panel.querySelectorAll("tr.er-sobre").forEach((r) => r.classList.remove("er-sobre"));
+        });
+    }
+    erInit();
+
     // ── Comparador de créditos ───────────────────────────────────────────────
     const escenarios = [];
     function displayEscenarios() {
@@ -2628,4 +2762,628 @@ function displayAbonarInvertir(r) {
         </div>
         <p class="hint">Sale lo mismo de tu bolsillo en los dos casos
             (${fmtMoney(r.monto_extra)} + ${r.plazo_restante_meses} cuotas), por eso son comparables.</p>`;
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════
+//  ER — Estado de resultados: flujo mensual editable, con semáforo por celda.
+//  Todo en localStorage (con exportar/importar). Tú pones los conceptos.
+// ══════════════════════════════════════════════════════════════════════════
+const ER_STORE = "amortizacion.er.v1";
+const ER_MES_NOMBRE = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+let erState = null;
+let erSort = { ingreso: null, egreso: null };   // {key, dir} por tabla; UI, no se persiste
+let erDrag = null;                                // arrastre en curso: {cid, tipo}
+let erDesgloseMes = null;                         // mes enfocado en el gráfico de desglose (null = Todos)
+let erDeudaVer = null;                             // deuda con la amortización desplegada
+
+function erDefault() {
+    const now = new Date();
+    const inicio = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    return { inicio, nMeses: 6, conceptos: [], deudas: [], ahorros: [], movimientos: [], _seq: 1 };
+}
+function erLoad() {
+    try {
+        const d = JSON.parse(localStorage.getItem(ER_STORE) || "null");
+        erState = (d && typeof d === "object") ? Object.assign(erDefault(), d) : erDefault();
+    } catch (e) { erState = erDefault(); }
+    if (!Array.isArray(erState.conceptos)) erState.conceptos = [];
+    if (!Array.isArray(erState.deudas)) erState.deudas = [];
+    if (!Array.isArray(erState.ahorros)) erState.ahorros = [];
+    if (!Array.isArray(erState.movimientos)) erState.movimientos = [];
+    if (!erState._seq) erState._seq = 1;
+}
+function erSave() { try { localStorage.setItem(ER_STORE, JSON.stringify(erState)); } catch (e) { /* ok */ } }
+function erId() { return "c" + (erState._seq++); }
+
+function erEsc(s) {
+    return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function erParse(v) { const d = String(v == null ? "" : v).replace(/\D/g, ""); return d === "" ? 0 : Number(d); }
+function erFmtInput(n) { return n ? Number(n).toLocaleString("es-CO") : ""; }
+function erSem(pago, neto, tope) {
+    if (pago <= 0) return "er-cero";
+    if (tope) {
+        // Presupuesto: verde si pagas dentro del tope; ocre si te pasas.
+        return (!neto || pago <= neto) ? "er-verde" : "er-ocre";
+    }
+    // Cuota fija: verde si cubres el Neto; ocre si abonas de menos.
+    return pago >= (neto || 0) ? "er-verde" : "er-ocre";
+}
+
+// Meses del periodo: [{key:"2026-07", corto:"Jul 26", largo:"Julio 2026"}]
+function erMesesLista() {
+    const base = erState.inicio || erDefault().inicio;
+    const [y, m] = base.split("-").map(Number);
+    const n = Math.max(1, Math.min(36, Number(erState.nMeses) || 6));
+    const out = [];
+    for (let i = 0; i < n; i++) {
+        const d = new Date(y, (m - 1) + i, 1);
+        const yy = d.getFullYear(), mm = d.getMonth();
+        out.push({
+            key: `${yy}-${String(mm + 1).padStart(2, "0")}`,
+            corto: `${ER_MES_NOMBRE[mm]} ${String(yy).slice(2)}`,
+            largo: `${ER_MES_NOMBRE[mm]} ${yy}`,
+        });
+    }
+    return out;
+}
+
+// Ordenar los conceptos de un tipo por una columna (alterna asc/desc).
+function erOrdenar(tipo, key) {
+    const cur = erSort[tipo];
+    const dir = (cur && cur.key === key && cur.dir === "asc") ? "desc" : "asc";
+    erSort[tipo] = { key, dir };
+    const mult = dir === "asc" ? 1 : -1;
+    const val = (c) => {
+        if (key === "clasificacion") return (c.clasificacion || "").toLowerCase();
+        if (key === "concepto") return (c.concepto || "").toLowerCase();
+        if (key === "neto") return c.neto || 0;
+        if (key.slice(0, 4) === "mes:") return (c.pagos && c.pagos[key.slice(4)]) || 0;
+        return 0;
+    };
+    const sorted = erState.conceptos.filter((c) => c.tipo === tipo).sort((a, b) => {
+        const va = val(a), vb = val(b);
+        return (typeof va === "string" ? va.localeCompare(vb) : va - vb) * mult;
+    });
+    let i = 0;
+    erState.conceptos = erState.conceptos.map((c) => c.tipo === tipo ? sorted[i++] : c);
+    erSave(); erRender();
+}
+
+// Mover un concepto (arrastrado) justo antes de otro, dentro del mismo grupo.
+function erMoverConcepto(cidDesde, cidHasta) {
+    if (cidDesde === cidHasta) return;
+    const arr = erState.conceptos;
+    const from = arr.findIndex((c) => c.id === cidDesde);
+    const to = arr.findIndex((c) => c.id === cidHasta);
+    if (from < 0 || to < 0 || arr[from].tipo !== arr[to].tipo) return;
+    const [movido] = arr.splice(from, 1);
+    const dest = arr.findIndex((c) => c.id === cidHasta);
+    arr.splice(dest, 0, movido);
+    erSave(); erRender();
+}
+
+function erRenderTabla(tipo, contId, titulo) {
+    const cont = document.getElementById(contId);
+    const meses = erMesesLista();
+    const conceptos = erState.conceptos.filter((c) => c.tipo === tipo);
+
+    const so = erSort[tipo];
+    const ind = (k) => (so && so.key === k) ? (so.dir === "asc" ? " ▲" : " ▼") : "";
+    const th = (label, k) => `<th class="er-th-sort" data-tipo="${tipo}" data-sort="${k}">${label}${ind(k)}</th>`;
+    const head = `<tr>
+        ${th("Clasificación", "clasificacion")}${th("Concepto", "concepto")}<th>Vínculo</th><th>Desde</th>${th("Presupuesto", "neto")}
+        ${meses.map((m) => `<th class="er-th-sort" data-tipo="${tipo}" data-sort="mes:${m.key}" title="${m.largo}">${m.corto}${ind("mes:" + m.key)}</th>`).join("")}
+        <th class="er-acc"></th>
+    </tr>`;
+
+    const filas = conceptos.map((c) => {
+        const celdas = meses.map((m) => {
+            if (c.mesInicio && m.key < c.mesInicio) return `<td class="er-na" title="Antes de que inicie">·</td>`;
+            const pago = (c.pagos && c.pagos[m.key]) || 0;
+            return `<td><input class="er-money er-pago ${erSem(pago, c.neto, c.tope)}" data-cid="${c.id}" data-mes="${m.key}" value="${erFmtInput(pago)}" inputmode="numeric"></td>`;
+        }).join("");
+        const tipoBtn = c.tope
+            ? `<button type="button" class="er-tipo" data-cid="${c.id}" title="Presupuesto (tope): verde si pagas dentro del presupuesto, ocre si te pasas. Clic para volverlo cuota fija.">≤</button>`
+            : `<button type="button" class="er-tipo" data-cid="${c.id}" title="Cuota fija: verde solo si cubres el presupuesto, ocre si abonas menos. Clic para volverlo tope.">=</button>`;
+        const desde = `<select class="er-mesinicio" data-cid="${c.id}"><option value="">— siempre</option>${meses.map((m) => `<option value="${m.key}"${c.mesInicio === m.key ? " selected" : ""}>${m.corto}</option>`).join("")}</select>`;
+        return `<tr data-cid="${c.id}"${c.activo === false ? ' class="er-inactivo"' : ""}>
+            <td><span class="er-clasif-cell"><span class="er-grip" draggable="true" data-cid="${c.id}" title="Arrastra para reordenar">⠿</span><input class="er-clasif" data-cid="${c.id}" value="${erEsc(c.clasificacion)}" placeholder="—"></span></td>
+            <td><input class="er-concepto" data-cid="${c.id}" value="${erEsc(c.concepto)}" placeholder="Concepto"></td>
+            <td><select class="er-vinculo" data-cid="${c.id}">${erVinculoOptions(c)}</select></td>
+            <td>${desde}</td>
+            <td><span class="er-neto-cell">${tipoBtn}<input class="er-money er-neto" data-cid="${c.id}" value="${erFmtInput(c.neto)}" inputmode="numeric"></span></td>
+            ${celdas}
+            <td class="er-acc"><label class="er-activo-lbl" title="Activo: cuenta en los totales. Desmárcalo cuando ya lo pagaste."><input type="checkbox" class="er-activo" data-cid="${c.id}"${c.activo === false ? "" : " checked"}></label><button type="button" class="er-del" data-cid="${c.id}" title="Eliminar">×</button></td>
+        </tr>`;
+    }).join("");
+
+    const activos = conceptos.filter((c) => c.activo !== false);
+    const totalNeto = activos.reduce((a, c) => a + (c.neto || 0), 0);
+    const totalesMes = meses.map((m) => {
+        const s = activos.reduce((a, c) => a + ((c.pagos && c.pagos[m.key]) || 0), 0);
+        return `<td data-total="${tipo}" data-mes="${m.key}">${s ? fmtMoney(s) : "—"}</td>`;
+    }).join("");
+    let foot = `<tr class="er-total-row">
+        <td>Total ${tipo === "ingreso" ? "ingresos" : "egresos"}</td><td></td><td></td><td></td>
+        <td data-netototal="${tipo}">${totalNeto ? fmtMoney(totalNeto) : "—"}</td>
+        ${totalesMes}<td></td>
+    </tr>`;
+    if (tipo === "egreso") {
+        const ingresos = erState.conceptos.filter((c) => c.tipo === "ingreso" && c.activo !== false);
+        const presIE = ingresos.reduce((a, c) => a + (c.neto || 0), 0) - totalNeto;
+        const presCls = presIE > 0 ? "er-pos" : (presIE < 0 ? "er-neg" : "");
+        const ieCeldas = meses.map((m) => {
+            const ing = ingresos.reduce((a, c) => a + ((c.pagos && c.pagos[m.key]) || 0), 0);
+            const egr = activos.reduce((a, c) => a + ((c.pagos && c.pagos[m.key]) || 0), 0);
+            const ie = ing - egr;
+            const cls = ie > 0 ? "er-pos" : (ie < 0 ? "er-neg" : "");
+            return `<td class="${cls}" data-ie-mes="${m.key}">${ie ? fmtMoney(ie) : "—"}</td>`;
+        }).join("");
+        foot += `<tr class="er-total-row er-neto-row"><td>Total (I − E)</td><td></td><td></td><td></td><td class="${presCls}" data-ie-presupuesto>${presIE ? fmtMoney(presIE) : "—"}</td>${ieCeldas}<td></td></tr>`;
+    }
+
+    const vacio = `<tr><td colspan="${meses.length + 6}" class="hint" style="text-align:center;padding:14px">Sin ${tipo === "ingreso" ? "ingresos" : "egresos"} todavía. Agrega uno abajo.</td></tr>`;
+    cont.className = "card er-seccion";
+    cont.innerHTML = `
+        <div class="er-seccion-head"><h2>${titulo}</h2></div>
+        <div class="table-scroll">
+            <table class="er-table">
+                <thead>${head}</thead>
+                <tbody>${filas || vacio}</tbody>
+                <tfoot>${conceptos.length ? foot : ""}</tfoot>
+            </table>
+        </div>
+        <button type="button" class="btn btn-outline er-add" data-tipo="${tipo}">+ ${tipo === "ingreso" ? "Ingreso" : "Egreso"}</button>`;
+}
+
+// Recalcula lo derivado (semáforo + totales) SIN reconstruir inputs (no pierde foco).
+function erActualizarDerivados() {
+    const meses = erMesesLista();
+    document.querySelectorAll("#panelER .er-pago").forEach((inp) => {
+        const c = erState.conceptos.find((x) => x.id === inp.dataset.cid);
+        if (!c) return;
+        const pago = (c.pagos && c.pagos[inp.dataset.mes]) || 0;
+        inp.classList.remove("er-verde", "er-ocre", "er-cero");
+        inp.classList.add(erSem(pago, c.neto, c.tope));
+    });
+    ["ingreso", "egreso"].forEach((tipo) => {
+        const conceptos = erState.conceptos.filter((c) => c.tipo === tipo && c.activo !== false);
+        const netoTotal = conceptos.reduce((a, c) => a + (c.neto || 0), 0);
+        const nt = document.querySelector(`#panelER td[data-netototal="${tipo}"]`);
+        if (nt) nt.textContent = netoTotal ? fmtMoney(netoTotal) : "—";
+        meses.forEach((m) => {
+            const s = conceptos.reduce((a, c) => a + ((c.pagos && c.pagos[m.key]) || 0), 0);
+            const cell = document.querySelector(`#panelER td[data-total="${tipo}"][data-mes="${m.key}"]`);
+            if (cell) cell.textContent = s ? fmtMoney(s) : "—";
+        });
+    });
+    meses.forEach((m) => {
+        const ing = erState.conceptos.filter((c) => c.tipo === "ingreso" && c.activo !== false).reduce((a, c) => a + ((c.pagos && c.pagos[m.key]) || 0), 0);
+        const egr = erState.conceptos.filter((c) => c.tipo === "egreso" && c.activo !== false).reduce((a, c) => a + ((c.pagos && c.pagos[m.key]) || 0), 0);
+        const ie = ing - egr;
+        const cell = document.querySelector(`#panelER td[data-ie-mes="${m.key}"]`);
+        if (cell) { cell.textContent = ie ? fmtMoney(ie) : "—"; cell.className = ie > 0 ? "er-pos" : (ie < 0 ? "er-neg" : ""); }
+    });
+    const ingB = erState.conceptos.filter((c) => c.tipo === "ingreso" && c.activo !== false).reduce((a, c) => a + (c.neto || 0), 0);
+    const egrB = erState.conceptos.filter((c) => c.tipo === "egreso" && c.activo !== false).reduce((a, c) => a + (c.neto || 0), 0);
+    const presIE = ingB - egrB;
+    const cp = document.querySelector("#panelER [data-ie-presupuesto]");
+    if (cp) { cp.textContent = presIE ? fmtMoney(presIE) : "—"; cp.className = presIE > 0 ? "er-pos" : (presIE < 0 ? "er-neg" : ""); }
+    // Saldos de deudas y ahorros (compensación: pagos vinculados + movimientos)
+    erState.deudas.forEach((d) => {
+        const sim = erSimDeuda(d);
+        const ci = document.querySelector(`#panelER [data-deuda-interes="${d.id}"]`);
+        const cp = document.querySelector(`#panelER [data-deuda-pagado="${d.id}"]`);
+        const cq = document.querySelector(`#panelER [data-deuda-queda="${d.id}"]`);
+        if (ci) ci.textContent = sim.interes >= 1 ? fmtMoney(sim.interes) : "—";
+        if (cp) cp.textContent = sim.pagado ? fmtMoney(sim.pagado) : "—";
+        if (cq) { const pagada = sim.queda <= 0.5; cq.textContent = pagada ? "✓ pagada" : fmtMoney(sim.queda); cq.className = pagada ? "er-pos" : "er-neg"; }
+    });
+    if (erDeudaVer) {
+        const cont = document.getElementById("erDetalle" + erDeudaVer);
+        const d = erState.deudas.find((x) => x.id === erDeudaVer);
+        if (cont && d) cont.innerHTML = erDeudaDetalleHtml(d);
+    }
+    erState.ahorros.forEach((a) => {
+        const actual = erSaldoAhorro(a);
+        const sumado = actual - (a.saldo || 0);
+        const cs = document.querySelector(`#panelER [data-ahorro-sumado="${a.id}"]`);
+        const ct = document.querySelector(`#panelER [data-ahorro-total="${a.id}"]`);
+        if (cs) cs.textContent = sumado ? fmtMoney(sumado) : "—";
+        if (ct) ct.textContent = fmtMoney(actual);
+    });
+}
+
+function erRender() {
+    const ini = document.getElementById("erInicio");
+    const nm = document.getElementById("erNMeses");
+    if (ini) ini.value = erState.inicio || erDefault().inicio;
+    if (nm) nm.value = erState.nMeses || 6;
+    erRenderTabla("ingreso", "erIngresos", "Ingresos");
+    erRenderTabla("egreso", "erEgresos", "Egresos");
+    erRenderRegistros();
+    erRenderCharts();
+}
+
+function erExport() {
+    const blob = new Blob([JSON.stringify(erState, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "estado-resultados.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+function erImport(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        try {
+            const d = JSON.parse(reader.result);
+            erState = Object.assign(erDefault(), d);
+            if (!Array.isArray(erState.conceptos)) erState.conceptos = [];
+            if (!Array.isArray(erState.deudas)) erState.deudas = [];
+            if (!Array.isArray(erState.ahorros)) erState.ahorros = [];
+            if (!Array.isArray(erState.movimientos)) erState.movimientos = [];
+            erSave(); erRender();
+        } catch (err) { alert("No pude leer el archivo: " + err.message); }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+}
+
+
+// ── ER Fase 2: registros de deudas/ahorros, enlace y compensación ─────────────
+function erSumaPagos(c) {
+    if (!c || !c.pagos) return 0;
+    return Object.keys(c.pagos).reduce((a, k) => a + (c.pagos[k] || 0), 0);
+}
+function erTasaMensual(ea) {
+    ea = Number(ea) || 0;
+    return ea > 0 ? Math.pow(1 + ea / 100, 1 / 12) - 1 : 0;
+}
+// Simula la deuda mes a mes sobre el periodo visible: cada mes acumula interés
+// (sobre el saldo) y luego le restan los pagos vinculados de ese mes. Los
+// movimientos (sin fecha) se aplican como ajuste al final. Como en un crédito:
+// parte de lo que pagas se va en interés, así que la deuda no baja "completa".
+function erSimDeuda(d) {
+    const im = erTasaMensual(d.tasa);
+    const meses = erMesesLista();
+    const pagoMes = (mk) => erState.conceptos.reduce((a, c) =>
+        a + ((c.vinculoTipo === "deuda" && c.vinculoId === d.id && c.pagos && c.pagos[mk]) || 0), 0);
+    // Movimientos con fecha en ese mes: 'paga' baja la deuda, 'sube' la aumenta.
+    const movMes = (mk) => {
+        let paga = 0, sube = 0;
+        erState.movimientos.forEach((mv) => {
+            if (mv.mes !== mk) return;
+            if (mv.destinoTipo === "deuda" && mv.destinoId === d.id) paga += mv.monto || 0;
+            if (mv.origenTipo === "deuda" && mv.origenId === d.id) sube += mv.monto || 0;
+        });
+        return { paga, sube };
+    };
+    // Solo se acumula interés hasta el último mes con actividad (pago o movimiento):
+    // es un registro de lo pagado, no una proyección de meses futuros vacíos.
+    let ultimo = -1;
+    meses.forEach((m, idx) => { const mm = movMes(m.key); if (pagoMes(m.key) > 0 || mm.paga > 0 || mm.sube > 0) ultimo = idx; });
+
+    let saldo = d.saldo || 0, interes = 0, pagado = 0;
+    const tabla = [];
+    for (let idx = 0; idx <= ultimo; idx++) {
+        const m = meses[idx];
+        const saldoIni = saldo;
+        const i = saldo * im;
+        interes += i; saldo += i;
+        const mm = movMes(m.key);
+        const pago = pagoMes(m.key) + mm.paga;
+        saldo -= pago; pagado += pago;
+        saldo += mm.sube;
+        tabla.push({ mes: m.corto, saldoIni, interes: i, pago, capital: pago - i, saldoFin: saldo });
+    }
+    // Movimientos sin fecha o fuera del rango visible: se aplican como ajuste final.
+    const mesKeys = new Set(meses.map((m) => m.key));
+    erState.movimientos.forEach((mv) => {
+        if (mesKeys.has(mv.mes)) return;
+        if (mv.destinoTipo === "deuda" && mv.destinoId === d.id) { saldo -= (mv.monto || 0); pagado += (mv.monto || 0); }
+        if (mv.origenTipo === "deuda" && mv.origenId === d.id) { saldo += (mv.monto || 0); }
+    });
+    return { queda: saldo, interes, pagado, tabla };
+}
+function erDeudaDetalleHtml(d) {
+    const sim = erSimDeuda(d);
+    const filas = sim.tabla.map((r) => `<tr>
+        <td>${r.mes}</td>
+        <td>${fmtMoney(r.saldoIni)}</td>
+        <td>${r.interes >= 1 ? fmtMoney(r.interes) : "—"}</td>
+        <td>${r.pago ? fmtMoney(r.pago) : "—"}</td>
+        <td class="${r.capital >= 0 ? "er-pos" : "er-neg"}">${r.pago || r.interes ? fmtMoney(r.capital) : "—"}</td>
+        <td>${fmtMoney(r.saldoFin)}</td>
+    </tr>`).join("");
+    return `<p class="hint" style="margin:0 0 8px">Cada mes: interés sobre el saldo, menos lo que pagaste. <strong>Abono a capital</strong> = pago − interés (negativo = la deuda creció).</p>
+        <table class="er-table er-reg" style="margin:0">
+            <thead><tr><th>Mes</th><th>Saldo inicial</th><th>Interés</th><th>Pagado</th><th>Abono capital</th><th>Saldo final</th></tr></thead>
+            <tbody>${filas}</tbody>
+        </table>`;
+}
+function erSaldoDeuda(d) { return erSimDeuda(d).queda; }
+function erSaldoAhorro(a) {
+    let s = a.saldo || 0;
+    erState.conceptos.forEach((c) => {
+        if (c.vinculoTipo === "ahorro" && c.vinculoId === a.id) s += erSumaPagos(c);
+    });
+    erState.movimientos.forEach((mv) => {
+        if (mv.destinoTipo === "ahorro" && mv.destinoId === a.id) s += (mv.monto || 0);
+        if (mv.origenTipo === "ahorro" && mv.origenId === a.id) s -= (mv.monto || 0);
+    });
+    return s;
+}
+function erVinculoOptions(c) {
+    let html = `<option value="">—</option>`;
+    if (erState.deudas.length) {
+        html += `<optgroup label="Deudas">`;
+        erState.deudas.forEach((d) => {
+            const sel = (c.vinculoTipo === "deuda" && c.vinculoId === d.id) ? " selected" : "";
+            html += `<option value="deuda:${d.id}"${sel}>${erEsc(d.nombre || "Deuda")}</option>`;
+        });
+        html += `</optgroup>`;
+    }
+    if (erState.ahorros.length) {
+        html += `<optgroup label="Ahorros">`;
+        erState.ahorros.forEach((a) => {
+            const sel = (c.vinculoTipo === "ahorro" && c.vinculoId === a.id) ? " selected" : "";
+            html += `<option value="ahorro:${a.id}"${sel}>${erEsc(a.nombre || "Ahorro")}</option>`;
+        });
+        html += `</optgroup>`;
+    }
+    return html;
+}
+function erMovOptions(selTipo, selId) {
+    const sel = (t, i) => (selTipo === t && selId === i) ? " selected" : "";
+    let html = `<option value=""${!selTipo ? " selected" : ""}>Externo / efectivo</option>`;
+    if (erState.deudas.length) {
+        html += `<optgroup label="Deudas">`;
+        erState.deudas.forEach((d) => { html += `<option value="deuda:${d.id}"${sel("deuda", d.id)}>${erEsc(d.nombre || "Deuda")}</option>`; });
+        html += `</optgroup>`;
+    }
+    if (erState.ahorros.length) {
+        html += `<optgroup label="Ahorros">`;
+        erState.ahorros.forEach((a) => { html += `<option value="ahorro:${a.id}"${sel("ahorro", a.id)}>${erEsc(a.nombre || "Ahorro")}</option>`; });
+        html += `</optgroup>`;
+    }
+    return html;
+}
+function erMesesOptions(sel) {
+    return erMesesLista().map((m) => `<option value="${m.key}"${m.key === sel ? " selected" : ""}>${m.corto}</option>`).join("");
+}
+function erMesCorto(key) {
+    if (!key) return "—";
+    const p = key.split("-").map(Number);
+    return ER_MES_NOMBRE[p[1] - 1] ? `${ER_MES_NOMBRE[p[1] - 1]} ${String(p[0]).slice(2)}` : key;
+}
+function erNombreCuenta(tipo, id) {
+    if (tipo === "deuda") { const d = erState.deudas.find((x) => x.id === id); return d ? (d.nombre || "Deuda") : "?"; }
+    if (tipo === "ahorro") { const a = erState.ahorros.find((x) => x.id === id); return a ? (a.nombre || "Ahorro") : "?"; }
+    return "Externo";
+}
+function erRenderRegistros() {
+    const cont = document.getElementById("erRegistros");
+    const deudasRows = erState.deudas.map((d) => {
+        const sim = erSimDeuda(d);
+        const pagada = sim.queda <= 0.5;
+        return `<tr>
+            <td><input class="er-deuda-nombre" data-did="${d.id}" value="${erEsc(d.nombre)}" placeholder="Nombre de la deuda"></td>
+            <td><input class="er-deuda-tasa" data-did="${d.id}" value="${d.tasa || ""}" placeholder="0" inputmode="decimal"></td>
+            <td><input class="er-money er-deuda-saldo" data-did="${d.id}" value="${erFmtInput(d.saldo)}" inputmode="numeric"></td>
+            <td data-deuda-interes="${d.id}">${sim.interes >= 1 ? fmtMoney(sim.interes) : "—"}</td>
+            <td data-deuda-pagado="${d.id}">${sim.pagado ? fmtMoney(sim.pagado) : "—"}</td>
+            <td class="${pagada ? "er-pos" : "er-neg"}" data-deuda-queda="${d.id}">${pagada ? "✓ pagada" : fmtMoney(sim.queda)}</td>
+            <td class="er-acc" style="white-space:nowrap"><button type="button" class="er-deuda-ver" data-did="${d.id}" title="Ver amortización mes a mes">${erDeudaVer === d.id ? "▾" : "▸"}</button><button type="button" class="er-del-deuda" data-did="${d.id}" title="Eliminar">×</button></td>
+        </tr>` + (erDeudaVer === d.id
+            ? `<tr class="er-deuda-detalle"><td colspan="7"><div id="erDetalle${d.id}">${erDeudaDetalleHtml(d)}</div></td></tr>`
+            : "");
+    }).join("");
+    const deudas = `<section class="card er-seccion">
+        <div class="er-seccion-head"><h2>Deudas</h2></div>
+        <p class="hint" style="margin-top:0">La deuda genera <strong>interés</strong> cada mes (a la Tasa E.A.); lo que pagas cubre primero el interés, por eso no baja "completa". El interés corre <strong>solo hasta el último mes con pago o movimiento</strong> registrado. Dale a ▸ para ver la amortización.</p>
+        <div class="table-scroll"><table class="er-table er-reg">
+            <thead><tr><th>Deuda</th><th>Tasa E.A.</th><th>Saldo inicial</th><th>Interés</th><th>Pagado</th><th>Queda</th><th class="er-acc"></th></tr></thead>
+            <tbody>${deudasRows || `<tr><td colspan="7" class="hint" style="text-align:center;padding:12px">Sin deudas. Agrega una y enlázala a un concepto para verla bajar al pagar.</td></tr>`}</tbody>
+        </table></div>
+        <button type="button" class="btn btn-outline er-add-deuda">+ Deuda</button>
+    </section>`;
+
+    const ahorrosRows = erState.ahorros.map((a) => {
+        const actual = erSaldoAhorro(a);
+        const sumado = actual - (a.saldo || 0);
+        return `<tr>
+            <td><input class="er-ahorro-nombre" data-aid="${a.id}" value="${erEsc(a.nombre)}" placeholder="Nombre del ahorro"></td>
+            <td><input class="er-money er-ahorro-saldo" data-aid="${a.id}" value="${erFmtInput(a.saldo)}" inputmode="numeric"></td>
+            <td data-ahorro-sumado="${a.id}">${sumado ? fmtMoney(sumado) : "—"}</td>
+            <td class="er-pos" data-ahorro-total="${a.id}">${fmtMoney(actual)}</td>
+            <td class="er-acc"><button type="button" class="er-del-ahorro" data-aid="${a.id}" title="Eliminar">×</button></td>
+        </tr>`;
+    }).join("");
+    const ahorros = `<section class="card er-seccion">
+        <div class="er-seccion-head"><h2>Ahorros</h2></div>
+        <div class="table-scroll"><table class="er-table er-reg">
+            <thead><tr><th>Ahorro</th><th>Saldo inicial</th><th>Sumado</th><th>Total</th><th class="er-acc"></th></tr></thead>
+            <tbody>${ahorrosRows || `<tr><td colspan="5" class="hint" style="text-align:center;padding:12px">Sin ahorros. Agrega uno y enlázalo a un concepto (ej. "Ahorro").</td></tr>`}</tbody>
+        </table></div>
+        <button type="button" class="btn btn-outline er-add-ahorro">+ Ahorro</button>
+    </section>`;
+
+    const movRows = erState.movimientos.map((mv) => `<tr>
+            <td><select class="er-mov-mes" data-mid="${mv.id}">${erMesesOptions(mv.mes)}</select></td>
+            <td><input class="er-mov-desc" data-mid="${mv.id}" value="${erEsc(mv.desc)}" placeholder="Descripción"></td>
+            <td><select class="er-mov-origen" data-mid="${mv.id}" title="Sale de">${erMovOptions(mv.origenTipo, mv.origenId)}</select></td>
+            <td><select class="er-mov-destino" data-mid="${mv.id}" title="Entra a">${erMovOptions(mv.destinoTipo, mv.destinoId)}</select></td>
+            <td><input class="er-money er-mov-monto" data-mid="${mv.id}" value="${erFmtInput(mv.monto)}" inputmode="numeric"></td>
+            <td class="er-acc"><button type="button" class="er-del-mov" data-mid="${mv.id}" title="Eliminar">×</button></td>
+        </tr>`).join("");
+    const movs = `<section class="card er-seccion">
+        <div class="er-seccion-head"><h2>Movimientos</h2></div>
+        <p class="hint" style="margin-top:0">Mueve plata entre cuentas en un <strong>mes</strong>: sacas de <strong>De</strong> (ej. un ahorro) para <strong>A</strong> (ej. una deuda) — baja el ahorro y baja la deuda, y el interés se ajusta a ese mes. Todo editable.</p>
+        <div class="table-scroll"><table class="er-table er-reg">
+            <thead><tr><th>Mes</th><th>Descripción</th><th>De</th><th>A</th><th>Monto</th><th class="er-acc"></th></tr></thead>
+            <tbody>${movRows || `<tr><td colspan="6" class="hint" style="text-align:center;padding:12px">Sin movimientos.</td></tr>`}</tbody>
+        </table></div>
+        <button type="button" class="btn btn-outline er-add-mov">+ Movimiento</button>
+    </section>`;
+
+    cont.innerHTML = deudas + ahorros + movs;
+}
+function erBorrarRegistro(tipo, id) {
+    if (tipo === "deuda" && erDeudaVer === id) erDeudaVer = null;
+    if (tipo === "deuda") erState.deudas = erState.deudas.filter((d) => d.id !== id);
+    else erState.ahorros = erState.ahorros.filter((a) => a.id !== id);
+    erState.conceptos.forEach((c) => { if (c.vinculoTipo === tipo && c.vinculoId === id) { c.vinculoTipo = null; c.vinculoId = null; } });
+    erState.movimientos = erState.movimientos.filter((mv) => !((mv.origenTipo === tipo && mv.origenId === id) || (mv.destinoTipo === tipo && mv.destinoId === id)));
+    erSave(); erRender();
+}
+function erAgregarMovimiento() {
+    const monto = erParse(document.getElementById("erMovMonto").value);
+    const desc = document.getElementById("erMovDesc").value.trim();
+    const mesEl = document.getElementById("erMovMes");
+    const mes = mesEl ? mesEl.value : "";
+    const parse = (v) => { if (!v) return [null, null]; const p = v.split(":"); return [p[0], p[1]]; };
+    const [ot, oi] = parse(document.getElementById("erMovOrigen").value);
+    const [dt, di] = parse(document.getElementById("erMovDestino").value);
+    if (!monto || monto <= 0) { alert("Pon un monto para el movimiento."); return; }
+    if (!ot && !dt) { alert("Elige al menos un origen o un destino."); return; }
+    erState.movimientos.push({ id: erId(), mes, desc, monto, origenTipo: ot, origenId: oi, destinoTipo: dt, destinoId: di });
+    erSave(); erRender();
+}
+
+// ── ER Fase 3: gráficos (SVG puro, sin librerías) ─────────────────────────────
+const ER_PALETA = ["#1D9E75", "#0F6E56", "#7FB800", "#F2A900", "#E4735F", "#3A7CA5", "#8367C7", "#B56576", "#4C9F70", "#6D6875", "#C98A3A", "#2A9D8F"];
+
+function erRenderCharts() {
+    const cont = document.getElementById("erCharts");
+    if (!cont) return;
+    const meses = erMesesLista();
+    const ingresos = erState.conceptos.filter((c) => c.tipo === "ingreso" && c.activo !== false);
+    const egresos = erState.conceptos.filter((c) => c.tipo === "egreso" && c.activo !== false);
+    const sumMes = (arr, mk) => arr.reduce((a, c) => a + ((c.pagos && c.pagos[mk]) || 0), 0);
+    const datos = meses.map((m) => {
+        const ing = sumMes(ingresos, m.key), egr = sumMes(egresos, m.key);
+        return { mes: m, ing, egr, neto: ing - egr };
+    });
+    if (!datos.some((d) => d.ing || d.egr)) { cont.innerHTML = ""; return; }
+    cont.innerHTML = `
+        <section class="card er-seccion">
+            <div class="er-seccion-head"><h2>Ingresos vs Egresos</h2></div>
+            <p class="hint" style="margin-top:0">Con lo efectivamente pagado/recibido cada mes.</p>
+            ${erChartIngEgr(datos)}
+        </section>
+        <section class="card er-seccion">
+            <div class="er-seccion-head"><h2>Desglose de egresos por clasificación</h2></div>
+            ${erChartDesglose(meses, egresos)}
+        </section>`;
+}
+
+function erChartIngEgr(datos) {
+    const n = datos.length;
+    const padL = 8, padR = 8, padT = 14, padB = 28;
+    const W = Math.max(560, n * 88), H = 280, innerH = H - padT - padB, innerW = W - padL - padR;
+    const netos = datos.map((d) => d.neto);
+    let yMax = Math.max(0, ...datos.map((d) => Math.max(d.ing, d.egr)), ...netos);
+    let yMin = Math.min(0, ...netos);
+    if (yMax === yMin) yMax = yMin + 1;
+    const sy = (v) => padT + (yMax - v) / (yMax - yMin) * innerH;
+    const base = sy(0);
+    const slotW = innerW / n;
+    const barW = Math.min(26, slotW * 0.3);
+    let bars = "", labels = "", dots = "";
+    const pts = [];
+    datos.forEach((d, i) => {
+        const cx = padL + slotW * i + slotW / 2;
+        const rect = (x, v, fill) => `<rect x="${x.toFixed(1)}" y="${Math.min(base, sy(v)).toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.abs(base - sy(v)).toFixed(1)}" fill="${fill}" rx="2"><title>${fmtMoney(v)}</title></rect>`;
+        bars += rect(cx - barW - 3, d.ing, "#1D9E75");
+        bars += rect(cx + 3, d.egr, "#E4735F");
+        pts.push(`${cx.toFixed(1)},${sy(d.neto).toFixed(1)}`);
+        dots += `<circle cx="${cx.toFixed(1)}" cy="${sy(d.neto).toFixed(1)}" r="3" fill="#0a5542"><title>Neto: ${fmtMoney(d.neto)}</title></circle>`;
+        labels += `<text x="${cx.toFixed(1)}" y="${(H - 9)}" text-anchor="middle" class="er-chart-lbl">${d.mes.corto}</text>`;
+    });
+    const zero = `<line x1="${padL}" y1="${base.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${base.toFixed(1)}" stroke="#dcd8d0" stroke-width="1"></line>`;
+    const line = `<polyline points="${pts.join(" ")}" fill="none" stroke="#0a5542" stroke-width="2"></polyline>`;
+    return `
+        <div class="er-chart-legend">
+            <span><i style="background:#1D9E75"></i>Ingresos</span>
+            <span><i style="background:#E4735F"></i>Egresos</span>
+            <span><i style="background:#0a5542"></i>Neto (I−E)</span>
+        </div>
+        <div class="table-scroll"><svg viewBox="0 0 ${W} ${H}" class="er-chart" style="width:${W}px;height:${H}px">${zero}${bars}${line}${dots}${labels}</svg></div>`;
+}
+
+function erChartDesglose(meses, egresos) {
+    if (erDesgloseMes && !meses.some((m) => m.key === erDesgloseMes)) erDesgloseMes = null;
+    const chip = (label, val) => {
+        const activo = (val === "todos" && !erDesgloseMes) || val === erDesgloseMes;
+        return `<button type="button" class="er-desglose-chip${activo ? " activo" : ""}" data-mesdesglose="${val}">${label}</button>`;
+    };
+    const chips = `<div class="er-desglose-chips">${chip("Todos", "todos")}${meses.map((m) => chip(m.corto, m.key)).join("")}</div>`;
+    return chips + (erDesgloseMes ? erDesgloseFoco(erDesgloseMes, egresos, meses) : erDesgloseTodos(meses, egresos));
+}
+
+// Barras (pagado) lado a lado, con línea punteada de presupuesto y el exceso en rojo.
+function erSvgBudgetBars(items, opts) {
+    const n = items.length;
+    if (!n) return `<p class="hint">Sin datos para mostrar.</p>`;
+    const padL = 8, padR = 8, padT = 12, padB = opts.rotar ? 70 : 28;
+    const W = Math.max(520, n * (opts.slot || 70)), H = opts.rotar ? 330 : 260;
+    const innerH = H - padT - padB, innerW = W - padL - padR;
+    const yMax = Math.max(1, ...items.map((d) => Math.max(d.actual, d.budget || 0)));
+    const sh = (v) => v / yMax * innerH;
+    const base = padT + innerH;
+    const slotW = innerW / n;
+    const barW = Math.min(opts.maxBar || 40, slotW * 0.6);
+    let svg = "";
+    items.forEach((d, i) => {
+        const cx = padL + slotW * i + slotW / 2, x = cx - barW / 2;
+        const over = d.budget > 0 && d.actual > d.budget;
+        const hDentro = sh(over ? d.budget : d.actual);
+        svg += `<rect x="${x.toFixed(1)}" y="${(base - hDentro).toFixed(1)}" width="${barW.toFixed(1)}" height="${hDentro.toFixed(1)}" fill="#1D9E75" rx="2"><title>${erEsc(d.label)}: pagado ${fmtMoney(d.actual)}${d.budget ? " · presupuesto " + fmtMoney(d.budget) : ""}</title></rect>`;
+        if (over) {
+            const yA = base - sh(d.actual), hEx = sh(d.actual) - sh(d.budget);
+            svg += `<rect x="${x.toFixed(1)}" y="${yA.toFixed(1)}" width="${barW.toFixed(1)}" height="${hEx.toFixed(1)}" fill="#E4572E" rx="2"><title>${erEsc(d.label)}: se pasó ${fmtMoney(d.actual - d.budget)}</title></rect>`;
+        }
+        if (d.budget > 0) {
+            const by = base - sh(d.budget);
+            svg += `<line x1="${(x - 3).toFixed(1)}" y1="${by.toFixed(1)}" x2="${(x + barW + 3).toFixed(1)}" y2="${by.toFixed(1)}" stroke="#0a5542" stroke-width="1.5" stroke-dasharray="3 2"><title>Presupuesto ${erEsc(d.label)}: ${fmtMoney(d.budget)}</title></line>`;
+        }
+        if (opts.rotar) {
+            const ly = base + 12, lbl = d.label.length > 16 ? d.label.slice(0, 15) + "…" : d.label;
+            svg += `<text x="${cx.toFixed(1)}" y="${ly.toFixed(1)}" transform="rotate(45 ${cx.toFixed(1)} ${ly.toFixed(1)})" text-anchor="start" class="er-chart-lbl">${erEsc(lbl)}</text>`;
+        } else {
+            svg += `<text x="${cx.toFixed(1)}" y="${(H - 9)}" text-anchor="middle" class="er-chart-lbl">${erEsc(d.label)}</text>`;
+        }
+    });
+    return `<div class="er-chart-legend">
+            <span><i style="background:#1D9E75"></i>Pagado</span>
+            <span><i style="background:#E4572E"></i>Sobre presupuesto</span>
+            <span><i style="background:#0a5542;height:2px;border-radius:0"></i>Presupuesto (Neto)</span>
+        </div>
+        <div class="table-scroll"><svg viewBox="0 0 ${W} ${H}" class="er-chart" style="width:${W}px;height:${H}px">${svg}</svg></div>`;
+}
+
+function erDesgloseFoco(mesKey, egresos, meses) {
+    const mesLbl = (meses.find((m) => m.key === mesKey) || {}).largo || mesKey;
+    const clasifs = [];
+    egresos.forEach((c) => { const k = (c.clasificacion || "").trim() || "Sin clasificar"; if (!clasifs.includes(k)) clasifs.push(k); });
+    const items = clasifs.map((k) => {
+        const ce = egresos.filter((c) => ((c.clasificacion || "").trim() || "Sin clasificar") === k);
+        return { label: k, actual: ce.reduce((a, c) => a + ((c.pagos && c.pagos[mesKey]) || 0), 0), budget: ce.reduce((a, c) => a + (c.neto || 0), 0) };
+    }).filter((d) => d.actual > 0 || d.budget > 0).sort((a, b) => b.actual - a.actual);
+    if (!items.length) return `<p class="hint">Sin egresos en ${mesLbl}.</p>`;
+    return `<p class="hint" style="margin-top:0">Egresos de <strong>${mesLbl}</strong>: cada barra es lo pagado; la línea punteada es el presupuesto (Neto). Rojo = te pasaste.</p>` +
+        erSvgBudgetBars(items, { rotar: true, slot: 54, maxBar: 34 });
+}
+
+function erDesgloseTodos(meses, egresos) {
+    const budgetTotal = egresos.reduce((a, c) => a + (c.neto || 0), 0);
+    const items = meses.map((m) => ({ label: m.corto, actual: egresos.reduce((a, c) => a + ((c.pagos && c.pagos[m.key]) || 0), 0), budget: budgetTotal }));
+    return `<p class="hint" style="margin-top:0">Total de egresos por mes vs. presupuesto (suma de Netos). Clic en un mes arriba para ver el desglose por clasificación.</p>` +
+        erSvgBudgetBars(items, { rotar: false, slot: 72, maxBar: 44 });
 }

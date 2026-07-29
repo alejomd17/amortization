@@ -16,6 +16,7 @@
             <button type="button" class="tab active" id="tabCredito">Crédito</button>
             <button type="button" class="tab" id="tabAhorro">Ahorro e inversión</button>
             <button type="button" class="tab" id="tabInmobiliaria">Inmobiliaria</button>
+            <button type="button" class="tab" id="tabER">ER</button>
         </div>
 
         <!-- ============ PESTAÑA CRÉDITO ============ -->
@@ -1288,6 +1289,37 @@
 
                 <div id="metaResultCard" class="card resumen-card hidden"></div>
             </div><!-- /ahPanelMeta -->
+        </section>
+
+        <!-- ===== PESTAÑA: Estado de resultados (ER) ===== -->
+        <section id="panelER" class="tab-panel hidden">
+            <h1 class="page-title">Estado de <em>resultados</em></h1>
+            <p class="hint" style="max-width:900px;margin-top:0">
+                Registra mes a mes lo que pagas y recibes. El <strong>Presupuesto</strong> es tu meta/tope por concepto;
+                la celda se pone <strong>verde</strong> si lo cubres, <strong>ocre</strong> si te falta o te pasas, y
+                <strong>0</strong> si nada. Tú pones los conceptos; todo se guarda en este navegador y lo puedes exportar.
+            </p>
+
+            <section class="card er-config">
+                <div class="field">
+                    <label for="erInicio">Desde</label>
+                    <input type="month" id="erInicio">
+                </div>
+                <div class="field">
+                    <label for="erNMeses">Meses</label>
+                    <input type="number" id="erNMeses" min="1" max="36" value="6">
+                </div>
+                <div class="er-config-actions">
+                    <button type="button" id="erExportBtn" class="btn btn-outline">Exportar (.json)</button>
+                    <button type="button" id="erImportBtn" class="btn btn-outline">Importar (.json)</button>
+                    <input type="file" id="erImportFile" accept="application/json,.json" hidden>
+                </div>
+            </section>
+
+            <div id="erIngresos"></div>
+            <div id="erEgresos"></div>
+            <div id="erCharts"></div>
+            <div id="erRegistros"></div>
         </section>
     </main>
 
