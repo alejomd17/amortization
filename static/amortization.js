@@ -788,6 +788,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Cuota inicial + precio
     wireRateConversion(document.getElementById("imCiRate"), document.getElementById("imCiRateType"),
         document.getElementById("imCiRatePeriod"), document.getElementById("imCiRateConversion"));
+    wireRateConversion(document.getElementById("fjTasa"), document.getElementById("fjTipoTasa"),
+        document.getElementById("fjPeriodoTasa"), document.getElementById("fjRateConversion"));
     document.getElementById("calcularCuotaInicialBtn").addEventListener("click", () => {
         const plazoMeses = gv("imCiPlazoUnit") === "years" ? g("imCiPlazo") * 12 : g("imCiPlazo");
         postAndRender("/inmueble/cuota-inicial", {
@@ -878,6 +880,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("fjTasa").value = c.tasa || 0;
         document.getElementById("fjTipoTasa").value = c.tipo_tasa || "Efectiva";
         document.getElementById("fjPeriodoTasa").value = c.periodo_tasa || "Anual";
+        document.getElementById("fjTasa").dispatchEvent(new Event("input"));  // refresca la conversión E.A./M.V.
         setMoneyValue("fjSeguro", c.seguro || "");
         setMoneyValue("fjAbonoFijo", c.abono_fijo || "");
         document.getElementById("fjMesInicio").value = c.mes_inicio || "";
