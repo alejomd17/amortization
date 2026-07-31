@@ -555,6 +555,7 @@ class FlujoRequest(BaseModel):
     pct_reinversion: float = 100
     orden_manual: List[int] | None = None
     vara: str = "intereses"         # intereses | tiempo | flujo
+    presupuesto: float = 0           # tope mensual (ingreso); 0 = sin tope (modo viejo)
 
 
 class FlujoCreditoRequest(BaseModel):
@@ -563,6 +564,7 @@ class FlujoCreditoRequest(BaseModel):
     fecha_inicio: str
     pct_reinversion: float = 100
     orden: List[int] | None = None  # sin orden solo se devuelve la tabla "solo este credito"
+    presupuesto: float = 0
 
 
 @app.post('/flujo')
@@ -586,6 +588,7 @@ async def calcular_flujo(request: FlujoRequest):
             pct_reinversion = request.pct_reinversion,
             orden_manual    = request.orden_manual,
             vara            = request.vara,
+            presupuesto     = request.presupuesto,
         )
     except ValueError as ve:
         raise HTTPException(status_code=422, detail=str(ve))
@@ -605,6 +608,7 @@ async def tabla_de_un_credito(request: FlujoCreditoRequest):
             fecha_inicio    = request.fecha_inicio,
             pct_reinversion = request.pct_reinversion,
             orden           = request.orden,
+            presupuesto     = request.presupuesto,
         )
     except ValueError as ve:
         raise HTTPException(status_code=422, detail=str(ve))

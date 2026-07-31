@@ -1553,6 +1553,7 @@ document.addEventListener("DOMContentLoaded", () => {
             pct_reinversion: 100,                    // siempre se reinvierte todo
             orden_manual: activos.map((_, i) => i),  // el orden de la lista (solo activos)
             vara: fjVaraActual,
+            presupuesto: fjIngresoActual,            // tope: cuotas + abonos no pasan tu ingreso
         }, displayFlujo, "flujoResultCard");
     }
     document.getElementById("calcularFlujoBtn").addEventListener("click", calcularFlujo);
@@ -1566,12 +1567,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // El ingreso solo afecta la columna "Te queda": no recalcula la cascada, solo re-dibuja
+    // El ingreso es el PRESUPUESTO que topa la cascada (cuotas + abonos no lo pasan).
+    // Al escribir se guarda; al terminar (change/blur) se recalcula todo el flujo.
     document.getElementById("fjIngreso").addEventListener("input", () => {
         fjIngresoActual = moneyVal("fjIngreso") || 0;
         guardarFlujo();
-        if (fjUltimoResultado && !document.getElementById("flujoDetalleCard").classList.contains("hidden")) {
-            renderFlujoDetalle(fjUltimoResultado, fjUltimaClave);
+    });
+    document.getElementById("fjIngreso").addEventListener("change", () => {
+        fjIngresoActual = moneyVal("fjIngreso") || 0;
+        guardarFlujo();
+        if (!document.getElementById("flujoResultCard").classList.contains("hidden")) {
+            calcularFlujo();
         }
     });
 
@@ -2502,6 +2508,7 @@ async function cargarTablaCredito(r, clave, indice, modo) {
             fecha_inicio: r.fecha_inicio,
             pct_reinversion: r.pct_reinversion,
             orden: esc.orden,
+            presupuesto: fjIngresoActual,
         });
     } catch (e) {
         card.innerHTML = `<p class="section-eyebrow">Detalle por crédito</p>
@@ -2621,7 +2628,7 @@ function renderFlujoDetalle(r, clave) {
         <tr>
             <td>${f.num}</td><td>${f.anno_mes}</td>
             ${secuencia.map((idx) => celda(f, idx)).join("")}
-            <td>${fmtMoney(f.pago_total - f.abonos_total)}</td>
+            <td class="${f.sin_cupo ? "queda-neg" : ""}"${f.sin_cupo ? ' title="Tus cuotas mínimas pasan tu ingreso este mes"' : ""}>${fmtMoney(f.pago_total - f.abonos_total)}</td>
             <td>${f.abonos_total > 0 ? fmtMoney(f.abonos_total) : "—"}</td>
             <td>${fmtMoney(f.pago_total)}</td>
             <td>${fmtMoney(f.liberado)}</td>
@@ -2657,12 +2664,22 @@ function renderFlujoDetalle(r, clave) {
             — crece a medida que se pagan créditos.`
         : ``;
 
+    // Aviso: meses en que ni las cuotas mínimas caben en el ingreso (presupuesto).
+    const mesSinCupo = filas.find((f) => f.sin_cupo);
+    const avisoCupo = (conIngreso && mesSinCupo)
+        ? `<p class="hint" style="color:#b03a2e;opacity:1"><strong>⚠ Tu ingreso no alcanza para los mínimos</strong>
+             desde <strong>${fmtMesAnno ? fmtMesAnno(mesSinCupo.anno_mes) : mesSinCupo.anno_mes}</strong>:
+             ese mes las cuotas obligatorias ya pasan tus ${fmtMoney(fjIngresoActual)} de ingreso (las celdas de
+             "Cuotas" en rojo). Ahí el plan no es sostenible con tu sueldo.</p>`
+        : ``;
+
     card.innerHTML = `
         <p class="section-eyebrow">Mes a mes — ${esc ? esc.nombre : clave}</p>
         <div class="toggle-tabla">
             <button type="button" class="chip-credito${vista === "pagos" ? " activo" : ""}" data-vista="pagos">Pagos</button>
             <button type="button" class="chip-credito${vista === "saldos" ? " activo" : ""}" data-vista="saldos">Saldos</button>
         </div>
+        ${avisoCupo}
         <p class="hint">${notaVista} ${notaCascada}${notaIngreso}</p>
         <div class="table-scroll">
             <table class="amort-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>

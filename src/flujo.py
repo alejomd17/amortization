@@ -129,7 +129,8 @@ class Flujo:
 
     # ── Simulación de un orden ────────────────────────────────────────────────
     def _simular(self, preparados: list[dict], orden: list[int], pct_reinversion: float,
-                 fecha_inicio: str, con_cascada: bool = True, detallar: bool = False) -> dict:
+                 fecha_inicio: str, con_cascada: bool = True, detallar: bool = False,
+                 presupuesto: float = 0.0) -> dict:
         """Simula mes a mes. `orden` son índices; el pool de cuotas liberadas va al
         primer crédito activo del orden (y el sobrante baja al siguiente).
 
@@ -142,6 +143,10 @@ class Flujo:
         saldos = [c["saldo_inicial"] if nacidos[i] else 0.0 for i, c in enumerate(preparados)]
         pool = 0.0                     # cuotas liberadas (ya escaladas por pct)
         pct = pct_reinversion / 100 if con_cascada else 0.0
+        # Modo presupuesto: el abono no es el pool de cuotas liberadas, sino lo que
+        # sobra de TU presupuesto (ingreso) tras pagar las cuotas activas. Así el total
+        # (cuotas + abono) nunca pasa tu ingreso: lo liberado se queda adentro, no encima.
+        usar_presupuesto = con_cascada and presupuesto > 0
 
         def foto_saldos():
             """None = todavía no se ha desembolsado (distinto de 0 = ya se pagó)."""
@@ -163,7 +168,14 @@ class Flujo:
 
         for mes in range(1, MAX_MESES + 1):
             anno_mes = _sumar_meses(fecha_inicio, mes)
-            extra = pool               # el pool va al primer crédito activo del orden
+            if usar_presupuesto:
+                cuotas_activas = sum(preparados[i]["cuota"] + preparados[i]["seguro"]
+                                     for i in range(len(preparados)) if nacidos[i] and saldos[i] > 0.005)
+                extra = max(0.0, presupuesto - cuotas_activas) * pct
+                sin_cupo = cuotas_activas > presupuesto + 0.005   # ni los mínimos caben
+            else:
+                extra = pool           # el pool va al primer crédito activo del orden
+                sin_cupo = False
             sobrante = 0.0             # lo que sobra de una última cuota; se reparte al final
             pago_mes = 0.0             # total pagado ese mes (cuotas + seguros + abonos)
             abonos_mes = 0.0           # todos los abonos (fijo + puntuales + cascada)
@@ -216,7 +228,8 @@ class Flujo:
                     cuota_pagada = capital_cuota + interes
                     saldos[idx] = 0.0
                     # al liquidarse deja de pagarse cuota Y seguro: ambos se liberan al pool
-                    pool += (c["cuota"] + c["seguro"]) * pct
+                    if not usar_presupuesto:
+                        pool += (c["cuota"] + c["seguro"]) * pct
                 else:
                     saldos[idx] -= reduccion
                     pago = c["cuota"] + dirigido + aporte_extra
@@ -263,7 +276,8 @@ class Flujo:
                 if saldos[objetivo] <= 0.005:
                     saldos[objetivo] = 0.0
                     o = preparados[objetivo]
-                    pool += (o["cuota"] + o["seguro"]) * pct
+                    if not usar_presupuesto:
+                        pool += (o["cuota"] + o["seguro"]) * pct
                 if detallar and objetivo in filas_mes:
                     fila = filas_mes[objetivo]
                     fila["abono_capital"] = round(fila["abono_capital"] + aplicado, 2)
@@ -289,6 +303,8 @@ class Flujo:
                 "abonos_total": round(abonos_mes, 2),   # la parte de abonos; cuotas = pago_total − abonos
                 "abonos_extra": round(abonos_extra_mes, 2),   # solo los puntuales (otra fuente, no salario)
                 "liberado": round(liberado, 2),
+                "sin_cupo": sin_cupo,   # las cuotas mínimas pasan tu presupuesto ese mes
+
                 # saldo que debías ESTE mes, antes de pagar (ver saldos_display arriba)
                 "saldos": saldos_display,
                 # lo pagado a cada crédito este mes: None si aún no nace, 0 si nació pero no pagó
@@ -343,15 +359,16 @@ class Flujo:
             return (-flujo, res["total_intereses"])
         return (res["total_intereses"], -flujo)   # 'intereses' (default)
 
-    def _buscar_mejor(self, p, pct, fecha, vara, horizonte, obligacion):
+    def _buscar_mejor(self, p, pct, fecha, vara, horizonte, obligacion, presupuesto=0.0):
         """Óptimo exacto si caben los órdenes; si no, búsqueda local desde las heurísticas."""
         n = len(p)
         puntuar = lambda res: self._score(res, vara, horizonte, obligacion)
+        sim = lambda orden: self._simular(p, list(orden), pct, fecha, presupuesto=presupuesto)
 
         if n <= MAX_FUERZA_BRUTA:
             mejor_orden, mejor_score, mejor_res = None, None, None
             for orden in permutations(range(n)):
-                res = self._simular(p, list(orden), pct, fecha)
+                res = sim(orden)
                 s = puntuar(res)
                 if mejor_score is None or s < mejor_score:
                     mejor_orden, mejor_score, mejor_res = list(orden), s, res
@@ -359,8 +376,8 @@ class Flujo:
 
         # Heurística: parte de las clásicas y mejora intercambiando pares
         candidatos = [self._orden_avalancha(p), self._orden_bola_nieve(p), list(range(n))]
-        mejor_orden = min(candidatos, key=lambda o: puntuar(self._simular(p, o, pct, fecha)))
-        mejor_res = self._simular(p, mejor_orden, pct, fecha)
+        mejor_orden = min(candidatos, key=lambda o: puntuar(sim(o)))
+        mejor_res = sim(mejor_orden)
         mejor_score = puntuar(mejor_res)
         mejoro = True
         while mejoro:
@@ -369,7 +386,7 @@ class Flujo:
                 for j in range(i + 1, n):
                     cand = mejor_orden[:]
                     cand[i], cand[j] = cand[j], cand[i]
-                    res = self._simular(p, cand, pct, fecha)
+                    res = sim(cand)
                     s = puntuar(res)
                     if s < mejor_score:
                         mejor_orden, mejor_score, mejor_res, mejoro = cand, s, res, True
@@ -382,6 +399,7 @@ class Flujo:
                  pct_reinversion: float = 100,
                  orden_manual: list[int] | None = None,
                  vara: str = "intereses",
+                 presupuesto: float = 0.0,
                  ) -> dict:
         """Corre los escenarios y devuelve la comparación + el detalle mes a mes."""
         validos = [c for c in creditos if float(c.get("saldo", 0) or 0) > 0]
@@ -401,20 +419,20 @@ class Flujo:
 
         av = self._orden_avalancha(p)
         escenarios.append({"clave": "avalancha", "nombre": "Avalancha", "orden": av,
-                           **self._simular(p, av, pct_reinversion, fecha_inicio)})
+                           **self._simular(p, av, pct_reinversion, fecha_inicio, presupuesto=presupuesto)})
 
         bn = self._orden_bola_nieve(p)
         escenarios.append({"clave": "bola_nieve", "nombre": "Bola de nieve", "orden": bn,
-                           **self._simular(p, bn, pct_reinversion, fecha_inicio)})
+                           **self._simular(p, bn, pct_reinversion, fecha_inicio, presupuesto=presupuesto)})
 
         orden_sug, res_sug, metodo = self._buscar_mejor(
-            p, pct_reinversion, fecha_inicio, vara, horizonte, obligacion_total)
+            p, pct_reinversion, fecha_inicio, vara, horizonte, obligacion_total, presupuesto)
         escenarios.append({"clave": "sugerencia", "nombre": "Sugerencia", "orden": orden_sug,
                            "metodo": metodo, **res_sug})
 
         if orden_manual and sorted(orden_manual) == natural:
             escenarios.append({"clave": "manual", "nombre": "Tu orden", "orden": orden_manual,
-                               **self._simular(p, orden_manual, pct_reinversion, fecha_inicio)})
+                               **self._simular(p, orden_manual, pct_reinversion, fecha_inicio, presupuesto=presupuesto)})
 
         # El flujo liberado se normaliza al horizonte del base: un escenario que dura más
         # acumula más solo por durar más, y eso haría ver "sin cascada" como el mejor.
@@ -467,6 +485,7 @@ class Flujo:
                       fecha_inicio: str = "202601",
                       pct_reinversion: float = 100,
                       orden: list[int] | None = None,
+                      presupuesto: float = 0.0,
                       ) -> dict:
         """Tabla de amortización de un crédito, en dos versiones:
 
@@ -498,7 +517,7 @@ class Flujo:
         }
 
         if orden and sorted(orden) == list(range(len(p))):
-            res_plan = self._simular(p, list(orden), pct_reinversion, fecha_inicio, detallar=True)
+            res_plan = self._simular(p, list(orden), pct_reinversion, fecha_inicio, detallar=True, presupuesto=presupuesto)
             out["en_plan"] = self._resumir_tabla(
                 res_plan["detalle_creditos"][indice], p[indice]["cuota"])
         return out
