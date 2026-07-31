@@ -2611,7 +2611,7 @@ function renderFlujoDetalle(r, clave) {
     // Dos lecturas del ingreso: "Caja real" = lo que de verdad te queda reinvirtiendo todo;
     // "Disponible" = eso + lo ya liberado (plata que ya es tuya aunque la reinviertas).
     const head = `<th>#</th><th>Mes</th>${cols}<th>Cuotas</th><th>Abonos</th><th>Total</th><th>Liberado</th>`
-        + (conIngreso ? `<th>Caja real</th><th>Disponible</th>` : ``);
+        + (conIngreso ? `<th>Caja real</th>` : ``);
     // Celda de cada crédito según la vista: saldo restante o lo pagado ese mes.
     // null = todavía no se desembolsa (·). En saldos, "—" = ya se pagó;
     // en pagos, "—" = ese mes no se le pagó nada (p. ej. el mes del desembolso).
@@ -2638,9 +2638,8 @@ function renderFlujoDetalle(r, clave) {
                 // Caja real  = ingreso − (Total − abonos extras)  → lo que queda en el bolsillo.
                 // Disponible = caja real + lo liberado             → suma la plata que ya no debes.
                 const caja = fjIngresoActual - (f.pago_total - f.abonos_extra);
-                const disp = caja + f.liberado;
                 const celdaMonto = (v) => `<td class="${v < 0 ? "queda-neg" : "queda-ok"}">${fmtMoney(v)}</td>`;
-                return celdaMonto(caja) + celdaMonto(disp);
+                return celdaMonto(caja);
             })() : ``}
         </tr>`).join("");
 
@@ -2661,7 +2660,7 @@ function renderFlujoDetalle(r, clave) {
     const notaIngreso = conIngreso
         ? ` El abono sale solo de lo <strong>liberado</strong> (cuota de un crédito ya pagado) o de tus abonos
             explícitos — nunca del sobrante del ingreso. <strong>Caja real</strong> = lo que te sobra del ingreso
-            ese mes (ingreso − lo que pagas). <strong>Disponible</strong> = eso + lo ya liberado.`
+            ese mes (ingreso − lo que pagas).`
         : ``;
 
     // Aviso: meses en que ni las cuotas mínimas caben en el ingreso (presupuesto).
