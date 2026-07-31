@@ -2659,9 +2659,9 @@ function renderFlujoDetalle(r, clave) {
            El mes del desembolso muestra "—": aún no se paga. La <strong>celda resaltada</strong> es a la que
            le entra la cascada ese mes — así ves el abono moviéndose de un crédito al siguiente.`;
     const notaIngreso = conIngreso
-        ? ` <strong>Caja real</strong> = lo que te queda en el bolsillo reinvirtiendo todo (plano mientras pagas).
-            <strong>Disponible</strong> = eso + lo ya liberado, o sea la plata que ya no debes aunque la reinviertas
-            — crece a medida que se pagan créditos.`
+        ? ` El abono sale solo de lo <strong>liberado</strong> (cuota de un crédito ya pagado) o de tus abonos
+            explícitos — nunca del sobrante del ingreso. <strong>Caja real</strong> = lo que te sobra del ingreso
+            ese mes (ingreso − lo que pagas). <strong>Disponible</strong> = eso + lo ya liberado.`
         : ``;
 
     // Aviso: meses en que ni las cuotas mínimas caben en el ingreso (presupuesto).

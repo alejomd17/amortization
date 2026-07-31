@@ -171,7 +171,11 @@ class Flujo:
             if usar_presupuesto:
                 cuotas_activas = sum(preparados[i]["cuota"] + preparados[i]["seguro"]
                                      for i in range(len(preparados)) if nacidos[i] and saldos[i] > 0.005)
-                extra = max(0.0, presupuesto - cuotas_activas) * pct
+                # El abono NO es el sobrante del ingreso. Es solo la cuota LIBERADA (pool)
+                # de créditos ya pagados, redirigida a otro crédito, y topada a lo que cabe
+                # en el ingreso. Si nada se ha liberado (pool=0), no hay abono: lo que sobra
+                # del ingreso se queda como sobra, no se abona solo.
+                extra = min(pool, max(0.0, presupuesto - cuotas_activas))
                 sin_cupo = cuotas_activas > presupuesto + 0.005   # ni los mínimos caben
             else:
                 extra = pool           # el pool va al primer crédito activo del orden
@@ -228,8 +232,7 @@ class Flujo:
                     cuota_pagada = capital_cuota + interes
                     saldos[idx] = 0.0
                     # al liquidarse deja de pagarse cuota Y seguro: ambos se liberan al pool
-                    if not usar_presupuesto:
-                        pool += (c["cuota"] + c["seguro"]) * pct
+                    pool += (c["cuota"] + c["seguro"]) * pct
                 else:
                     saldos[idx] -= reduccion
                     pago = c["cuota"] + dirigido + aporte_extra
@@ -276,8 +279,7 @@ class Flujo:
                 if saldos[objetivo] <= 0.005:
                     saldos[objetivo] = 0.0
                     o = preparados[objetivo]
-                    if not usar_presupuesto:
-                        pool += (o["cuota"] + o["seguro"]) * pct
+                    pool += (o["cuota"] + o["seguro"]) * pct
                 if detallar and objetivo in filas_mes:
                     fila = filas_mes[objetivo]
                     fila["abono_capital"] = round(fila["abono_capital"] + aplicado, 2)
