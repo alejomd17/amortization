@@ -2610,7 +2610,7 @@ function renderFlujoDetalle(r, clave) {
     const conIngreso = fjIngresoActual > 0;
     // Dos lecturas del ingreso: "Caja real" = lo que de verdad te queda reinvirtiendo todo;
     // "Disponible" = eso + lo ya liberado (plata que ya es tuya aunque la reinviertas).
-    const head = `<th>#</th><th>Mes</th>${cols}<th>Cuotas</th><th>Abonos</th><th>Total</th><th>Liberado</th>`
+    const head = `<th>#</th><th>Mes</th>${cols}<th>Cuotas</th><th>Abonos</th><th>Total</th>`
         + (conIngreso ? `<th>Caja real</th>` : ``);
     // Celda de cada crédito según la vista: saldo restante o lo pagado ese mes.
     // null = todavía no se desembolsa (·). En saldos, "—" = ya se pagó;
@@ -2631,7 +2631,6 @@ function renderFlujoDetalle(r, clave) {
             <td class="${f.sin_cupo ? "queda-neg" : ""}"${f.sin_cupo ? ' title="Tus cuotas mínimas pasan tu ingreso este mes"' : ""}>${fmtMoney(f.pago_total - f.abonos_total)}</td>
             <td>${f.abonos_total > 0 ? fmtMoney(f.abonos_total) : "—"}</td>
             <td>${fmtMoney(f.pago_total)}</td>
-            <td>${fmtMoney(f.liberado)}</td>
             ${conIngreso ? (() => {
                 // Del salario salen las cuotas, el abono fijo y la cascada; SOLO los abonos
                 // extras (puntuales: primas, cesantías…) vienen de otra fuente y no se restan.
@@ -2658,7 +2657,7 @@ function renderFlujoDetalle(r, clave) {
            El mes del desembolso muestra "—": aún no se paga. La <strong>celda resaltada</strong> es a la que
            le entra la cascada ese mes — así ves el abono moviéndose de un crédito al siguiente.`;
     const notaIngreso = conIngreso
-        ? ` El abono sale solo de lo <strong>liberado</strong> (cuota de un crédito ya pagado) o de tus abonos
+        ? ` El <strong>abono</strong> sale solo de una cuota que se libera (un crédito ya pagado) o de tus abonos
             explícitos — nunca del sobrante del ingreso. <strong>Caja real</strong> = lo que te sobra del ingreso
             ese mes (ingreso − lo que pagas).`
         : ``;
